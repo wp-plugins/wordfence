@@ -1,0 +1,208 @@
+.wordfenceWrap {
+	margin: 0 0 0 20px;
+}
+div.wordfenceLive {
+	height: 29px;
+	white-space: nowrap;
+	overflow: hidden;
+	border-width: 1px 0 1px 0;
+	background-color: #FFFCEF;
+	border-color: #666;
+	border-style: solid;
+	margin: 20px 0 10px 0;
+	padding: 3px 3px 3px 10px;
+	font-family: Arial;
+	font-size: 14px;
+	-webkit-font-smoothing: antialiased;
+}
+div.wordfenceLive h2 {
+	font-weight: bold;
+	color: #888;
+	margin: 0 10px 0 0;
+	padding: 0;
+	display: inline;
+	font-size: 14px;
+	font-family: Georgia, serif;
+	font-style: italic;
+	-webkit-font-smoothing: antialiased;
+}
+div.wordfenceLive p {
+	color: #000;
+	font-weight: normal;
+	display: inline;
+}
+.wordfence-icon32 {
+	width: 32px;
+	height: 32px;
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	padding: 0;
+	margin: 7px 5px 0 0;
+	float: left;
+}
+.wordfence-lock-icon {
+	background-image: url(../images/wordfence-logo-32x32.png);
+}
+
+.wordfence .resulticon {
+	display: block;
+	float: left;
+	width: 16px;
+	height: 16px;
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	border-width: 0;
+	padding: 0;
+	margin: 0 3px 0 0;
+	background-image: url(../images/icons/bullet_yellow.png);
+}
+
+.wordfence .wordfenceScanButton { margin: 20px 0 20px 0; }
+
+.wordfenceBoldTD {
+	font-weight: bold;
+}
+
+.wfAjax24 {
+	display: none;
+	width: 24px;
+	height: 24px;
+	background-image: url(../images/icons/ajax24.gif);
+	margin: 0;
+	padding: 0;
+}
+
+
+div.wfLoadingWhite32 {
+	width: 32px;
+	height: 32px;
+	background-image: url(../images/icons/ajaxWhite32x32.gif);
+	margin: 0;
+	padding: 0;
+}
+
+div.wordfenceScanButton input.button-wf-grey {
+	background: #EFEFEF url(../images/button-grad-grey.png) repeat-x scroll left top;
+	border-color: #EFEFEF;
+}
+
+.wfTabsContainer {
+	overflow: hidden;
+	border: 1px solid #CCC;
+	max-width: 970px;
+	padding: 15px;
+	min-height: 200px;
+	-webkit-font-smoothing: antialiased;
+}
+#wfTabs::after {
+	content: ".";
+	display: block;
+	height: 0;
+	width: 0;
+	line-height: 0;
+	clear: both;
+	visibility: hidden;
+}
+#wfTabs a {
+	float: left;
+	z-index: 10;
+	height: 18px;
+	margin: 0 5px -1px 0;
+	padding: 5px 8px;
+	border: 1px solid #CCC;
+	text-decoration: none;
+	background-color: #EFEFEF;
+	color: #21759B;
+	-moz-border-radius-topright: 3px;
+	-moz-border-radius-topleft: 3px;
+	border-top-right-radius: 3px;
+	border-top-left-radius: 3px;
+}
+#wfTabs a.selected {
+	border-bottom: 1px solid #FFF;
+	background-color: #FFF;
+	color: #777;
+}
+table.wfSummaryParent { font-family: sans-serif; font-size: 14px; color: #000; z-index: 9;}
+table.wfSummaryParent td { vertical-align: top; padding: 0; margin: 0; }
+table.wfSummaryParent table.wfSummaryChild th { font-weight: bold; text-align: right; font-family: Georgia, serif; color: #000; padding: 5px 10px 5px 0; border-top: 1px solid #CCC; } 
+table.wfSummaryParent table.wfSummaryChild td { font-weight: normal; text-align: left; padding: 5px 0 5px 0; border-top: 1px solid #CCC; } 
+table.wfSummaryParent table.wfSC1 td { width: 300px; padding: 0px 25px 10px 0; }
+table.wfSummaryParent table.wfSC2 th { width: 80px; }
+table.wfSummaryParent table.wfSC2 td { width: 100px; }
+table.wfSummaryParent table.wfSC3 th { width: 80px; }
+table.wfSummaryParent table.wfSC3 td { width: 250px; }
+table.wfSummaryParent th.wfHead { font-size: 22px; font-family: Georgia, serif; font-style: italic; color: #555; font-weight: bold; text-align: left; padding: 20px 0 20px 0px; -webkit-font-smoothing: antialiased; }
+
+div.wfIssue table.wfIssue td { padding: 2px; margin: 0; border-width: 0px; text-align: left; }
+div.wfIssue table.wfIssue th { padding: 2px; margin: 0; font-weight: bold;  text-align: left; color: #777; }
+div.wfIssue h2 { margin: 0px 0 5px 0; padding: 0; }
+div.wfIssue table.wfIssueLinks td { border-width: 0px; text-align: left; padding-right: 10px; }
+.wfIssueOptions { 
+	border-top: 1px solid #CCC; 
+	padding: 10px;
+}
+.wfIssueOptions a {
+	margin-left: 10px;
+}
+.wfIssueOptions strong {
+	float: left;
+	display: block;
+	width: 60px;
+}
+.wfProbSev1, .wfProbSev2, .wfAjaxLight128, .wfResolved {
+	width: 128px;
+	height: 128px;
+	border: 0;
+	margin: 0 auto;
+	background-repeat: no-repeat; background-position: 0 0;
+	text-decoration: none;
+	display: block;
+}
+.wfProbSev1 { background-image: url(../images/icons/error128.png); }
+.wfProbSev2 { background-image: url(../images/icons/warning128.png); }
+.wfResolved { background-image: url(../images/icons/tick128.png); }
+.wfAjaxLight128 { background-image: url(../images/icons/ajax3.gif); }
+.wfStrong { font-weight: bold; }
+.wordfenceModeElem { display: none; }
+.wfIssuesContainer { width: 800px; display: none; }
+.wfIssuesContainer p { width: 550px; }
+.wfWarn { color: #F00; }
+img.wfFlag { vertical-align: middle; margin: -3px 4px 0 0; }
+.wfHitTime { font-style: italic; }
+.wfAvatar img { vertical-align: middle; }
+.wfActEvent { border-bottom: 1px solid #CCC; margin: 0 0 10px 0; padding: 0 0 10px 0; }
+.wfTimeAgo { font-family: Georgia, times; color: #999; font-weight: bold; font-style: italic; }
+table.wfConfigForm th {
+	font-weight: normal;
+	text-align: left;
+	padding: 2px 3px 1px 0;
+	vertical-align: middle;
+}
+table.wfConfigForm td {
+	vertical-align: middle;
+}
+table th.wfConfigEnable { font-weight: bold; }
+.wfSavedMsg { display: none; color: #A00; }
+table th.wfSubheading { font-weight: bold; padding-top: 10px; }
+.wfALogTime { color: #999; }
+.wfALogEntry { }
+.wfALogMailLink, .wfALogReloadLink {
+	display: block;
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	padding: 0;
+	margin: 0;
+}
+.wfALogMailLink {
+	right: 20px;
+	top: 2px;
+	background-image: url(../images/icons/email_go.png);
+}
+.wfALogReloadLink {
+	right: 42px;
+	top: 2px;
+	background-image: url(../images/icons/arrow_refresh.png);
+}
+#wfActivity { position: relative; }
