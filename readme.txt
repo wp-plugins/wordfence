@@ -18,7 +18,7 @@ Wordfence:
 * Scans for signatures of over 44,000 known malware variants.
 * Continuously scans for known dangerous malware and phishing URL's in all your comments, posts and files.
 * Scans for heuristics of backdoors, trojans and suspicious code.
-* Checks the strenght of all user and admin passwords.
+* Checks the strength of all user and admin passwords.
 * Monitor for unauthorized DNS changes.
 * Monitor disk space.
 * Includes a firewall to block fake Googlebots, malicious scans from hackers and botnets.
