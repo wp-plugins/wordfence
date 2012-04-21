@@ -60,7 +60,7 @@ class wfConfig {
 				'max404Humans' => "DISABLED",
 				'max404Humans_action' => "throttle",
 				'maxScanHits' => "DISABLED",
-				'maxScanHits_action' => "block",
+				'maxScanHits_action' => "throttle",
 				'blockedTime' => "300"
 			)
 		),
@@ -120,7 +120,7 @@ class wfConfig {
 				'max404Humans' => "60",
 				'max404Humans_action' => "throttle",
 				'maxScanHits' => "60",
-				'maxScanHits_action' => "block",
+				'maxScanHits_action' => "throttle",
 				'blockedTime' => "3600"
 			)
 		),
@@ -174,13 +174,13 @@ class wfConfig {
 				'maxRequestsCrawlers' => "960",
 				'maxRequestsCrawlers_action' => "throttle",
 				'maxRequestsHumans' => "120",
-				'maxRequestsHumans_action' => "block",
+				'maxRequestsHumans_action' => "throttle",
 				'max404Crawlers' => "240",
 				'max404Crawlers_action' => "throttle",
 				'max404Humans' => "30",
-				'max404Humans_action' => "block",
+				'max404Humans_action' => "throttle",
 				'maxScanHits' => "15",
-				'maxScanHits_action' => "block",
+				'maxScanHits_action' => "throttle",
 				'blockedTime' => "7200"
 			)
 		),
