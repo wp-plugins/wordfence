@@ -63,12 +63,10 @@ class wfUtils {
 		return sprintf("%u", ip2long($ip));
 	}
 	public static function getBaseURL(){
-		//return WP_PLUGIN_URL . '/' . str_replace(basename( __FILE__), "", plugin_basename(__FILE__));
-		$plug = preg_replace('/^.*\/([^\/]+)\/lib\/[^\/]+\.php$/', '$1', __FILE__);
-		return WP_PLUGIN_URL . '/' . $plug . '/';
+		return plugins_url() . '/wordfence/';
 	}
 	public static function getPluginBaseDir(){
-		return realpath(dirname(__FILE__) . '/../../') . '/';
+		return ABSPATH . 'wp-content/plugins/';
 	}
 	public static function getIP(){
 		$ip = 0;

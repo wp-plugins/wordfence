@@ -9,11 +9,15 @@ Wordfence is an enterprise firewall and anti-virus plugin for WordPress.
 
 == Description ==
 
-Wordfence is an enterprise firewall and anti-virus plugin for WordPress websites.
+Wordfence is a free enterprise class firewall and anti-virus plugin for WordPress websites.
+
+Wordfence is 100% free. You need to sign up on Wordfence.com to get a free API key.
+We also offer a Premium API key that adds additional scanning capabilities. See below for details.
 
 Wordfence:
 
-* Scans core files, themes and plugins against repository versions. 
+* Scans core files against repository versions to check their integrity.
+* Premium API key also scans themes and plugins against repository versions. This is currently the only difference between free and premium API keys.
 * See how files have changed. Optionally repair changed files.
 * Scans for signatures of over 44,000 known malware variants.
 * Continuously scans for known dangerous malware and phishing URL's in all your comments, posts and files.
