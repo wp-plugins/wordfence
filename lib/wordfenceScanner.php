@@ -69,7 +69,7 @@ class wordfenceScanner {
 					break;
 				}
 				if($isPHP){
-					if((strpos($data, '\$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false) || strpos($data, "TimThum"."b script created by") !== false){
+					if(strpos($data, '\$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false && strpos($data, "TimThum"."b script created by") !== false){
 						$this->addResult(array(
 							'type' => 'file',
 							'severity' => 1,
