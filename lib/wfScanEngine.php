@@ -282,13 +282,12 @@ class wfScanEngine {
 		$this->status(1, 'info', "Starting posts scan");
 		global $wpdb;
 		$wfdb = new wfDB();
+		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
 		$q1 = $wfdb->uQuery("select ID, post_title, post_type, post_date, post_content from $wpdb->posts where post_type IN ('page', 'post') and post_status = 'publish'");
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$postDat = array();
 		while($row = mysql_fetch_assoc($q1)){
-			$this->status(2, 'info', "Scanning " . $row['post_type'] . ": \"" . $row['post_title'] . "\"");
 			$h->hoover($row['ID'], $row['post_title'] . ' ' . $row['post_content']);
-			
 			$postDat[$row['ID']] = array(
 				'contentMD5' => md5($row['post_content']),
 				'title' => $row['post_title'],
@@ -372,6 +371,7 @@ class wfScanEngine {
 	private function scanComments(){
 		global $wpdb;
 		$wfdb = new wfDB();
+		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
 		$q1 = $wfdb->uQuery("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from $wpdb->comments where comment_approved=1");
 		if( ! $q1){
 			return;
@@ -381,7 +381,6 @@ class wfScanEngine {
 		$gotRow = false;
 		while($row = mysql_fetch_assoc($q1)){
 			$gotRow = true; //because we can't use mysql_num_rows on unbuffered queries
-			$this->status(2, 'info', "Scanning comment ID " . $row['comment_ID'] . " with author " . $row['comment_author']);
 			$h->hoover($row['comment_ID'], $row['comment_author_url'] . ' ' . $row['comment_author'] . ' ' . $row['comment_content']);
 			$commentDat[$row['comment_ID']] = array(
 				'contentMD5' => md5($row['comment_content'] . $row['comment_author'] . $row['comment_author_url']),
