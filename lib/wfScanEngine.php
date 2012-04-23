@@ -18,10 +18,9 @@ class wfScanEngine {
 	private $dictWords = array();
 	public function __construct(){
 		$this->i = new wfIssues();
-		global $wp_version;
-		$this->wp_version = $wp_version;
+		$this->wp_version = wfUtils::getWPVersion();
 		$this->apiKey = wfConfig::get('apiKey');
-		$this->api = new wfAPI($this->apiKey, $wp_version);
+		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 	}
@@ -601,9 +600,8 @@ class wfScanEngine {
 		}
 		$cur = get_preferred_from_update_core();
 		if(isset( $cur->response ) && $cur->response == 'upgrade'){
-			global $wp_version;
 			$this->addIssue('wfUpgrade', 1, 'wfUpgrade' . $cur->current, 'wfUpgrade' . $cur->current, "Your WordPress version is out of date", "WordPress version " . $cur->current . " is now available. Please upgrade immediately to get the latest security updates from WordPress.", array(
-				'currentVersion' => $wp_version,
+				'currentVersion' => $this->wp_version,
 				'newVersion' => $cur->current
 				));
 		}

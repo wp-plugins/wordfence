@@ -134,6 +134,15 @@ class wfUtils {
 		$c2 = array_shift($trace);
 		error_log("Caller for " . $caller['file'] . " line " . $caller['line'] . " is " . $c2['file'] . ' line ' . $c2['line']);
 	}
+	public static function getWPVersion(){
+		global $wp_version;
+		global $wordfence_wp_version;
+		if(isset($wordfence_wp_version)){
+			return $wordfence_wp_version;
+		} else {
+			return $wp_version;
+		}
+	}
 }
 
 
