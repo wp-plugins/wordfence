@@ -36,7 +36,7 @@ class wordfence {
 	}
 	public static function hourlyCron(){
 		global $wpdb; $p = $wpdb->prefix;
-		$api = new wfAPI(wfConfig::get('apiKey'), $wp_version);
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$patData = $api->call('get_known_vuln_pattern');
 		if(is_array($patData) && $patData['pat']){
 			if(@preg_match($patData['pat'], 'wordfence_test_vuln_match')){
@@ -229,7 +229,6 @@ class wordfence {
 		return self::getLog()->isIPLockedOut($IP);
 	}
 	public static function veryFirstAction(){
-		global $wp_version;
 		$wfLog = self::getLog();
 		$wfLog->firewallBadIPs();
 	}
@@ -323,8 +322,7 @@ class wordfence {
 		if($content){ 
 			return array('fileContent' => $content);
 		}
-		global $wp_version;
-		$api = new wfAPI(wfConfig::get('apiKey'), $wp_version);
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$dat = $api->call('get_wp_file_content', array(
 			'file' => $file,
 			'cType' => $cType,
@@ -342,8 +340,7 @@ class wordfence {
 		}
 	}
 	public static function ajax_sendActivityLog_callback(){
-		global $wp_version;
-		$content = "SITE: " . site_url() . "\nWP VERSION: $wp_version\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
+		$content = "SITE: " . site_url() . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
 		$wfdb = new wfDB();
 		global $wpdb;
 		$p = $wpdb->prefix;
@@ -418,7 +415,21 @@ class wordfence {
 		if(sizeof($validIPs) > 0){
 			$opts['liveTraf_ignoreIPs'] = implode(',', $validIPs);
 		}
-		
+		$reload = '';
+		if($opts['apiKey'] != wfConfig::get('apiKey')){
+			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
+			$res = $api->call('check_api_key', array(), array());
+			if($res['ok'] && $res['isPaid']){
+				wfConfig::set('apiKey', $opts['apiKey']);
+				$reload = 'reload';
+				wfConfig::set('isPaid', $res['isPaid']);
+			} else if($res['errorMsg']){
+				return array('errorMsg' => $res['errorMsg']);
+			} else {
+				return array('errorMsg' => "We could not change your API key. Please try again in a few minutes.");
+			}
+		}
+			
 		if(preg_match('/[a-zA-Z0-9\d]+/', $opts['liveTraf_ignoreUA'])){
 			$opts['liveTraf_ignoreUA'] = trim($opts['liveTraf_ignoreUA']);
 		} else {
@@ -435,8 +446,12 @@ class wordfence {
 		}
 		
 		//Clears next scan if scans are disabled. Schedules next scan if enabled.
-		self::scheduleNextScan();
-		return array('ok' => 1);
+		$err = self::scheduleNextScan();
+		if($err){
+			return array('errorMsg' => $err);
+		} else {
+			return array('ok' => 1, 'reload' => $reload );
+		}
 	}
 	public static function ajax_clearAllBlocked_callback(){
 		$op = $_POST['op'];
@@ -645,17 +660,19 @@ class wordfence {
 			return array("errorAlert" => "You entered an invalid API key." );
 		}
 		wfConfig::set('apiKey', $key);
-		global $wp_version;
-		$api = new wfAPI(wfConfig::get('apiKey'), $wp_version);
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$result = $api->call('activate', array(), array());
 		if($api->errorMsg){
 			wfConfig::set('apiKey', '');
 			return array("errorMsg" => $api->errorMsg );
 		}
-		if($result['ok']){
+		if($result['ok'] && $result['isPaid']){
+			wfConfig::set('isPaid', $result['isPaid']);
+			self::startScan();
 			return array("ok" => 1);
+		} else {
+			return array('errorAlert' => "An unknown error occured trying to activate Wordfence. Please try again in a few minutes." );
 		}
-		return array("errorAlert" => "An unknown error occured trying to activate Wordfence. Please try again in a few minutes." );
 	}
 	public static function ajax_scan_callback(){
 		self::startScan();
@@ -746,7 +763,7 @@ class wordfence {
 			echo "An invalid IP address was specified.";
 			exit(0);
 		}
-		global $wp_version; $wfLog = new wfLog(wfConfig::get('apiKey'), $wp_version);
+		$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$results = array_merge(
 			$wfLog->getHits('hits', 'hit', 0, 10000, $IP), 
 			$wfLog->getHits('hits', '404', 0, 10000, $IP)
@@ -948,7 +965,7 @@ class wordfence {
 		}
 	}
 	public static function genFilter($gen, $type){
-		if(wfConfig::get('other_hideWPVersion')){
+		if(wfConfig::get('other_hidegetWPVersion')){
 			return '';
 		} else {
 			return $gen;
@@ -998,9 +1015,11 @@ class wordfence {
 				//scan is already scheduled for the future
 				return;
 			}
-			global $wp_version;
-			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version);
+			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 			$result = $api->call('get_next_scan_time', array(), array());
+			if($result['errorMsg']){
+				return $result['errorMsg'];
+			}
 			$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.
 			if(is_array($result) && $result['secsToGo'] > 1){
 				$secsToGo = $result['secsToGo'];
@@ -1013,7 +1032,7 @@ class wordfence {
 	}
 	private static function getLog(){
 		if(! self::$wfLog){
-			global $wp_version; $wfLog = new wfLog(wfConfig::get('apiKey'), $wp_version);
+			$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 			self::$wfLog = $wfLog;
 		}
 		return self::$wfLog;
