@@ -89,6 +89,9 @@ Yes! Simply visit the Options page, click on advanced options and enable or disa
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.3.1 =
+* Some "other" security plugin trashes the $wp_version variable to hide your version rather than using the correct wordpress filter provided, so coded a workaround in case you have that installed.
+
 = 1.3 =
 * Minor fix to point to the correct binary API URL on the Wordfence cloud servers.
 
