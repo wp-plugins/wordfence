@@ -2,7 +2,12 @@
 ignore_user_abort(true);
 if ( !defined('ABSPATH') ) {
 	/** Set up WordPress environment */
-	require_once('../../../wp-load.php');
+	if($_SERVER['SCRIPT_FILENAME']){
+		$dir = preg_replace('/[^\/]+\/[^\/]+\/[^\/]+\/wfscan\.php$/', '', $_SERVER['SCRIPT_FILENAME']);
+		require_once($dir . 'wp-load.php');
+	} else {
+		require_once('../../../wp-load.php');
+	}
 }
 require_once('lib/wordfenceConstants.php');
 require_once('lib/wfScanEngine.php');

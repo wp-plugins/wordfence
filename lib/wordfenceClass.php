@@ -418,7 +418,21 @@ class wordfence {
 		if(sizeof($validIPs) > 0){
 			$opts['liveTraf_ignoreIPs'] = implode(',', $validIPs);
 		}
-		
+		$reload = '';
+		if($opts['apiKey'] != wfConfig::get('apiKey')){
+			$api = new wfAPI($opts['apiKey'], $wp_version);
+			$res = $api->call('check_api_key', array(), array());
+			if($res['ok'] && $res['isPaid']){
+				wfConfig::set('apiKey', $opts['apiKey']);
+				$reload = 'reload';
+				wfConfig::set('isPaid', $res['isPaid']);
+			} else if($res['errorMsg']){
+				return array('errorMsg' => $res['errorMsg']);
+			} else {
+				return array('errorMsg' => "We could not change your API key. Please try again in a few minutes.");
+			}
+		}
+			
 		if(preg_match('/[a-zA-Z0-9\d]+/', $opts['liveTraf_ignoreUA'])){
 			$opts['liveTraf_ignoreUA'] = trim($opts['liveTraf_ignoreUA']);
 		} else {
@@ -435,8 +449,12 @@ class wordfence {
 		}
 		
 		//Clears next scan if scans are disabled. Schedules next scan if enabled.
-		self::scheduleNextScan();
-		return array('ok' => 1);
+		$err = self::scheduleNextScan();
+		if($err){
+			return array('errorMsg' => $err);
+		} else {
+			return array('ok' => 1, 'reload' => $reload );
+		}
 	}
 	public static function ajax_clearAllBlocked_callback(){
 		$op = $_POST['op'];
@@ -652,10 +670,12 @@ class wordfence {
 			wfConfig::set('apiKey', '');
 			return array("errorMsg" => $api->errorMsg );
 		}
-		if($result['ok']){
+		if($result['ok'] && $result['isPaid']){
+			wfConfig::set('isPaid', $result['isPaid']);
 			return array("ok" => 1);
+		} else {
+			return array('errorAlert' => "An unknown error occured trying to activate Wordfence. Please try again in a few minutes." );
 		}
-		return array("errorAlert" => "An unknown error occured trying to activate Wordfence. Please try again in a few minutes." );
 	}
 	public static function ajax_scan_callback(){
 		self::startScan();
@@ -1001,6 +1021,9 @@ class wordfence {
 			global $wp_version;
 			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version);
 			$result = $api->call('get_next_scan_time', array(), array());
+			if($result['errorMsg']){
+				return $result['errorMsg'];
+			}
 			$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.
 			if(is_array($result) && $result['secsToGo'] > 1){
 				$secsToGo = $result['secsToGo'];
