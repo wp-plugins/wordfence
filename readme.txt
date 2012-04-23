@@ -2,18 +2,22 @@
 Contributors: mmaunder 
 Tags: anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence
 Requires at least: 3.3.1
-Tested up to: 3.3.1
-Stable tag: 1.1
+Tested up to: 3.3.2
+Stable tag: 1.3.2
 
 Wordfence is an enterprise firewall and anti-virus plugin for WordPress.
 
 == Description ==
 
-Wordfence is an enterprise firewall and anti-virus plugin for WordPress websites.
+Wordfence is a free enterprise class firewall and anti-virus plugin for WordPress websites.
+
+Wordfence is 100% free. You need to sign up on Wordfence.com to get a free API key.
+We also offer a Premium API key that adds additional scanning capabilities. See below for details.
 
 Wordfence:
 
-* Scans core files, themes and plugins against repository versions. 
+* Scans core files against repository versions to check their integrity.
+* Premium API key also scans themes and plugins against repository versions. This is currently the only difference between free and premium API keys.
 * See how files have changed. Optionally repair changed files.
 * Scans for signatures of over 44,000 known malware variants.
 * Continuously scans for known dangerous malware and phishing URL's in all your comments, posts and files.
@@ -85,6 +89,21 @@ Yes! Simply visit the Options page, click on advanced options and enable or disa
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.3.2 =
+* Reduced the number of database connections that Wordfence makes to one.
+* Modified the memory efficient unbuffered queries we use to only use a single DB connection.
+* Removed status updates during post and comment scans which prevents interference with unbuffered queries and makes the scans even faster.
+
+= 1.3.1 =
+* Fixed a bug where if you have the plugin "secure-wordpress" installed, you can't do a Wordfence scan because it says you have the wrong version. This is because secure-wordpress trashes the $wp_version global variable to hide your version rather than using the filters provided by WordPress. So coded a workaround so that your Wordfence scans will work with that plugin installed.
+
+= 1.3 =
+* Minor fix to point to the correct binary API URL on the Wordfence cloud servers.
+
+= 1.2 =
+* It is now free to get a Wordfence API key.
+* Premium keys include theme and plugin file verification which consumes resources on the Wordfence servers.
+* Various bugfixes and performance enhancements.
 
 = 1.1 =
 * Initial public release of Wordfence.

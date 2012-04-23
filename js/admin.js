@@ -630,8 +630,8 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_saveConfig', qstr, function(res){
 			jQuery('.wfAjax24').hide();
 			if(res.ok){
-				if(WFAD.reloadConfigPage){
-					self.colorbox('400px', "Please reload this page", "You selected a config option that changes the Wordfence menu on the left. Click the button below to reload this page to update the menu.<br /><br /><center><input type='button' name='wfReload' value='Reload page' onclick='window.location.reload();' /></center>");
+				if(res['reload'] == 'reload' || WFAD.reloadConfigPage){
+					self.colorbox('400px', "Please reload this page", "You selected a config option that requires a page reload. Click the button below to reload this page to update the menu.<br /><br /><center><input type='button' name='wfReload' value='Reload page' onclick='window.location.reload();' /></center>");
 					return;
 				} else {
 					self.pulse('.wfSavedMsg');

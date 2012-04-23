@@ -88,7 +88,7 @@ class wfAPI {
 	}
 	public function binCall($func, $postData){
 		$this->errorMsg = false;
-		$url = WORDFENCE_API_URL . '?' . $this->makeAPIQueryString() . '&action=' . $func;
+		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		$curl = curl_init($url);
 		curl_setopt ($curl, CURLOPT_TIMEOUT, 30);
 		//curl_setopt($curl, CURLOPT_VERBOSE, true);
