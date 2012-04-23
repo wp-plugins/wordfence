@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence
 Requires at least: 3.3.1
 Tested up to: 3.3.1
-Stable tag: 1.1
+Stable tag: 1.2
 
 Wordfence is an enterprise firewall and anti-virus plugin for WordPress.
 
