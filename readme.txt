@@ -89,6 +89,13 @@ Yes! Simply visit the Options page, click on advanced options and enable or disa
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.3 =
+* Minor fix to point to the correct binary API URL on the Wordfence cloud servers.
+
+= 1.2 =
+* It is now free to get a Wordfence API key.
+* Premium keys include theme and plugin file verification which consumes resources on the Wordfence servers.
+* Various bugfixes and performance enhancements.
 
 = 1.1 =
 * Initial public release of Wordfence.
