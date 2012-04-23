@@ -90,7 +90,7 @@ Yes! Simply visit the Options page, click on advanced options and enable or disa
 
 == Changelog ==
 = 1.3.1 =
-* Some "other" security plugin trashes the $wp_version variable to hide your version rather than using the correct wordpress filter provided, so coded a workaround in case you have that installed.
+* Fixed a bug where if you have the plugin "secure-wordpress" installed, you can't do a Wordfence scan because it says you have the wrong version. This is because secure-wordpress trashes the $wp_version global variable to hide your version rather than using the filters provided by WordPress. So coded a workaround so that your Wordfence scans will work with that plugin installed.
 
 = 1.3 =
 * Minor fix to point to the correct binary API URL on the Wordfence cloud servers.
