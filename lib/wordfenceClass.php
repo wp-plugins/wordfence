@@ -668,6 +668,7 @@ class wordfence {
 		}
 		if($result['ok'] && $result['isPaid']){
 			wfConfig::set('isPaid', $result['isPaid']);
+			self::startScan();
 			return array("ok" => 1);
 		} else {
 			return array('errorAlert' => "An unknown error occured trying to activate Wordfence. Please try again in a few minutes." );
