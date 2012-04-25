@@ -56,7 +56,8 @@ class wfAPI {
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . WORDFENCE_VERSION);
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt ($curl, CURLOPT_HEADER, 0);
-			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, TRUE);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
 			curl_setopt ($curl, CURLOPT_WRITEFUNCTION, array($this, 'curlWrite'));
 			@curl_setopt ($curl, CURLOPT_FOLLOWLOCATION, true);
 			@curl_setopt ($curl, CURLOPT_MAXREDIRS, 10);
@@ -94,7 +95,9 @@ class wfAPI {
 		//curl_setopt($curl, CURLOPT_VERBOSE, true);
 		curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
 		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
-		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, TRUE);
+		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+
 		@curl_setopt ($curl, CURLOPT_FOLLOWLOCATION, true);
 		@curl_setopt ($curl, CURLOPT_MAXREDIRS, 10);
 		curl_setopt($curl, CURLOPT_POST, true);

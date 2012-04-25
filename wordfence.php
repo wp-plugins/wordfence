@@ -2,9 +2,9 @@
 /*
 Plugin Name: Wordfence
 Plugin URI: http://wordfence.com/
-Description: Anti-virus and Firewall for WordPress 
+Description: WordPress Security - Anti-virus and Firewall for WordPress 
 Author: Mark Maunder
-Version: 1.3.3
+Version: 1.4.1
 Author URI: http://wordfence.com/
 */
 require_once('lib/wordfenceConstants.php');
