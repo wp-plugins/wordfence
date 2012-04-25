@@ -1,4 +1,5 @@
 <?php
+require_once('wfUtils.php');
 class wfCrawl {
 	public static function isCrawler($UA){
 		foreach(self::$patterns as $pat){
@@ -20,7 +21,7 @@ class wfCrawl {
 				return false;
 			}
 		}
-		global $wp_version; $wfLog = new wfLog(wfConfig::get('apiKey'), $wp_version);
+		$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$host = $wfLog->reverseLookup($IP);
 		if(! $host){ 
 			$db->query("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'noPTR', '', 'noPTR', '');
