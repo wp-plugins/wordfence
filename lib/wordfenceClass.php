@@ -565,7 +565,7 @@ class wordfence {
 		$issues = new wfIssues();
 		$jsonData = array(
 			'serverTime' => $serverTime,
-			'msg' => $wfdb->querySingle("select msg from $p"."wfStatus order by ctime desc limit 1"),
+			'msg' => $wfdb->querySingle("select msg from $p"."wfStatus where level < 3 order by ctime desc limit 1"),
 			'currentScanID' => $issues->getScanTime()
 			);
 		$events = array();
