@@ -27,26 +27,30 @@ window['wordfenceAdmin'] = {
 		} else if(jQuery('#wordfenceMode_activity').length > 0){
 			this.mode = 'activity';
 			this.activityMode = 'hit';
-			this.updateTicker();
+			this.updateTicker(true);
 		} else if(jQuery('#wordfenceMode_options').length > 0){
 			this.mode = 'options';
 			jQuery('.wfConfigElem').change(function(){ jQuery('#securityLevel').val('CUSTOM'); });
-			this.updateTicker();
+			this.updateTicker(true);
 		} else if(jQuery('#wordfenceMode_blockedIPs').length > 0){
 			this.mode = 'blocked';
 			this.staticTabChanged();
-			this.updateTicker();
+			this.updateTicker(true);
 		} else {
 			this.mode = false;
 		}
 		if(this.mode){ //We are in a Wordfence page
 			var self = this;
-			this.liveInt = setInterval(function(){ self.updateTicker(); }, 1000);
+			this.liveInt = setInterval(function(){ self.updateTicker(); }, 2000);
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
 
 	},
-	updateTicker: function(){
+	updateTicker: function(forceUpdate){
+		if( (! forceUpdate) && this.tickerUpdatePending){
+			return;
+		}
+		this.tickerUpdatePending = true;
 		var self = this;
 		var alsoGet = '';
 		var otherParams = '';
@@ -57,11 +61,10 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_ticker', { 
 			alsoGet: alsoGet,
 			otherParams: otherParams
-			}, function(res){ 
-			self.handleTickerReturn(res);
-			});
+			}, function(res){ self.handleTickerReturn(res); }, function(){ self.tickerUpdatePending = false; });
 	},
 	handleTickerReturn: function(res){
+		this.tickerUpdatePending = false;
 		var statusMsgChanged = false;
 		var newMsg = "";
 		var oldMsg = jQuery('#wfLiveStatus').html();
@@ -100,7 +103,7 @@ window['wordfenceAdmin'] = {
 		} else if(this.mode == 'activity'){
 			if(res.alsoGet != 'logList_' + this.activityMode){ return; } //user switched panels since ajax request started
 			if(/^(?:topScanners|topLeechers)$/.test(this.activityMode)){
-				if(statusMsgChanged){ this.updateTicker(); } return;
+				if(statusMsgChanged){ this.updateTicker(true); } return;
 			}
 			if(res.events.length > 0){
 				this.newestActivityTime = res.events[0]['ctime'];
@@ -138,7 +141,7 @@ window['wordfenceAdmin'] = {
 				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
 				});
 		}
-		if(statusMsgChanged){ this.updateTicker(); } return;
+		if(statusMsgChanged){ this.updateTicker(true); } return;
 	},
 	reverseLookupIPs: function(){
 		var ips = [];
@@ -182,7 +185,8 @@ window['wordfenceAdmin'] = {
 	activateWF: function(key){
 		jQuery('.wfAjax24').show();
 		this.ajax('wordfence_activate', {
-			key: key
+			key: jQuery('#wordfenceKey').val(),
+			email: jQuery('#email').val()
 			},
 			function(res){
 				jQuery('.wfAjax24').hide();
@@ -446,7 +450,7 @@ window['wordfenceAdmin'] = {
 		});
 	},
 	emailActivityLog: function(){
-		this.colorbox('400px', 'Email Wordfence Activity Log', "Enter the email address you would like to send the Wordfence activity log to. Note that the activity log may contain thousands of lines of data. This log is usually only sent to a member of the Wordfence support team.<br /><br /><input type='text' size='20' id='wfALogRecip' /><input type='button' value='Send' onclick=\"WFAD.completeEmailActivityLog();\" /><input type='button' value='Cancel' onclick='jQuery.colorbox.close();' /><br /><br />");
+		this.colorbox('400px', 'Email Wordfence Activity Log', "Enter the email address you would like to send the Wordfence activity log to. Note that the activity log may contain thousands of lines of data. This log is usually only sent to a member of the Wordfence support team. It also contains your PHP configuration from the phpinfo() function for diagnostic data.<br /><br /><input type='text' value='support@wordfence.com' size='20' id='wfALogRecip' /><input type='button' value='Send' onclick=\"WFAD.completeEmailActivityLog();\" /><input type='button' value='Cancel' onclick='jQuery.colorbox.close();' /><br /><br />");
 	},
 	completeEmailActivityLog: function(){
 		jQuery.colorbox.close();
@@ -498,7 +502,7 @@ window['wordfenceAdmin'] = {
 	reloadActivities: function(){
 		jQuery('#wfActivity_' + this.activityMode).html('<div class="wfLoadingWhite32"></div>');
 		this.newestActivityTime = 0;
-		this.updateTicker();
+		this.updateTicker(true);
 	},
 	staticTabChanged: function(){
 		var mode = jQuery('.wfDataPanel:visible')[0].id.replace('wfActivity_','');
@@ -630,8 +634,8 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_saveConfig', qstr, function(res){
 			jQuery('.wfAjax24').hide();
 			if(res.ok){
-				if(WFAD.reloadConfigPage){
-					self.colorbox('400px', "Please reload this page", "You selected a config option that changes the Wordfence menu on the left. Click the button below to reload this page to update the menu.<br /><br /><center><input type='button' name='wfReload' value='Reload page' onclick='window.location.reload();' /></center>");
+				if(res['reload'] == 'reload' || WFAD.reloadConfigPage){
+					self.colorbox('400px', "Please reload this page", "You selected a config option that requires a page reload. Click the button below to reload this page to update the menu.<br /><br /><center><input type='button' name='wfReload' value='Reload page' onclick='window.location.reload();' /></center>");
 					return;
 				} else {
 					self.pulse('.wfSavedMsg');

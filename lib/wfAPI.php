@@ -1,5 +1,6 @@
 <?php
 require_once('wordfenceConstants.php');
+require_once('wordfenceClass.php');
 class wfAPI {
 	public $errorMsg = false;
 	public $lastURLError = '';
@@ -14,6 +15,7 @@ class wfAPI {
 		$this->wordpressVersion = $wordpressVersion;
 	}
 	public function call($action, $getParams = array(), $postParams = array()){
+		wordfence::status(3, 'info', "Starting API call: $action");
 		$this->errorMsg = false;
 		$json = $this->getURL(WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
 			array_merge(
@@ -26,6 +28,7 @@ class wfAPI {
 			} else {
 				$this->errorMsg = "We could not fetch data from the API when calling '$action': " . $this->lastURLError;
 			}
+			wordfence::status(3, 'error', "API Error: " . $this->errorMsg);
 			return false;
 		}
 
@@ -35,6 +38,11 @@ class wfAPI {
 		}
 		if($dat['errorMsg']){
 			$this->errorMsg = $dat['errorMsg'];
+		}
+		if($this->errorMsg){
+			wordfence::status(3, 'error', "API Error: " . $this->errorMsg);
+		} else {
+			wordfence::status(3, 'info', "Completed API call: $action");
 		}
 		return $dat;
 	}
@@ -52,11 +60,12 @@ class wfAPI {
 			$this->curlDataWritten = 0;
 			$this->curlContent = "";
 			$curl = curl_init($url);
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 30);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . WORDFENCE_VERSION);
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt ($curl, CURLOPT_HEADER, 0);
-			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, TRUE);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
 			curl_setopt ($curl, CURLOPT_WRITEFUNCTION, array($this, 'curlWrite'));
 			@curl_setopt ($curl, CURLOPT_FOLLOWLOCATION, true);
 			@curl_setopt ($curl, CURLOPT_MAXREDIRS, 10);
@@ -87,14 +96,17 @@ class wfAPI {
 
 	}
 	public function binCall($func, $postData){
+		wordfence::status(3, 'info', "Starting binary API call: $func");
 		$this->errorMsg = false;
-		$url = WORDFENCE_API_URL . '?' . $this->makeAPIQueryString() . '&action=' . $func;
+		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		$curl = curl_init($url);
-		curl_setopt ($curl, CURLOPT_TIMEOUT, 30);
+		curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
 		//curl_setopt($curl, CURLOPT_VERBOSE, true);
 		curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
 		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
-		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, TRUE);
+		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+
 		@curl_setopt ($curl, CURLOPT_FOLLOWLOCATION, true);
 		@curl_setopt ($curl, CURLOPT_MAXREDIRS, 10);
 		curl_setopt($curl, CURLOPT_POST, true);
@@ -109,9 +121,11 @@ class wfAPI {
 			$jdat = @json_decode($data, true);
 			if(is_array($jdat) && $jdat['errorMsg']){
 				$this->errorMsg = $jdat['errorMsg'];
+				wordfence::status(3, 'error', "Error in binary API call $func: " . $this->errorMsg);
 				return false;
 			}
 		}
+		wordfence::status(3, 'info', "Completed binary API call $func with code: $code");
 		return array('code' => $httpStatus, 'data' => $data);
 	}
 	public function makeAPIQueryString(){

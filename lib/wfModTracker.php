@@ -1,4 +1,5 @@
 <?php
+require_once('wordfenceClass.php');
 class wfModTracker {
 	private $themeSum = false;
 	private $pluginSum = false;
@@ -9,12 +10,18 @@ class wfModTracker {
 	public function __construct(){
 		global $wpdb;
 		$this->changesTable = $wpdb->prefix . 'wfFileChanges';
+		$this->status(2, 'info', "Getting file change DB handle");
 		$this->db = new wfDB();
+		$this->status(2, 'info', "Starting theme change check");
 		$this->themeSum = $this->makeSum(get_theme_root());
+		$this->status(2, 'info', "Starting plugin change scan");
 		$this->pluginSum = $this->makeSum(WP_PLUGIN_DIR);
+		$this->status(2, 'info', "Starting core file change scan");
 		$this->coreSum = $this->makeCoreSum();
 		$this->allFilesSum = array();
+		$this->status(2, 'info', "Getting changes in all other files");
 		$this->getAllFilesSum(ABSPATH);
+		$this->status(2, 'info', "Done compiling file changes");
 	}
 	public static function resetChanges(){
 		wfConfig::set('wfmdt_coreSum', '');
@@ -110,6 +117,9 @@ class wfModTracker {
 			}
 		}
 		return md5($str);
+	}
+	private function status($level, $type, $msg){
+		wordfence::status($level, $type, $msg);
 	}
 }
 ?>

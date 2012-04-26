@@ -139,7 +139,7 @@ class wfSchema {
 	private $prefix = 'wp_';
 	public function __construct($dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
 		if($dbhost){ //for testing
-			$this->db = new wfDB($dbhost, $dbuser, $dbpassword, $dbname);
+			$this->db = new wfDB(false, $dbhost, $dbuser, $dbpassword, $dbname);
 			$this->prefix = 'wp_';
 		} else {
 			global $wpdb;
