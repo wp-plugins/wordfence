@@ -79,7 +79,7 @@ class wfConfig {
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -139,7 +139,7 @@ class wfConfig {
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -198,8 +198,8 @@ class wfConfig {
 				"liveTraf_ignorePublishers" => true,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
-				"scansEnabled_themes" => true,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_themes" => false,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -258,8 +258,8 @@ class wfConfig {
 				"liveTraf_ignorePublishers" => true,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
-				"scansEnabled_themes" => true,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_themes" => false,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -317,6 +317,9 @@ class wfConfig {
 			}
 		}
 		self::set('encKey', substr(wfUtils::bigRandomHex(),0 ,16) );
+		if(! self::get('isPaid', false)){
+			self::set('isPaid', 'free');
+		}
 	}
 	public static function parseOptions(){
 		$ret = array();
