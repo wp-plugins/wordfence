@@ -52,7 +52,7 @@ class wfAPI {
 			$this->curlDataWritten = 0;
 			$this->curlContent = "";
 			$curl = curl_init($url);
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 30);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . WORDFENCE_VERSION);
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt ($curl, CURLOPT_HEADER, 0);
@@ -91,7 +91,7 @@ class wfAPI {
 		$this->errorMsg = false;
 		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		$curl = curl_init($url);
-		curl_setopt ($curl, CURLOPT_TIMEOUT, 30);
+		curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
 		//curl_setopt($curl, CURLOPT_VERBOSE, true);
 		curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
 		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
