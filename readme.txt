@@ -141,6 +141,7 @@ or a theme, because often these have been updated to fix a security hole.
 * Login security message.
 * Updated readme.txt FAQ and description.
 * Fixed bug where sites with self signed SSL security certificate never start scan because cert fails security check.
+* Increased API curl timeout to 300 for slower hosts that seem affected during URL security scans.
 
 = 1.4.1 =
 * This is a major release, please upgrade immediately.
