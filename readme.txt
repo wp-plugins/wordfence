@@ -9,7 +9,7 @@ Wordfence Security is a free enterprise class security plugin that includes a fi
 
 == Description ==
 
-Wordfence WordPrses Security is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
+Wordfence Security is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
