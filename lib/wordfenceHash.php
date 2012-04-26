@@ -43,7 +43,6 @@ class wordfenceHash {
 				if(is_file($file)){
 					$this->processFile($file);
 				} else if(is_dir($file)) {
-					wordfence::status(2, 'info', "Traversing into dir $file");
 					$this->_dirHash($file);
 				}
 			}
@@ -56,6 +55,7 @@ class wordfenceHash {
 	private function processFile($file){
 		$wfHash = $this->wfHash($file, true); 
 		if($wfHash){
+			wordfence::status(2, 'info', "Examined file: $file");
 			$this->hashes[substr($file, $this->striplen)] = $wfHash;
 			//Now that we know we can open the file, lets update stats
 			if(preg_match('/\.(?:js|html|htm|css)$/i', $file)){
@@ -65,6 +65,8 @@ class wordfenceHash {
 			}
 			$this->totalFiles++;
 			$this->totalData += filesize($file);
+		} else {
+			wordfence::status(2, 'error', "Could not gen hash for file: $file");
 		}
 	}
 	public function wfHash($file, $binary = true){

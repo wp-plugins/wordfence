@@ -149,6 +149,7 @@ class wordfence {
 		add_action('wp_logout','wordfence::logoutAction');
 		add_action('profile_update', 'wordfence::profileUpdateAction', '99', 2);
 		add_action('lostpassword_post', 'wordfence::lostPasswordPost', '1');
+		add_action('login_form', 'wordfence::loginForm', '1');
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
 		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
@@ -352,6 +353,14 @@ class wordfence {
 			$content .= date(DATE_RFC822, $r['ctime']) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . $r['msg'] . "\n";
 		}
 		$content .= "\n\n";
+		
+		ob_start();
+		phpinfo();
+		$phpinfo = ob_get_contents();
+		ob_get_clean();
+
+		$content .= $phpinfo;
+		
 		wp_mail($_POST['email'], "Wordfence Activity Log", $content);	
 		return array('ok' => 1);
 	}
@@ -653,13 +662,18 @@ class wordfence {
 			);
 	}
 	public static function ajax_activate_callback(){
-		$key = $_POST['key'];
-		$key = trim($key);
+		$key = trim($_POST['key']);
+		$email = trim($_POST['email']);
 		$key = preg_replace('/[^a-fA-F0-9]+/', '', $key);
 		if(strlen($key) < 10){
 			return array("errorAlert" => "You entered an invalid API key." );
 		}
+		if(! preg_match('/.+\@.+/', $email)){
+			return array("errorAlert" => "Please enter a valid email address where Wordfence can send alerts.");
+		}
+
 		wfConfig::set('apiKey', $key);
+		wfConfig::set('alertEmails', $email);
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$result = $api->call('activate', array(), array());
 		if($api->errorMsg){
@@ -668,30 +682,61 @@ class wordfence {
 		}
 		if($result['ok'] && $result['isPaid']){
 			wfConfig::set('isPaid', $result['isPaid']);
-			self::startScan();
-			return array("ok" => 1);
+			$err = self::startScan();
+			if($err){
+				return array('errorMsg' => $err);
+			} else {
+				return array("ok" => 1);
+			}
 		} else {
 			return array('errorAlert' => "An unknown error occured trying to activate Wordfence. Please try again in a few minutes." );
 		}
 	}
 	public static function ajax_scan_callback(){
-		self::startScan();
-		return array("ok" => "1" );
+		$err = self::startScan();
+		if($err){
+			return array('errorMsg' => $err);
+		} else {
+			return array("ok" => 1);
+		}
 	}
 	public static function startScan(){
 		$cron_url = plugins_url('wordfence/wfscan.php');
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
 		$result = wp_remote_post( $cron_url, array(
-			'timeout' => 0.1, 
-			'blocking' => false, 
-			'sslverify' => apply_filters('https_local_ssl_verify', true),
+			'timeout' => 0.5, 
+			'blocking' => true, 
+			'sslverify' => false,
 			'headers' => array(
 				'x-wordfence-cronkey' => $cronKey
 				)
 			) );
+		if(is_wp_error($result) && sizeof($result->errors) > 0){
+			$errs = "";
+			$isTimeout = false;
+			foreach($result->errors as $key => $val){
+				$errs .= $key . ": ";
+				foreach($val as $e){
+					$errs .= $e . ' ';
+					if(preg_match('/timed/i', $e)){
+						$isTimeout = true;
+					}
+				}
+			}
+			if(! $isTimeout){
+				return "Error connecting to Wordfence scanning system: " . $errs;
+			}
+		}
+		if((! is_wp_error($result)) && is_array($result) && $result['body'] && strstr($result['body'], '{') !== false){
+			$resp = json_decode($result['body'], true);
+			if($resp['errorMsg']){
+				return $resp['errorMsg'];
+			}
+		}
+				
 		//If the currentCronKey was eaten, then cron executed so return
-		wfConfig::clearCache(); if(! wfConfig::get('currentCronKey')){ return; }
+		wfConfig::clearCache(); if(! wfConfig::get('currentCronKey')){ return false; }
 
 		//This second request is for hosts that don't know their own name. i.e. they don't have example.com in their hosts file or DNS pointing to their own IP address or loopback address. So we throw a hail mary to loopback.
 		usleep(200000);
@@ -702,16 +747,40 @@ class wordfence {
 			if(preg_match('/^https?:\/\/([^\/]+)/i', site_url(), $matches)){
 				$host = $matches[1];
 				$result = wp_remote_post( $cron_url, array(
-					'timeout' => 0.2, 
-					'blocking' => false, 
-					'sslverify' => apply_filters('https_local_ssl_verify', true),
+					'timeout' => 0.5, 
+					'blocking' => true, 
+					'sslverify' => false,
 					'headers' => array(
 						'x-wordfence-cronkey' => $cronKey,
 						'Host' => $host
 						)
 					) );
+				if(is_wp_error($result) && sizeof($result->errors) > 0){
+					$errs = "";
+					$isTimeout = false;
+					foreach($result->errors as $key => $val){
+						$errs .= $key . ": ";
+						foreach($val as $e){
+							$errs .= $e . ' ';
+							if(preg_match('/timed/i', $e)){
+								$isTimeout = true;
+							}
+						}
+					}
+					if(! $isTimeout){
+						return "Error connecting to Wordfence scanning system: " . $errs;
+					}
+				}
+				if((! is_wp_error($result)) && is_array($result) && $result['body'] && strstr($result['body'], '{') !== false){
+					$resp = json_decode($result['body'], true);
+					if($resp['errorMsg']){
+						return $resp['errorMsg'];
+					}
+				}
+	
 			}
 		}
+		return false;
 	}
 	public static function templateRedir(){
 		$wfLog = self::getLog();
@@ -1036,6 +1105,9 @@ class wordfence {
 			self::$wfLog = $wfLog;
 		}
 		return self::$wfLog;
+	}
+	public static function loginForm(){
+		echo "<p><a href='http://www.wordfence.com/' target='_blank'>WordPress Security powered by Wordfence</a><br /><br /><br /></p>";
 	}
 }
 ?>

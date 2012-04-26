@@ -20,17 +20,28 @@ require_once('lib/wfScanEngine.php');
 
 class wfScan {
 	public static function wfScanMain(){
-		if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ exit(); }
-		$savedKey = explode(',',wfConfig::get('currentCronKey'));
-		if(time() - $savedKey[0] > 60){ exit(); } //keys only last 60 seconds and are used within milliseconds of creation
-		if($savedKey[1] != $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ exit(); }
+		if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
+			self::errorExit("The Wordfence scanner did not receive the x_wordfence_cronkey secure header.");
+		}
+		$currentCronKey = wfConfig::get('currentCronKey', false);
+		if(! $currentCronKey){
+			self::errorExit("Wordfence could not find a saved cron key to start the scan.");
+		}
+
+		$savedKey = explode(',',$currentCronKey);
+		if(time() - $savedKey[0] > 60){ 
+			self::errorExit("The key used to start a scan has expired.");
+		} //keys only last 60 seconds and are used within milliseconds of creation
+		if($savedKey[1] != $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
+			self::errorExit("Wordfence could not start a scan because the cron key does not match the saved key.");
+		}
 		wfConfig::set('currentCronKey', '');
 		ini_set('max_execution_time', 1800); //30 mins
 		self::becomeAdmin();
 
 		$scanRunning = wfConfig::get('wf_scanRunning');
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
-			return;
+			self::errorExit("There is already a scan running.");
 		}
 		wfConfig::set('wf_scanRunning', time());
 		register_shutdown_function('wfScan::clearScan');
@@ -38,6 +49,10 @@ class wfScan {
 		$scan = new wfScanEngine();
 		$scan->go();
 		wfConfig::set('wf_scanRunning', '');
+	}
+	private static function errorExit($msg){
+		echo json_encode(array('errorMsg' => $msg)); 
+		exit();	
 	}
 	public static function becomeAdmin(){
 		global $wpdb;

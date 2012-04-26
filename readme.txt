@@ -1,17 +1,17 @@
-=== Plugin Name ===
+=== Wordfence Security ===
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 
-Wordfence is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
+Wordfence Security is a free enterprise class security plugin that includes a firewall, anti-virus scanning and other security features for your WordPress websites. 
 
 == Description ==
 
-[Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
+Wordfence WordPrses Security is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
 
-Wordfence is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
+[Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
 Wordfence is 100% free. You need to sign up on Wordfence.com to get a free API key.
 We also offer a Premium API key that adds additional scanning capabilities. See below for details.
@@ -21,80 +21,127 @@ Wordfence:
 * Scans core files against repository versions to check their integrity.
 * Premium API key also scans themes and plugins against repository versions. This is currently the only difference between free and premium API keys.
 * See how files have changed. Optionally repair changed files.
-* Scans for signatures of over 44,000 known malware variants.
-* Continuously scans for known dangerous malware and phishing URL's in all your comments, posts and files.
-* Scans for heuristics of backdoors, trojans and suspicious code.
-* Checks the strength of all user and admin passwords.
+* Scans for signatures of over 44,000 known malware variants that are known security threats.
+* Continuously scans for malware and phishing URL's in all your comments, posts and files that are security threats.
+* Scans for heuristics of backdoors, trojans,  suspicious code and other security issues.
+* Checks the strength of all user and admin passwords to enhance login security.
 * Monitor for unauthorized DNS changes.
-* Monitor disk space.
-* Includes a firewall to block fake Googlebots, malicious scans from hackers and botnets.
-* Configure rate limiting based on different types of traffic.
-* Choose whether you want to block or throttle users and robots who break your rules.
-* Includes login security to lock out brute force hacks and to stop WordPress from revealing info useful to a hacker.
-* See all your traffic in real-time, including robots, humans, 404 errors, logins and logouts and who is consuming most of your content.
-* A real-time view of all traffic including crawlers, scrapers and shows in depth data on each hit including city level location.
+* Includes a firewall to block common security threats like fake Googlebots, malicious scans from hackers and botnets.
+* Rate limit or block security threats like aggressive crawlers, scrapers and bots doing security scans for vulnerabilities in your site.
+* Choose whether you want to block or throttle users and robots who break your security rules.
+* Includes login security to lock out brute force hacks and to stop WordPress from revealing info that will compromise security.
+* See all your traffic in real-time, including robots, humans, 404 errors, logins and logouts and who is consuming most of your content. Enhances your situational awareness of which security threats your site is facing.
+* A real-time view of all traffic including automated bots that often constitute security threats that Javascript analytics packages never show you.
+* Real-time traffic includes reverse DNS and city-level geolocation. Know which geographic area security threats originate from.
+* Monitors disk space which is related to security because many DDoS attacks attempt to consume all disk space to create denial of service.
 
-Wordfence is full-featured and constantly updated by our team to incorporate the latest security features and to hunt for the 
-newest threats to your WordPress website.
+Wordfence Security is full-featured and constantly updated by our team to incorporate the latest security features and to hunt for the 
+newest security threats to your WordPress website.
 
 == Installation ==
 
+To install Wordfence Security and start protecting your WordPress website:
+
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
-To install Wordfence and start protecting your WordPress website:
-
-1. Install Wordfence automatically or by uploading the ZIP file. 
-1. Activate the plugin through the 'Plugins' menu in WordPress.
-1. Visit [Wordfence.com to get an API key](http://wordfence.com/)
+1. Install Wordfence Security automatically or by uploading the ZIP file. 
+1. Activate the security plugin through the 'Plugins' menu in WordPress.
+1. Visit [Wordfence.com to get an API key](http://wordfence.com/) which you need to security scans.
 1. Go to the Wordfence menu option that appears on the left or your site's admin section.
 1. Enter your API key and click the button.
-1. Wordfence is now activated. Do your first scan which will enable scheduled scanning.
-1. Visit the Wordfence options page to enter your email address so that you can receive email alerts.
-1. Optionally change your security level or click the advanced options link to see under the hood.
+1. Wordfence is now activated. Your first security scan will start automatically and scheduled security scanning will also be enabled.
+1. Visit the Wordfence options page to enter your email address so that you can receive email security alerts.
+1. Optionally change your security level or click the advanced options link to see individual security scanning and protection options.
 1. Click the "Live Traffic" menu option to watch your site activity in real-time.
 
 == Frequently Asked Questions ==
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
-= Why does Wordfence need an API key? =
+= Why does Wordfence Security need an API key? =
 
-Wordfence contacts our servers for a variety of reasons. These include: comparing the hashes of your core, theme and plugin files
-against the official versions, checking if URL's in your comments, posts and files are on any known list of dangerous URL's, checking
-if any of your file signatures match a large list of known malware files, and much more. 
+Wordfence securely contacts our servers when doing a security scan. These include: comparing the hashes of your core, theme and plugin files
+against the official versions to see if security has been compromised, checking if URL's in your comments, posts and files are on any known list of dangerous URL's and checking
+if any of your file signatures match a large list of known malware files that constitute a security threat.
 
 = Will Wordfence slow my site down? =
 
-We have spent a lot of time making sure Wordfence runs very quickly. Wordfence uses its own database
+We have spent a lot of time making sure Wordfence runs very quickly and securely. Wordfence uses its own database
 tables and advanced mysql features to ensure it runs as fast as possible. The creators of Wordfence
 also run a large scale real-time analytics product and much of the technology and knowledge from
 our real-time analytics products is built into Wordfence.
 
 = How often is Wordfence updated? =
 
-Wordfence is continually updated. That is the advantage of scanning using an API key that connects to a
-web service. While we do provide updates to the Wordfence plugin frequently and it's important
-that you install those updates, our web service is updated even more frequently with known 
-security issues that Wordfence will scan for.
+The Wordfence security plugin is frequently updated and we update the code on our security scanning servers
+more frequently. Our cloud servers are continually updated with the latest known security threats and vulnerabilities so
+that we can blog any security threat as soon as it emerges in the wild.
 
 = What if I need support? =
 
 All our paid customers receive priority support. Excellent customer service is a key part
-of being a Wordfence member.
+of being a Wordfence member. You can also [visit our support forums where we provide free support for all Wordfence users](http://wordfence.com/forums/) and answer any security releated questions you may have.
 
-= Can I disable certain features of Wordfence? =
+= Can I disable certain security features of Wordfence? =
 
-Yes! Simply visit the Options page, click on advanced options and enable or disable the features you want.
+Yes! Simply visit the Options page, click on advanced options and enable or disable the security features you want.
+
+= What if my site security has already been compromised by a hacker? =
+
+Wordfence is the only security plugin that is able to repair core files, themes and plugins on sites where security is already compromised.
+However, please note that site security can not be assured unless you do a full reinstall if your site has been hacked. We recommend you only
+use Wordfence to get your site into a running state in order to recover the data you need to do a full reinstall. A full reinstall is the only
+way to ensure site security once you have been hacked. 
+
+= How will I be alerted that my site has a security problem? =
+
+Wordfence sends security alerts via email. Once you install Wordfence, you will configure a list of email addresses where security alerts will be sent.
+When you receive a security alert, make sure you deal with it promptly to ensure your site stays secure.
+
+= My WordPress site is behind a firewall. Doesn't that make it secure? =
+
+If your site is accessible from the web, it means that people you don't know can execute PHP code on your site.
+They have to be able to execute PHP code, like the core WordPress code, in order for your site to work. 
+Most WordPress security threats allow a hacker to execute PHP code on your website. The challenge hackers
+face is how to get their malicious PHP code onto your site to compromise your security. There
+are many upload mechanisms that WordPress itself, themes and plugins offer and the vast majority of these
+are secure. However, every now and then a hacker discovers an upload mechanism that is not secure or 
+a way of fooling your site into allowing an upload. That is usually when security is compromised. Even
+though your site is behind a commercial firewall, it still accepts web requests that include uploads and executes PHP code
+and as long as it does that, it may become face a security vulnerability at some point.
+
+= Will Wordfence protect me against the Timthumb security problem? =
+
+The timthumb security exploit occured in 2011 and all good plugins and themes now use an updated 
+version of timthumb (which the creator of Wordfence wrote and donated to the timthumb author) which closes the security hole that
+caused the problem. However we do scan for old version of timthumb for good measure to make sure they don't 
+cause a security hole on your site. 
+
+= People keep telling me that WordPress itself has security problems. Is that true? =
+
+In general, no it's not. The WordPress team work very hard to keep the awesome software they have produced secure and in the
+rare cases when a security hole is found, they fix it very quickly. Most responsible plugin authors also fix security holes
+as soon as they are told about them. That's why Wordfence will warn you if you're running an old version of WordPress, a plugin
+or a theme, because often these have been updated to fix a security hole.
+
 
 == Screenshots ==
 
-1. The home screen of Wordfence where you can see a summary, manage issues and do a manual scan. 
+1. The home screen of Wordfence where you can see a summary, manage security issues and do a manual security scan. 
 2. The Live Traffic view of Wordfence where you can see real-time activity on your site.
-3. The "Blocked IPs" page where you can manage blocked IP's, locked out IP's and see recently throttled IPs.
+3. The "Blocked IPs" page where you can manage blocked IP's, locked out IP's and see recently throttled IPs that violated security rules.
 4. The basic view of Wordfence options. There is very little to configure other than your alert email address and security level.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.4.2 =
+* Email to send security alerts to is now configured at the same time an API key is entered.
+* phpinfo is emailed along with activity log when user requests to send us activity log so that we can see things like PHP max execution time and other relevant data
+* Now writing individual files to activity log during security scans for better diagnostics.
+* Login security message.
+* Updated readme.txt FAQ and description.
+* Fixed bug where sites with self signed SSL security certificate never start scan because cert fails security check.
+
 = 1.4.1 =
 * This is a major release, please upgrade immediately.
 * Only scan files in the WordPress ABSPATH root directory and known WordPress subdirectories. Prevents potentially massive scans on hosts that have large dirs off their wordpress root.

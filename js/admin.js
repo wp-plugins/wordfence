@@ -185,7 +185,8 @@ window['wordfenceAdmin'] = {
 	activateWF: function(key){
 		jQuery('.wfAjax24').show();
 		this.ajax('wordfence_activate', {
-			key: key
+			key: jQuery('#wordfenceKey').val(),
+			email: jQuery('#email').val()
 			},
 			function(res){
 				jQuery('.wfAjax24').hide();
@@ -449,7 +450,7 @@ window['wordfenceAdmin'] = {
 		});
 	},
 	emailActivityLog: function(){
-		this.colorbox('400px', 'Email Wordfence Activity Log', "Enter the email address you would like to send the Wordfence activity log to. Note that the activity log may contain thousands of lines of data. This log is usually only sent to a member of the Wordfence support team.<br /><br /><input type='text' size='20' id='wfALogRecip' /><input type='button' value='Send' onclick=\"WFAD.completeEmailActivityLog();\" /><input type='button' value='Cancel' onclick='jQuery.colorbox.close();' /><br /><br />");
+		this.colorbox('400px', 'Email Wordfence Activity Log', "Enter the email address you would like to send the Wordfence activity log to. Note that the activity log may contain thousands of lines of data. This log is usually only sent to a member of the Wordfence support team. It also contains your PHP configuration from the phpinfo() function for diagnostic data.<br /><br /><input type='text' value='support@wordfence.com' size='20' id='wfALogRecip' /><input type='button' value='Send' onclick=\"WFAD.completeEmailActivityLog();\" /><input type='button' value='Cancel' onclick='jQuery.colorbox.close();' /><br /><br />");
 	},
 	completeEmailActivityLog: function(){
 		jQuery.colorbox.close();
