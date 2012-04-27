@@ -139,17 +139,17 @@ class wfSchema {
 	private $prefix = 'wp_';
 	public function __construct($dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
 		if($dbhost){ //for testing
-			$this->db = new wfDB($dbhost, $dbuser, $dbpassword, $dbname);
+			$this->db = new wfDB(false, $dbhost, $dbuser, $dbpassword, $dbname);
 			$this->prefix = 'wp_';
 		} else {
 			global $wpdb;
 			$this->db = new wfDB();
-			$this->prefix = $wpdb->prefix;
+			$this->prefix = $wpdb->base_prefix;
 		}
 	}
-	public function dropAll(){
+	public function dropAll($prefix){
 		foreach($this->tables as $table => $def){
-			$this->db->query("drop table if exists " . $this->prefix . $table);
+			$this->db->query("drop table if exists " . $prefix . $table);
 		}
 	}
 	public function createAll(){
