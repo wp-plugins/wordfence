@@ -22,7 +22,7 @@ function wfVisitor(){
 	$hid = wfUtils::decrypt($hid);
 	if(! preg_match('/^\d+$/', $hid)){ exit(); }
 	$db = new wfDB();
-	global $wpdb; $p = $wpdb->prefix;
+	global $wpdb; $p = $wpdb->base_prefix;
 	$db->query("update $p"."wfHits set jsRun=1 where id=%d", $hid);
 	exit();
 }

@@ -144,12 +144,12 @@ class wfSchema {
 		} else {
 			global $wpdb;
 			$this->db = new wfDB();
-			$this->prefix = $wpdb->prefix;
+			$this->prefix = $wpdb->base_prefix;
 		}
 	}
-	public function dropAll(){
+	public function dropAll($prefix){
 		foreach($this->tables as $table => $def){
-			$this->db->query("drop table if exists " . $this->prefix . $table);
+			$this->db->query("drop table if exists " . $prefix . $table);
 		}
 	}
 	public function createAll(){

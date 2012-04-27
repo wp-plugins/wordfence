@@ -9,7 +9,7 @@ class wfModTracker {
 	private $anyFilesChangedCached = false;
 	public function __construct(){
 		global $wpdb;
-		$this->changesTable = $wpdb->prefix . 'wfFileChanges';
+		$this->changesTable = $wpdb->base_prefix . 'wfFileChanges';
 		$this->status(2, 'info', "Getting file change DB handle");
 		$this->db = new wfDB();
 		$this->status(2, 'info', "Starting theme change check");
@@ -29,7 +29,7 @@ class wfModTracker {
 		wfConfig::set('wfmdt_pluginSum', '');
 		$db = new wfDB();
 		global $wpdb;
-		$db->query("delete from " . $wpdb->prefix . 'wfFileChanges');
+		$db->query("delete from " . $wpdb->base_prefix . 'wfFileChanges');
 	}
 	public function filesModifiedInCore(){  if(wfConfig::get('wfmdt_coreSum') != $this->coreSum){ return true; } else { return false; } }
 	public function filesModifiedInThemes(){  if(wfConfig::get('wfmdt_themeSum') != $this->themeSum){ return true; } else { return false; } }

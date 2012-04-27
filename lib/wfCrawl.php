@@ -10,7 +10,7 @@ class wfCrawl {
 		return false;
 	}
 	public static function verifyCrawlerPTR($hostPattern, $IP){
-		global $wpdb; $table = $wpdb->prefix . 'wfCrawlers';
+		global $wpdb; $table = $wpdb->base_prefix . 'wfCrawlers';
 		$db = new wfDB();
 		$IPn = wfUtils::inet_aton($IP);
 		$status = $db->querySingle("select status from $table where IP=%s and patternSig=UNHEX(MD5('%s')) and lastUpdate > unix_timestamp() - %d", $IPn, $hostPattern, WORDFENCE_CRAWLER_VERIFY_CACHE_TIME);

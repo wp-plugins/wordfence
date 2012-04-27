@@ -14,17 +14,17 @@ class wfLog {
 		$this->apiKey = $apiKey;
 		$this->wp_version = $wp_version;
 		global $wpdb;
-		$this->hitsTable = $wpdb->prefix . 'wfHits';
-		$this->loginsTable = $wpdb->prefix . 'wfLogins';
-		$this->locsTable = $wpdb->prefix . 'wfLocs';
-		$this->blocksTable = $wpdb->prefix . 'wfBlocks';
-		$this->lockOutTable = $wpdb->prefix . 'wfLockedOut';
-		$this->leechTable = $wpdb->prefix . 'wfLeechers';
-		$this->badLeechersTable = $wpdb->prefix . 'wfBadLeechers';
-		$this->scanTable = $wpdb->prefix . 'wfScanners';
-		$this->reverseTable = $wpdb->prefix . 'wfReverseCache';
-		$this->throttleTable = $wpdb->prefix . 'wfThrottleLog';
-		$this->statusTable = $wpdb->prefix . 'wfStatus';
+		$this->hitsTable = $wpdb->base_prefix . 'wfHits';
+		$this->loginsTable = $wpdb->base_prefix . 'wfLogins';
+		$this->locsTable = $wpdb->base_prefix . 'wfLocs';
+		$this->blocksTable = $wpdb->base_prefix . 'wfBlocks';
+		$this->lockOutTable = $wpdb->base_prefix . 'wfLockedOut';
+		$this->leechTable = $wpdb->base_prefix . 'wfLeechers';
+		$this->badLeechersTable = $wpdb->base_prefix . 'wfBadLeechers';
+		$this->scanTable = $wpdb->base_prefix . 'wfScanners';
+		$this->reverseTable = $wpdb->base_prefix . 'wfReverseCache';
+		$this->throttleTable = $wpdb->base_prefix . 'wfThrottleLog';
+		$this->statusTable = $wpdb->base_prefix . 'wfStatus';
 	}
 	public function logLogin($action, $fail, $username){
 		$user = get_user_by('login', $username);
@@ -75,7 +75,7 @@ class wfLog {
 				$this->takeBlockingAction('maxGlobalRequests', "Exceeded the maximum global requests per minute for crawlers or humans.");
 			}
 			if($type == '404'){
-				global $wpdb; $p = $wpdb->prefix;
+				global $wpdb; $p = $wpdb->base_prefix;
 				if(wfConfig::get('other_WFNet')){
 					$this->getDB()->query("insert IGNORE into $p"."wfNet404s (sig, ctime, URI) values (UNHEX(MD5('%s')), unix_timestamp(), '%s')", $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_URI']);
 				}

@@ -3,13 +3,15 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 1.4.3
+Stable tag: 1.4.4
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
 == Description ==
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
+
+Wordfence is now Multi-Site compatible. Support for Multi-Site is currently in Beta. Please visit our forums to report any issues.
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
@@ -19,6 +21,7 @@ We also offer a Premium API key that adds additional scanning capabilities. See 
 Wordfence:
 
 * Scans core files against repository versions to check their integrity.
+* WordPress Multi-Site (or WordPress MU in the older parlance) compatible (beta).
 * Premium API key also scans themes and plugins against repository versions. This is currently the only difference between free and premium API keys.
 * See how files have changed. Optionally repair changed files.
 * Scans for signatures of over 44,000 known malware variants that are known security threats.
@@ -54,6 +57,17 @@ To install Wordfence Security and start protecting your WordPress website:
 1. Optionally change your security level or click the advanced options link to see individual security scanning and protection options.
 1. Click the "Live Traffic" menu option to watch your site activity in real-time.
 
+To install Wordfence on WordPress Multi-Site installations (support is currently in Beta):
+
+1. Install Wordfence via the plugin directory or by uploading the ZIP file.
+1. Network Activate Wordfence. This step is important because until you network activate it, your sites will see the plugin option on their plugins menu. Once activated that option dissapears. If one of your users manages to sneak in and try to activate Wordfence between you installing Wordfence and network activating it, don't worry because they won't be allowed to activate the plugin. It will generate a warning and won't activate for an individual site.
+1. Now that Wordfence is network activated it will appear on your Network Admin menu. Wordfence will not appear on any individual site's menu. 
+1. Enter your API key to start your first scan.
+1. Wordfence will scan all files in your WordPress installation including those in the blogs.dir directory of your individual sites. 
+1. Live Traffic will appear for ALL sites in your network. If you have a heavily trafficed system you may want to disable live traffic which will stop logging to the DB. 
+1. Firewall rules and login rules apply to the WHOLE system. So if you fail a login on site1.example.com and site2.example.com it counts as 2 failures. Crawler traffic is counted between blogs, so if you hit three sites in the network, all the hits are totalled and that counts as the rate you're accessing the system.
+1. Wordfence has been tested with subdomains, not with subdirectories yet, but it should work. Please report all bugs and we'll fix them as fast as we can.
+
 == Frequently Asked Questions ==
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
@@ -63,6 +77,10 @@ To install Wordfence Security and start protecting your WordPress website:
 Wordfence securely contacts our servers when doing a security scan. These include: comparing the hashes of your core, theme and plugin files
 against the official versions to see if security has been compromised, checking if URL's in your comments, posts and files are on any known list of dangerous URL's and checking
 if any of your file signatures match a large list of known malware files that constitute a security threat.
+
+= Does Wordfence support Multi-Site installations? =
+
+Yes. WordPress MU or Multi-Site as it's called now is supported and support is currently in beta. See the installation tab for more info.
 
 = Will Wordfence slow my site down? =
 
@@ -134,6 +152,10 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.4.4 =
+* WordPress Multi-site support added. Currently in Beta. Tested with subdomains, not subdirectories, but it should work great on both.
+* Main changes are moving menus to the Network Admin area, preventing individual blogs from enabling the plugin and dealing with database prefix issues.
+
 = 1.4.3 =
 * Improved diagnistic information on binary and regular API calls for better debugging.
 * Changed ticker to only show activity with level < 3

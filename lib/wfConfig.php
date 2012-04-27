@@ -411,7 +411,7 @@ class wfConfig {
 	private static function table(){
 		if(! self::$table){
 			global $wpdb;
-			self::$table = $wpdb->prefix . 'wfConfig';
+			self::$table = $wpdb->base_prefix . 'wfConfig';
 		}
 		return self::$table;
 	}

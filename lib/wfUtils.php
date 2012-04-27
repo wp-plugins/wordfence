@@ -143,6 +143,12 @@ class wfUtils {
 			return $wp_version;
 		}
 	}
+	public static function isAdminPageMU(){
+		if(preg_match('/^[\/a-zA-Z0-9\-\_\s\+\~\!\^\.]*\/wp-admin\/network\//', $_SERVER['REQUEST_URI'])){ 
+			return true; 
+		}
+		return false;
+	}
 }
 
 

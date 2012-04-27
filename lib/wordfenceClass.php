@@ -23,6 +23,9 @@ class wordfence {
 	private static $wfLog = false;
 	private static $hitID = 0;
 	public static function installPlugin(){
+		if(is_multisite() && @$_GET['networkwide'] != 1){
+			die("Sorry but you can't activate Wordfence on an individual site when WordPress MultiSite is enabled. Only the Network Admin can enable Wordfence and only they have access to administer Wordfence.");
+		}
 		$schema = new wfSchema();
 		$schema->createAll(); //if not exists
 		wfConfig::setDefaults(); //If not set
@@ -32,10 +35,13 @@ class wordfence {
 		if( !wp_next_scheduled( 'wordfence_hourly_cron' )){
 			wp_schedule_event(time(), 'hourly', 'wordfence_daily_cron');
 		}
-
+		update_option('wordfenceActivated', 1);
+	}
+	public static function uninstallPlugin(){
+		update_option('wordfenceActivated', 0);
 	}
 	public static function hourlyCron(){
-		global $wpdb; $p = $wpdb->prefix;
+		global $wpdb; $p = $wpdb->base_prefix;
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$patData = $api->call('get_known_vuln_pattern');
 		if(is_array($patData) && $patData['pat']){
@@ -85,7 +91,7 @@ class wordfence {
 	}
 	public static function dailyCron(){
 		$wfdb = new wfDB();
-		global $wpdb; $p = $wpdb->prefix;
+		global $wpdb; $p = $wpdb->base_prefix;
 		$wfdb->query("delete from $p"."wfLocs where ctime < unix_timestamp() - %d", WORDFENCE_MAX_IPLOC_AGE); 
 		$wfdb->query("truncate table $p"."wfBadLeechers"); //only uses date that's less than 1 minute old
 		$wfdb->query("delete from $p"."wfBlocks where blockedTime + %s < unix_timestamp()", wfConfig::get('blockedTime'));
@@ -136,6 +142,10 @@ class wordfence {
 
 	}
 	public static function install_actions(){
+		if(defined('MULTISITE')){
+			global $blog_id;
+			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
+		}
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
 		add_action('plugins_loaded', 'wordfence::veryFirstAction');
@@ -160,11 +170,15 @@ class wordfence {
 		add_filter('get_the_generator_rdf', 'wordfence::genFilter', 99, 2);
 		add_filter('get_the_generator_comment', 'wordfence::genFilter', 99, 2);
 		add_filter('get_the_generator_export', 'wordfence::genFilter', 99, 2);
-
 		if(is_admin()){
-			//both functions check if user is admin and we can't do that check now because user object doesn't exist.
 			add_action('admin_init', 'wordfence::admin_init');
-			add_action('admin_menu', 'wordfence::admin_menus');
+			if(is_multisite()){
+				if(wfUtils::isAdminPageMU()){
+					add_action('network_admin_menu', 'wordfence::admin_menus');
+				} //else don't show menu
+			} else {
+				add_action('admin_menu', 'wordfence::admin_menus');
+			}
 		}
 	}
 	public static function ajaxReceiver(){
@@ -344,7 +358,7 @@ class wordfence {
 		$content = "SITE: " . site_url() . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
 		$wfdb = new wfDB();
 		global $wpdb;
-		$p = $wpdb->prefix;
+		$p = $wpdb->base_prefix;
 		$q = $wfdb->query("select ctime, level, type, msg from $p"."wfStatus order by ctime desc limit 10000");
 		while($r = mysql_fetch_assoc($q)){
 			if($r['type'] == 'error'){
@@ -447,7 +461,7 @@ class wordfence {
 		if(! $opts['other_WFNet']){	
 			$wfdb = new wfDB();
 			global $wpdb;
-			$p = $wpdb->prefix;
+			$p = $wpdb->base_prefix;
 			$wfdb->query("delete from $p"."wfBlocks where wfsn=1");
 		}
 		foreach($opts as $key => $val){
@@ -559,7 +573,7 @@ class wordfence {
 	public static function ajax_ticker_callback(){
 		$wfdb = new wfDB();
 		global $wpdb;
-		$p = $wpdb->prefix;
+		$p = $wpdb->base_prefix;
 
 		$serverTime = $wfdb->querySingle("select unix_timestamp()");
 		$issues = new wfIssues();
@@ -1012,12 +1026,16 @@ class wordfence {
 		require 'menu_scan.php';
 	}
 	public static function isAdmin(){
-		foreach(array('update_core', 'activate_plugins', 'add_users', 'create_users', 'create_users', 'install_themes') as $capability){
-			if(! current_user_can($capability)){
-				return false;
+		if(is_multisite()){
+			if(current_user_can('manage_network')){
+				return true;
+			}
+		} else {
+			if(current_user_can('update_core')){
+				return true;
 			}
 		}
-		return true;
+		return false;
 	}
 	public static function status($level /* 1 has highest visibility */, $type /* info|error */, $msg){
 		if($type != 'info' && $type != 'error'){ error_log("Invalid status type: $type"); return; }
