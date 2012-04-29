@@ -1,4 +1,5 @@
 <?php
+require_once('wfUtils.php');
 class wfCrawl {
 	public static function isCrawler($UA){
 		foreach(self::$patterns as $pat){
@@ -9,7 +10,7 @@ class wfCrawl {
 		return false;
 	}
 	public static function verifyCrawlerPTR($hostPattern, $IP){
-		global $wpdb; $table = $wpdb->prefix . 'wfCrawlers';
+		global $wpdb; $table = $wpdb->base_prefix . 'wfCrawlers';
 		$db = new wfDB();
 		$IPn = wfUtils::inet_aton($IP);
 		$status = $db->querySingle("select status from $table where IP=%s and patternSig=UNHEX(MD5('%s')) and lastUpdate > unix_timestamp() - %d", $IPn, $hostPattern, WORDFENCE_CRAWLER_VERIFY_CACHE_TIME);
@@ -20,7 +21,7 @@ class wfCrawl {
 				return false;
 			}
 		}
-		global $wp_version; $wfLog = new wfLog(wfConfig::get('apiKey'), $wp_version);
+		$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$host = $wfLog->reverseLookup($IP);
 		if(! $host){ 
 			$db->query("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'noPTR', '', 'noPTR', '');
