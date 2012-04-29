@@ -15,7 +15,7 @@ class wordfenceScanner {
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 	}
-	public function scan($path, $fileList, $userfunc = false){
+	public function scan($path, $fileList){
 		$this->errorMsg = false;
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
@@ -42,14 +42,16 @@ class wordfenceScanner {
 			if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt)){
 				continue;
 			}
-			if($userfunc){
-				$fsize = filesize($this->path . $file);
-				if($fsize > 1000000){
-					$fsize = sprintf('%.2f', ($fsize / 1000000)) . " Megs";
-				} else {
-					$fsize = $fsize . " bytes";
-				}
-				call_user_func($userfunc, 2, 'info', "Currently scanning: $file ($fsize)");
+			$fsize = filesize($this->path . $file);
+			if($fsize > 1000000){
+				$fsize = sprintf('%.2f', ($fsize / 1000000)) . "M";
+			} else {
+				$fsize = $fsize . "B";
+			}
+			if(function_exists('memory_get_usage')){
+				wordfence::status(2, 'info', "Currently scanning: $file (Size:$fsize Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+			} else {
+				wordfence::status(2, 'info', "Currently scanning: $file (Size: $fsize)");
 			}
 			$stime = microtime(true);
 			$fileSum = @md5_file($this->path . $file);
@@ -118,6 +120,10 @@ class wordfenceScanner {
 			fclose($fh);
 			$mtime = sprintf("%.5f", microtime(true) - $stime);
 		}
+		if(function_exists('memory_get_usage')){
+			wordfence::status(3, 'info', "Total memory being used: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "MB");
+		}
+		wordfence::status(2, 'info', "Asking Wordfence to check URL's against malware list.");
 		$hooverResults = $urlHoover->getBaddies();
 		if($urlHoover->errorMsg){
 			$this->errorMsg = $urlHoover->errorMsg;

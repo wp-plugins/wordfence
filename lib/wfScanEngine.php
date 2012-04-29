@@ -23,7 +23,7 @@ class wfScanEngine {
 		$this->dictWords = $dictWords;
 	}
 	public function go(){
-		$this->status(1, 'info', "Initializing scan");
+		$this->status(1, 'info', "Initializing scan. Memory available: " . @ini_get('memory_limit') );
 		$this->i->deleteNew();
 
 		try {
@@ -214,7 +214,7 @@ class wfScanEngine {
 		$this->status(2, 'info', "Getting list of changed files since last scan.");
 		$scanner = new wordfenceScanner($this->apiKey, $this->wp_version);
 		$this->status(2, 'info', "Starting scan of file contents");
-		$result2 = $scanner->scan(ABSPATH, $unknownFiles, array($this, 'status'));
+		$result2 = $scanner->scan(ABSPATH, $unknownFiles);
 		$this->status(2, 'info', "Done file contents scan");
 		if($scanner->errorMsg){
 			$this->errorStop($scanner->errorMsg);

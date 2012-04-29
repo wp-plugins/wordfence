@@ -572,10 +572,11 @@ class wfLog {
 		}
 	}
 	public function addStatus($level, $type, $msg){
+		//$msg = '[' . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . '] ' . $msg;
 		$this->getDB()->query("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", microtime(true), $level, $type, $msg);
 	}
 	public function getStatusEvents(){
-		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " order by ctime desc limit 1000");
+		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " order by ctime desc limit 2000");
 		$results = array();
 		$lastTime = false;
 		while($rec = mysql_fetch_assoc($res)){

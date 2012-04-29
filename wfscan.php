@@ -43,6 +43,10 @@ class wfScan {
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
 			self::errorExit("There is already a scan running.");
 		}
+		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < WORDFENCE_MEM_LIMIT ) ){
+			@ini_set('memory_limit', WORDFENCE_MEM_LIMIT . 'M');
+		}
+
 		wfConfig::set('wf_scanRunning', time());
 		register_shutdown_function('wfScan::clearScan');
 

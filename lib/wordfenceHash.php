@@ -55,7 +55,11 @@ class wordfenceHash {
 	private function processFile($file){
 		$wfHash = $this->wfHash($file, true); 
 		if($wfHash){
-			wordfence::status(2, 'info', "Examined file: $file");
+			if(function_exists('memory_get_usage')){
+				wordfence::status(2, 'info', "Examined file: $file (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+			} else {
+				wordfence::status(2, 'info', "Examined file: $file");
+			}
 			$this->hashes[substr($file, $this->striplen)] = $wfHash;
 			//Now that we know we can open the file, lets update stats
 			if(preg_match('/\.(?:js|html|htm|css)$/i', $file)){
