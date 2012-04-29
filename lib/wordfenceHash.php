@@ -1,4 +1,5 @@
 <?php
+require_once('wordfenceClass.php');
 class wordfenceHash {
 	private $whitespace = array("\n","\r","\t"," ");
 	public $totalData = 0; //To do a sanity check, don't use 'du' because it gets sparse files wrong and reports blocks used on disk. Use : find . -type f -ls | awk '{total += $7} END {print total}'
@@ -6,63 +7,77 @@ class wordfenceHash {
 	public $totalDirs = 0;
 	public $linesOfPHP = 0;
 	public $linesOfJCH = 0; //lines of HTML, CSS and javascript
-	public function dirHash($path, $striplen, $filter = array(), $userfunc = false){
-		$hashes = $this->_dirHash($path, $striplen, $filter, $userfunc);
-		$hashes['.'] = $this->hashOfHashes($hashes);
-		return $hashes;
+	public $striplen = 0;
+	private $hashes = array();
+	public function __construct($striplen){
+		$this->striplen = $striplen;
 	}
-	private function _dirHash($path, $striplen, $filter, $userfunc = false){
+	public function hashPaths($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
-		$cont = scandir($path);
-			
-		$ret = array();
-		for($i = 0; $i < sizeof($cont); $i++){
-			if($cont[$i] == '.' || $cont[$i] == '..'){ continue; }
-			if(in_array($cont[$i], $filter)){ continue; }
-			$file = $path . $cont[$i];
-			if($userfunc){ call_user_func($userfunc, "Scanning: $file"); }
-			if(is_file($file)){
-				$wfHash = $this->wfHash($file, true); 
-				if($wfHash){
-					$ret[substr($file, $striplen)] = $wfHash;
-					//Now that we know we can open the file, lets update stats
-					if(preg_match('/\.(?:js|html|htm|css)$/i', $file)){
-						$this->linesOfJCH += sizeof(file($file));
-					} else if(preg_match('/\.php$/i', $file)){
-						$this->linesOfPHP += sizeof(file($file));
-					}
-					$this->totalFiles++;
-					$this->totalData += filesize($file);
+		$files = scandir($path);
+		foreach($files as $file){
+			if(sizeof($only) > 0 && (! in_array($file, $only))){
+				continue;
+			}
+			$file = $path . $file;
+			wordfence::status(2, 'info', "Hashing item in base dir: $file");
+			$this->_dirHash($file);
+		}	
+		return $this->hashes;
+	}
+	private function _dirHash($path){
+		if(substr($path, -3, 3) == '/..' || substr($path, -2, 2) == '/.'){
+			return;
+		}
+		if(is_dir($path)){
+			$this->totalDirs++;
+			if($path[strlen($path) - 1] != '/'){
+				$path .= '/';
+			}
+			$cont = scandir($path);
+			for($i = 0; $i < sizeof($cont); $i++){
+				if($cont[$i] == '.' || $cont[$i] == '..'){ continue; }
+				$file = $path . $cont[$i];
+				if(is_file($file)){
+					$this->processFile($file);
+				} else if(is_dir($file)) {
+					$this->_dirHash($file);
 				}
-
-			} else if(is_dir($file)) {
-				$this->totalDirs++;
-				$dirHashes = $this->_dirHash($file, $striplen, $filter);
-				$dirHashes[substr($file, $striplen) . '/'] = $this->hashOfHashes($dirHashes);
-				$ret = array_merge($ret, $dirHashes);
+			}
+		} else {
+			if(is_file($path)){
+				$this->processFile($path);
 			}
 		}
-		return $ret;
 	}
-	public function hashOfHashes($dirHashes){
-		ksort($dirHashes);
-		$all_md5 = "";
-		$all_sha = "";
-		$all_shac = "";
-		foreach($dirHashes as $key => $val){
-			$all_md5 .= $val[0];
-			$all_sha .= $val[1];
-			$all_shac .= $val[2];
+	private function processFile($file){
+		$wfHash = $this->wfHash($file, true); 
+		if($wfHash){
+			if(function_exists('memory_get_usage')){
+				wordfence::status(2, 'info', "Examined file: $file (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+			} else {
+				wordfence::status(2, 'info', "Examined file: $file");
+			}
+			$this->hashes[substr($file, $this->striplen)] = $wfHash;
+			//Now that we know we can open the file, lets update stats
+			if(preg_match('/\.(?:js|html|htm|css)$/i', $file)){
+				$this->linesOfJCH += sizeof(file($file));
+			} else if(preg_match('/\.php$/i', $file)){
+				$this->linesOfPHP += sizeof(file($file));
+			}
+			$this->totalFiles++;
+			$this->totalData += filesize($file);
+		} else {
+			wordfence::status(2, 'error', "Could not gen hash for file: $file");
 		}
-		return array( md5($all_md5, true), hash('sha256', $all_sha, true), hash('sha256', $all_shac, true) ); 
 	}
 	public function wfHash($file, $binary = true){
 		$md5 = @md5_file($file, $binary);
 		if(! $md5){ return false; }
-		$sha = @hash_file('sha256', $file, $binary);
-		if(! $sha){ return false; }
+		//$sha = @hash_file('sha256', $file, $binary);
+		//if(! $sha){ return false; }
 		$fp = @fopen($file, "rb");
 		if(! $fp){
 			return false;
@@ -72,7 +87,8 @@ class wordfenceHash {
 			hash_update($ctx, str_replace($this->whitespace,"",fread($fp, 65536)));
 		}
 		$shac = hash_final($ctx, $binary);
-		return array($md5, $sha, $shac, filesize($file) );
+		//Taking out $sha for now because we don't use it on the scanning server side
+		return array($md5, '', $shac, filesize($file) );
 	}
 	public static function bin2hex($hashes){
 		function wf_func1($elem){ 

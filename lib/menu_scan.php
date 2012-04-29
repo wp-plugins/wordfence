@@ -382,12 +382,14 @@
 <script type="text/x-jquery-template" id="wfNoScanYetTmpl">
 <div>
 	<table class="wfSummaryParent" cellpadding="0" cellspacing="0">
-	<tr><th class="wfHead">Please start your first scan</th></tr>
+	<tr><th class="wfHead">Your first scan is starting now</th></tr>
 	<tr><td>
 		<table class="wfSC1"  cellpadding="0" cellspacing="0">
 		<tr><td>
-			You have not completed your first Wordfence scan yet.
-			Please click the button below to start your first scan.
+			Your first Wordfence scan should be automatically starting now
+			and you will see the scan details in the "Activity Log" above in a few seconds.
+			While you're waiting, why not visit the <a href="http://www.wordfence.com/forums/" target="_blank">Wordfence Forums</a>
+			where you can post your comments or questions. We would love to hear from you.
 		</td></tr>
 		<tr><td>
 			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" class="wfStartScanButton button-primary" /></div>
@@ -438,6 +440,7 @@
 		</td></tr>
 		<tr><td>
 			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" class="wfStartScanButton button-primary" /></div>
+			<a href="http://www.wordfence.com/forums/" target="_blank">Visit the Wordfence forums for help.</a>
 		</td></tr>
 		</table>
 	</td>
