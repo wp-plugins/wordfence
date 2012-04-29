@@ -63,12 +63,10 @@ class wfUtils {
 		return sprintf("%u", ip2long($ip));
 	}
 	public static function getBaseURL(){
-		//return WP_PLUGIN_URL . '/' . str_replace(basename( __FILE__), "", plugin_basename(__FILE__));
-		$plug = preg_replace('/^.*\/([^\/]+)\/lib\/[^\/]+\.php$/', '$1', __FILE__);
-		return WP_PLUGIN_URL . '/' . $plug . '/';
+		return plugins_url() . '/wordfence/';
 	}
 	public static function getPluginBaseDir(){
-		return realpath(dirname(__FILE__) . '/../../') . '/';
+		return ABSPATH . 'wp-content/plugins/';
 	}
 	public static function getIP(){
 		$ip = 0;
@@ -135,6 +133,21 @@ class wfUtils {
 		$caller=array_shift($trace); 
 		$c2 = array_shift($trace);
 		error_log("Caller for " . $caller['file'] . " line " . $caller['line'] . " is " . $c2['file'] . ' line ' . $c2['line']);
+	}
+	public static function getWPVersion(){
+		global $wp_version;
+		global $wordfence_wp_version;
+		if(isset($wordfence_wp_version)){
+			return $wordfence_wp_version;
+		} else {
+			return $wp_version;
+		}
+	}
+	public static function isAdminPageMU(){
+		if(preg_match('/^[\/a-zA-Z0-9\-\_\s\+\~\!\^\.]*\/wp-admin\/network\//', $_SERVER['REQUEST_URI'])){ 
+			return true; 
+		}
+		return false;
 	}
 }
 
