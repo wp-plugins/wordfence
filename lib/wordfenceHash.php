@@ -16,6 +16,10 @@ class wordfenceHash {
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
+		if(! is_readable($path)){
+			wordfence::status(1, 'error', "Could not read directory $path to do sacn.");
+			exit();
+		}
 		$files = scandir($path);
 		foreach($files as $file){
 			if(sizeof($only) > 0 && (! in_array($file, $only))){
@@ -31,6 +35,7 @@ class wordfenceHash {
 		if(substr($path, -3, 3) == '/..' || substr($path, -2, 2) == '/.'){
 			return;
 		}
+		if(! is_readable($path)){ return; } //Applies to files and dirs
 		if(is_dir($path)){
 			$this->totalDirs++;
 			if($path[strlen($path) - 1] != '/'){
