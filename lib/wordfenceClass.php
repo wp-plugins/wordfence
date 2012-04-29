@@ -1104,7 +1104,7 @@ class wordfence {
 			}
 			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 			$result = $api->call('get_next_scan_time', array(), array());
-			if($result['errorMsg']){
+			if(empty($result['errorMsg']) === false){
 				return $result['errorMsg'];
 			}
 			$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.

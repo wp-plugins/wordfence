@@ -8,6 +8,7 @@ class wfIssues {
 	public $totalIssues = 0;
 	public $totalCriticalIssues = 0;
 	public $totalWarningIssues = 0;
+	private $db = false;
 	public function __construct(){
 		global $wpdb;
 		$this->issuesTable = $wpdb->base_prefix . 'wfIssues';

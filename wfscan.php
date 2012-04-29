@@ -47,11 +47,29 @@ class wfScan {
 			@ini_set('memory_limit', WORDFENCE_MEM_LIMIT . 'M');
 		}
 
-		wfConfig::set('wf_scanRunning', time());
-		register_shutdown_function('wfScan::clearScan');
+		set_error_handler('wfScan::error_handler', E_ALL);
+		register_shutdown_function('wfScan::shutdown');
+		ob_start('wfScan::obHandler');
+		@error_reporting(E_ALL);
+		@ini_set('display_errors','On');
 
+		wfConfig::set('wf_scanRunning', time());
 		$scan = new wfScanEngine();
 		$scan->go();
+		wfConfig::set('wf_scanRunning', '');
+	}
+	public static function obHandler($buf){
+		if(strlen($buf) > 1000){
+			$buf = substr($buf, 0, 255);
+		}
+		if(empty($buf) === false && preg_match('/[a-zA-Z0-9]+/', $buf)){
+			wordfence::status(1, 'error', $buf);
+		}
+	}
+	public static function error_handler($errno, $errstr, $errfile, $errline){
+		wordfence::status(1, 'error', "$errstr ($errno) File: $errfile Line: $errline");
+	}
+	public static function shutdown(){
 		wfConfig::set('wf_scanRunning', '');
 	}
 	private static function errorExit($msg){
@@ -76,9 +94,6 @@ class wfScan {
 	public static function usort($b, $a){
 		if($a['level'] == $b['level']){ return 0; }
 		return ($a['level'] < $b['level']) ? -1 : 1;
-	}
-	public static function clearScan(){
-		wfConfig::set('wf_scanRunning', '');
 	}
 }
 wfScan::wfScanMain();

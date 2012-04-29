@@ -121,18 +121,12 @@ class wfScanEngine {
 		//CORE SCAN
 		$this->status(2, 'info', "Examining files in WordPress base directory.");
 		$hasher = new wordfenceHash(strlen(ABSPATH));
-		$includeInScan = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
+		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
 		$baseContents = scandir(ABSPATH);
-		$includeBase = true;
-		if(sizeof($baseContents) > 500){ //If there are more than 500 files in the base dir, then don't scan base dir files other than core WP files.
-			$includeBase = false;
-		}
-		if($includeBase){
-			foreach($baseContents as $file){ //Only include base files less than a meg that are files.
-				$file = rtrim(ABSPATH, '/') . '/' . $file;
-				if(is_file($file) && @filesize(ABSPATH . $file) < 1000000 && (! in_array($file, $includeInScan)) ){
-					$includeInScan[] = $file;
-				}
+		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
+			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
+			if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && filesize($fullFile) < 1000000) ){
+				$includeInScan[] = $file;
 			}
 		}
 		$this->status(2, 'info', "Hashing your WordPress files for comparison against originals.");
@@ -191,7 +185,7 @@ class wfScanEngine {
 			$this->errorStop($this->api->errorMsg);
 			return;
 		}
-		if($result1['errorMsg']){
+		if(empty($result1['errorMsg']) === false){
 			$this->errorStop($result['errorMsg']);
 			return;
 		}
@@ -370,7 +364,7 @@ class wfScanEngine {
 	}
 	private function highestCap($caps){
 		foreach(array('administrator', 'editor', 'author', 'contributor', 'subscriber') as $cap){
-			if($caps[$cap]){
+			if(empty($caps[$cap]) === false && $caps[$cap]){
 				return $cap;
 			}
 		}
@@ -378,7 +372,7 @@ class wfScanEngine {
 	}
 	private function isEditor($caps){
 		foreach(array('contributor', 'author', 'editor', 'administrator') as $cap){
-			if($caps[$cap]){
+			if(empty($caps[$cap]) === false && $caps[$cap]){
 				return true;
 			}
 		}
@@ -560,7 +554,7 @@ class wfScanEngine {
 					$pluginFile = wfUtils::getPluginBaseDir() . $plugin;
 					$data = get_plugin_data($pluginFile);
 					$data['newVersion'] = $vals->new_version;
-					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['oldVersion'] . ' ' . $data['Version'];
+					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['newVersion'] . ' ' . $data['Version'];
 					$this->addIssue('wfPluginUpgrade', 1, $key, $key, "The Plugin \"" . $data['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $data['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $data);
 				}
 			}

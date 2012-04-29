@@ -36,7 +36,7 @@ class wfAPI {
 		if(! is_array($dat)){
 			$this->errorMsg = "We could not understand the Wordfence API response when calling '$action'.";
 		}
-		if($dat['errorMsg']){
+		if(empty($dat['errorMsg']) === false){
 			$this->errorMsg = $dat['errorMsg'];
 		}
 		if($this->errorMsg){
@@ -125,7 +125,7 @@ class wfAPI {
 				return false;
 			}
 		}
-		wordfence::status(3, 'info', "Completed binary API call $func with code: $code");
+		wordfence::status(3, 'info', "Completed binary API call $func with code: $httpStatus");
 		return array('code' => $httpStatus, 'data' => $data);
 	}
 	public function makeAPIQueryString(){
