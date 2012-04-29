@@ -726,6 +726,7 @@ class wordfence {
 				'x-wordfence-cronkey' => $cronKey
 				)
 			) );
+		/* This is a timeout in all likelihood, so ignore
 		if(is_wp_error($result) && sizeof($result->errors) > 0){
 			$errs = "";
 			$isTimeout = false;
@@ -742,9 +743,10 @@ class wordfence {
 				return "Error connecting to Wordfence scanning system: " . $errs;
 			}
 		}
-		if((! is_wp_error($result)) && is_array($result) && $result['body'] && strstr($result['body'], '{') !== false){
+		*/
+		if((! is_wp_error($result)) && is_array($result) && empty($result['body']) === false && strstr($result['body'], '{') !== false){
 			$resp = json_decode($result['body'], true);
-			if($resp['errorMsg']){
+			if(empty($resp['errorMsg']) === false){
 				return $resp['errorMsg'];
 			}
 		}
@@ -769,6 +771,7 @@ class wordfence {
 						'Host' => $host
 						)
 					) );
+				/* Is probably a timeout
 				if(is_wp_error($result) && sizeof($result->errors) > 0){
 					$errs = "";
 					$isTimeout = false;
@@ -785,9 +788,10 @@ class wordfence {
 						return "Error connecting to Wordfence scanning system: " . $errs;
 					}
 				}
-				if((! is_wp_error($result)) && is_array($result) && $result['body'] && strstr($result['body'], '{') !== false){
+				*/
+				if((! is_wp_error($result)) && is_array($result) && empty($result['body']) === false && strstr($result['body'], '{') !== false){
 					$resp = json_decode($result['body'], true);
-					if($resp['errorMsg']){
+					if(empty($resp['errorMsg']) === false){
 						return $resp['errorMsg'];
 					}
 				}
