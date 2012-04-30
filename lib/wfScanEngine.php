@@ -6,7 +6,6 @@ require_once('wordfenceScanner.php');
 require_once('wfIssues.php');
 require_once('wfDB.php');
 require_once('wfUtils.php');
-require_once('wfModTracker.php');
 class wfScanEngine {
 	private $i = false;
 	private $api = false;
@@ -14,65 +13,22 @@ class wfScanEngine {
 	private $wp_version = false;
 	private $apiKey = false;
 	private $errorStopped = false;
-	private $modTracker = false;
 	private $dictWords = array();
 	public function __construct(){
 		$this->i = new wfIssues();
-		global $wp_version;
-		$this->wp_version = $wp_version;
+		$this->wp_version = wfUtils::getWPVersion();
 		$this->apiKey = wfConfig::get('apiKey');
-		$this->api = new wfAPI($this->apiKey, $wp_version);
+		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 	}
 	public function go(){
-		$this->status(1, 'info', "Initializing scan");
-		
-		/*
-			The logic for determining if we need to do a full scan or only scan files that have changed is as follows:
-			
-			NOTE NOTE: We delete all 'new' issues at the start of every scan.
-			
-			If the last scan added any new issues, or if new issues have been added since then, we do a full scan
-			because at the start of this scan we delete those 'new' issues and we need to check which of those new issues
-			are still issues.
-
-			If the previous scan didn't detect any new issues, no issues have been added since then and no files have changed
-			then we don't need to do a full scan UNLESS:
-
-			If the user has deleted 'ignored' issues then we need to do a full scan to see if any of those previously
-			ignored issues need to show up in the 'new' list.
-
-			So to accomplish this we track if new issues have been added during or since the previous scan and if any ignored issues
-			have been modified since the previous scan. If any of that is true, then we force a new scan. 
-
-			NOTE that we don't have to 'resetChanges()' if the user deletes 'new' issues or moves them to 'ignore' because a full scan
-			will already occur because the previous scan called addIssue to create those issues (because we delete all new issues at the start of each scan)
-			and thereby set newIssueAddedLastScan.
-
-		*/
-
-		$forceFullScan = false;
-		if(wfConfig::get('newIssueAddedLastScan', false)){
-			$forceFullScan = true; //Do a full scan if a new issue was added in the last scan (or since the last scan) because we need to check if that issue has been resolved or still exists.
-		}
-		if(wfConfig::get('ignoreListChanged', false)){
-			$forceFullScan = true; //Do a full scan if the ignore list changed because we need to show that issue in 'new' list if it still exists.
-		}
-		wfConfig::set('newIssueAddedLastScan', 0);
-		wfConfig::set('ignoreListChanged', 0);
+		$this->status(1, 'info', "Initializing scan. Memory available: " . @ini_get('memory_limit') );
 		$this->i->deleteNew();
 
 		try {
-			if($forceFullScan){
-				$this->status(1, 'info', "Getting ready to do a full scan by reinitializing change tracking");
-				wfModTracker::resetChanges();
-			}
-			$this->status(1, 'info', "Compiling list of changed files");
-			$this->modTracker = new wfModTracker();
 			$this->doScan();
 			if(! $this->errorStopped){
-				$this->modTracker->logCurrentState();
 				wfConfig::set('lastScanCompleted', 'ok');
 			}
 			//updating this scan ID will trigger the scan page to load/reload the results.
@@ -80,7 +36,6 @@ class wfScanEngine {
 			//scan ID only incremented at end of scan to make UI load new results
 			$this->emailNewIssues();
 		} catch(Exception $e){
-			wfModTracker::resetChanges();	
 			$this->errorStop($e->getMessage());
 		}
 		wordfence::scheduleNextScan(true);
@@ -95,15 +50,13 @@ class wfScanEngine {
 			$this->errorStop($this->api->errorMsg);
 			return;
 		}
-		$knownFiles = $this->scanKnownFiles();
+		$unknownFiles = $this->scanKnownFiles();
 		if($this->errorStopped){ 
-			wfModTracker::resetChanges();	
 			return; 
 		}
 		if(wfConfig::get('scansEnabled_fileContents')){
-			$this->scanFileContents($knownFiles);
+			$this->scanFileContents($unknownFiles);
 			if($this->errorStopped){ 
-				wfModTracker::resetChanges();	
 				return; 
 			}
 		}
@@ -139,43 +92,23 @@ class wfScanEngine {
 	private function scanKnownFiles(){
 		$malwareScanEnabled = $coreScanEnabled = $pluginScanEnabled = $themeScanEnabled = false;
 		if(wfConfig::get('scansEnabled_core')){
-			if($this->modTracker->filesModifiedInCore()){
-				$this->status(2, 'info', "Enabling core scan because core files have been modified.");
-				$coreScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping core scan because no core files were modified.");
-			}
+			$coreScanEnabled = true;
 		} else {
 			$this->status(2, 'info', "Skipping core scan because it's disabled.");
 		}
 		if(wfConfig::get('scansEnabled_plugins')){
-			if($this->modTracker->filesModifiedInPlugins()){
-				$this->status(2, 'info', "Enabling plugin scan because files in plugins directory have been modified.");
-				$pluginScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping plugin scan because no files in plugins directory have been modified.");
-			}	
+			$pluginScanEnabled = true;
 		} else {
 			$this->status(2, 'info', "Skipping plugin scan because it's disabled.");
 		}
 		if(wfConfig::get('scansEnabled_themes')){
-			if($this->modTracker->filesModifiedInThemes()){
-				$this->status(2, 'info', "Enabling theme scan because files in themes dir have been modified.");
-				$themeScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping theme scan because no files in themes directory have been modified.");
-			}
+			$themeScanEnabled = true;
 		} else {
 			$this->status(2, 'info', "Skipping themes scan because it's disabled.");
 		}
 
 		if(wfConfig::get('scansEnabled_malware')){
-			if($this->modTracker->anyFilesChanged()){
-				$this->status(2, 'info', "Enabling malware scan because we have modified files in the dir structure.");
-				$malwareScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping malware scan because no files were modified in the dir structure.");
-			} 
+			$malwareScanEnabled = true;
 		} else {
 			$this->status(2, 'info', "Skipping malware scan because it's disabled.");
 		}
@@ -185,11 +118,25 @@ class wfScanEngine {
 			return array();
 		}
 			
-		$this->status(1, 'info', "Scanning known files.");
 		//CORE SCAN
-		$this->status(2, 'info', "Generating a hash of directory structure.");
-		$hasher = new wordfenceHash();
-		$hashes = $hasher->dirHash(ABSPATH, strlen(ABSPATH) );
+		$this->status(2, 'info', "Examining files in WordPress base directory.");
+		$hasher = new wordfenceHash(strlen(ABSPATH));
+		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
+		$baseContents = scandir(ABSPATH);
+		$scanOutside = wfConfig::get('other_scanOutside');
+		if($scanOutside){
+			wordfence::status(2, 'info', "Including files that are outside the WordPress installation in the scan.");
+		}
+		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
+			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
+			if($scanOutside){
+				$includeInScan[] = $file;
+			} else if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && filesize($fullFile) < 1000000) ){
+				$includeInScan[] = $file;
+			}
+		}
+		$this->status(2, 'info', "Hashing your WordPress files for comparison against originals.");
+		$hashes = $hasher->hashPaths(ABSPATH, $includeInScan);
 		$this->status(2, 'info', "Done hash. Updating summary items.");
 		$this->i->updateSummaryItem('totalData', wfUtils::formatBytes($hasher->totalData));
 		$this->i->updateSummaryItem('totalFiles', $hasher->totalFiles);
@@ -244,7 +191,7 @@ class wfScanEngine {
 			$this->errorStop($this->api->errorMsg);
 			return;
 		}
-		if($result1['errorMsg']){
+		if(empty($result1['errorMsg']) === false){
 			$this->errorStop($result['errorMsg']);
 			return;
 		}
@@ -257,19 +204,17 @@ class wfScanEngine {
 			$this->status(2, 'info', "Adding issue: " . $issue['shortMsg']);
 			$this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
 		}
-		return $result1['knownFiles'];
+		return $result1['unknownFiles'];
 	}
-	private function scanFileContents($knownFiles){
+	private function scanFileContents($unknownFiles){
 		$this->status(1, 'info', "Scanning file contents.");
-		if(! is_array($knownFiles)){
-			$knownFiles = array();
+		if(! is_array($unknownFiles)){
+			$unknownFiles = array();
 		}
 		$this->status(2, 'info', "Getting list of changed files since last scan.");
-		$filesToScan = $this->modTracker->getChangedFiles(ABSPATH, $knownFiles); //get changed files since last scan and exclude $knownFiles
-		$this->status(2, 'info', "Got " . sizeof($filesToScan) . " changed files to scan.");
 		$scanner = new wordfenceScanner($this->apiKey, $this->wp_version);
 		$this->status(2, 'info', "Starting scan of file contents");
-		$result2 = $scanner->scan(ABSPATH, $filesToScan, array($this, 'status'));
+		$result2 = $scanner->scan(ABSPATH, $unknownFiles);
 		$this->status(2, 'info', "Done file contents scan");
 		if($scanner->errorMsg){
 			$this->errorStop($scanner->errorMsg);
@@ -283,13 +228,12 @@ class wfScanEngine {
 		$this->status(1, 'info', "Starting posts scan");
 		global $wpdb;
 		$wfdb = new wfDB();
+		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
 		$q1 = $wfdb->uQuery("select ID, post_title, post_type, post_date, post_content from $wpdb->posts where post_type IN ('page', 'post') and post_status = 'publish'");
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$postDat = array();
 		while($row = mysql_fetch_assoc($q1)){
-			$this->status(2, 'info', "Scanning " . $row['post_type'] . ": \"" . $row['post_title'] . "\"");
 			$h->hoover($row['ID'], $row['post_title'] . ' ' . $row['post_content']);
-			
 			$postDat[$row['ID']] = array(
 				'contentMD5' => md5($row['post_content']),
 				'title' => $row['post_title'],
@@ -373,6 +317,7 @@ class wfScanEngine {
 	private function scanComments(){
 		global $wpdb;
 		$wfdb = new wfDB();
+		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
 		$q1 = $wfdb->uQuery("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from $wpdb->comments where comment_approved=1");
 		if( ! $q1){
 			return;
@@ -382,7 +327,6 @@ class wfScanEngine {
 		$gotRow = false;
 		while($row = mysql_fetch_assoc($q1)){
 			$gotRow = true; //because we can't use mysql_num_rows on unbuffered queries
-			$this->status(2, 'info', "Scanning comment ID " . $row['comment_ID'] . " with author " . $row['comment_author']);
 			$h->hoover($row['comment_ID'], $row['comment_author_url'] . ' ' . $row['comment_author'] . ' ' . $row['comment_content']);
 			$commentDat[$row['comment_ID']] = array(
 				'contentMD5' => md5($row['comment_content'] . $row['comment_author'] . $row['comment_author_url']),
@@ -426,7 +370,7 @@ class wfScanEngine {
 	}
 	private function highestCap($caps){
 		foreach(array('administrator', 'editor', 'author', 'contributor', 'subscriber') as $cap){
-			if($caps[$cap]){
+			if(empty($caps[$cap]) === false && $caps[$cap]){
 				return $cap;
 			}
 		}
@@ -434,7 +378,7 @@ class wfScanEngine {
 	}
 	private function isEditor($caps){
 		foreach(array('contributor', 'author', 'editor', 'administrator') as $cap){
-			if($caps[$cap]){
+			if(empty($caps[$cap]) === false && $caps[$cap]){
 				return true;
 			}
 		}
@@ -601,9 +545,8 @@ class wfScanEngine {
 		}
 		$cur = get_preferred_from_update_core();
 		if(isset( $cur->response ) && $cur->response == 'upgrade'){
-			global $wp_version;
 			$this->addIssue('wfUpgrade', 1, 'wfUpgrade' . $cur->current, 'wfUpgrade' . $cur->current, "Your WordPress version is out of date", "WordPress version " . $cur->current . " is now available. Please upgrade immediately to get the latest security updates from WordPress.", array(
-				'currentVersion' => $wp_version,
+				'currentVersion' => $this->wp_version,
 				'newVersion' => $cur->current
 				));
 		}
@@ -617,7 +560,7 @@ class wfScanEngine {
 					$pluginFile = wfUtils::getPluginBaseDir() . $plugin;
 					$data = get_plugin_data($pluginFile);
 					$data['newVersion'] = $vals->new_version;
-					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['oldVersion'] . ' ' . $data['Version'];
+					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['newVersion'] . ' ' . $data['Version'];
 					$this->addIssue('wfPluginUpgrade', 1, $key, $key, "The Plugin \"" . $data['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $data['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $data);
 				}
 			}

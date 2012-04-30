@@ -38,11 +38,12 @@ class wfConfig {
 				"other_noAnonMemberComments" => false,
 				"other_scanComments" => false,
 				"other_pwStrengthOnUpdate" => false,
-				"other_WFNet" => true
+				"other_WFNet" => true,
+				"other_scanOutside" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "",
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -79,7 +80,7 @@ class wfConfig {
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -98,11 +99,12 @@ class wfConfig {
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
-				"other_WFNet" => true
+				"other_WFNet" => true,
+				"other_scanOutside" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "",
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -139,7 +141,7 @@ class wfConfig {
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -158,11 +160,12 @@ class wfConfig {
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
-				"other_WFNet" => true
+				"other_WFNet" => true,
+				"other_scanOutside" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "",
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "240",
@@ -198,8 +201,8 @@ class wfConfig {
 				"liveTraf_ignorePublishers" => true,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
-				"scansEnabled_themes" => true,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_themes" => false,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -218,11 +221,12 @@ class wfConfig {
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
-				"other_WFNet" => true
+				"other_WFNet" => true,
+				"other_scanOutside" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "",
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -258,8 +262,8 @@ class wfConfig {
 				"liveTraf_ignorePublishers" => true,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_core" => true,
-				"scansEnabled_themes" => true,
-				"scansEnabled_plugins" => true,
+				"scansEnabled_themes" => false,
+				"scansEnabled_plugins" => false,
 				"scansEnabled_malware" => true,
 				"scansEnabled_fileContents" => true,
 				"scansEnabled_posts" => true,
@@ -278,11 +282,12 @@ class wfConfig {
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
-				"other_WFNet" => true
+				"other_WFNet" => true,
+				"other_scanOutside" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "",
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -317,6 +322,15 @@ class wfConfig {
 			}
 		}
 		self::set('encKey', substr(wfUtils::bigRandomHex(),0 ,16) );
+		if(! self::get('isPaid', false)){
+			self::set('isPaid', 'free');
+		}
+		if(self::get('maxMem', false) === false ){
+			self::set('maxMem', '256');
+		}
+		if(self::get('other_scanOutside', false) === false){
+			self::set('other_scanOutside', 0);
+		}
 	}
 	public static function parseOptions(){
 		$ret = array();
@@ -408,7 +422,7 @@ class wfConfig {
 	private static function table(){
 		if(! self::$table){
 			global $wpdb;
-			self::$table = $wpdb->prefix . 'wfConfig';
+			self::$table = $wpdb->base_prefix . 'wfConfig';
 		}
 		return self::$table;
 	}
