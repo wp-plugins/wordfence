@@ -43,8 +43,14 @@ class wfScan {
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
 			self::errorExit("There is already a scan running.");
 		}
-		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < WORDFENCE_MEM_LIMIT ) ){
-			@ini_set('memory_limit', WORDFENCE_MEM_LIMIT . 'M');
+		if(wfConfig::get('maxMem', false) && (int) wfConfig::get('maxMem') > 0){
+			$maxMem = (int) wfConfig::get('maxMem');
+		} else {
+			$maxMem = 256;
+		}
+		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < $maxMem ) ){
+			wordfence::status(1, 'info', "Requesting a maximum memory limit of $maxMem megabytes from PHP.");
+			@ini_set('memory_limit', $maxMem . 'M');
 		}
 
 		set_error_handler('wfScan::error_handler', E_ALL);

@@ -123,9 +123,15 @@ class wfScanEngine {
 		$hasher = new wordfenceHash(strlen(ABSPATH));
 		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
 		$baseContents = scandir(ABSPATH);
+		$scanOutside = wfConfig::get('other_scanOutside');
+		if($scanOutside){
+			wordfence::status(2, 'info', "Including files that are outside the WordPress installation in the scan.");
+		}
 		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
-			if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && filesize($fullFile) < 1000000) ){
+			if($scanOutside){
+				$includeInScan[] = $file;
+			} else if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && filesize($fullFile) < 1000000) ){
 				$includeInScan[] = $file;
 			}
 		}

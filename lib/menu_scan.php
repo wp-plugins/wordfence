@@ -439,7 +439,7 @@
 			{{/if}}
 		</td></tr>
 		<tr><td>
-			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" class="wfStartScanButton button-primary" /></div>
+			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" class="wfStartScanButton button-primary" onclick="wordfenceAdmin.startScan();" /></div>
 			<a href="http://www.wordfence.com/forums/" target="_blank">Visit the Wordfence forums for help.</a>
 		</td></tr>
 		</table>

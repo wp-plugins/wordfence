@@ -655,7 +655,7 @@ window['wordfenceAdmin'] = {
 			}
 		}
 		for(var k in WFSLevels[level].otherParams){
-			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize)$/.test(k)){
+			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem)$/.test(k)){
 				jQuery('#' + k).val(WFSLevels[level].otherParams[k]);
 			}
 		}

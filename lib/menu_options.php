@@ -169,7 +169,9 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Scan comments for malware and phishing URL's</th><td><input type="checkbox" id="other_scanComments" class="wfConfigElem" name="other_scanComments" value="1" <?php $w->cb('other_scanComments'); ?> /></td></tr>
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
+	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
 	<tr><th>Your Wordfence API Key</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="20" /></td></tr>
+	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
