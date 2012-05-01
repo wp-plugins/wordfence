@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 1.5.5
+Stable tag: 1.5.6
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,11 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.5.6 =
+* Removed use of nonces and purely using 30 minute key for unlocking emails.
+* Fixed bug that caused admin emails to not get emailed when requesting unlocking email.
+* Fixed minor issue with undefined array in issues loop.
+
 = 1.5.5 =
 * Added ability for admin's to unlock login and unblock their IP addresses if they're accidentally locked out by the firewall or login security. Uses two security tokens to prevent abuse.
 * Admins can now also disable firewall and login security from the unlock-me email, just in case of emergency.

@@ -245,17 +245,14 @@ class wordfence {
 	public static function veryFirstAction(){
 		$wfFunc = $_GET['_wfsf'];
 		if($wfFunc == 'unlockEmail'){
-			if(! wp_verify_nonce($_GET['nonce'], 'wp-ajax')){
-				echo "Security token verification failed.";
-				exit();
-			}
 			$email = trim($_POST['email']);
 			global $wpdb;
 			$ws = $wpdb->get_results("SELECT ID, user_login FROM $wpdb->users");
 			$users = array();
 			foreach($ws as $user){
-				if($user->user_level > 7){
-					if($email == $user->user_email){
+				$userDat = get_userdata($user->ID);
+				if($userDat->user_level > 7){
+					if($email == $userDat->user_email){
 						$found = true;
 						break;
 					}
@@ -276,7 +273,7 @@ class wordfence {
 				$content = wfUtils::tmpl('email_unlockRequest.php', array(
 					'siteName' => get_bloginfo('name', 'raw'),
 					'siteURL' => wfUtils::getSiteBaseURL(),
-					'unlockHref' => wfUtils::getSiteBaseURL() . '?_wfsf=unlockAccess&nonce=' . wp_create_nonce('wp-unlock') . '&key=' . $key,
+					'unlockHref' => wfUtils::getSiteBaseURL() . '?_wfsf=unlockAccess&key=' . $key,
 					'key' => $key,
 					'IP' => $IP
 					));
@@ -285,10 +282,6 @@ class wordfence {
 			echo "<html><body><h1>Your request was received</h1><p>We received a request to email \"$email\" instructions to unlock their access. If that is the email address of a site administrator or someone on the Wordfence alert list, then they have been emailed instructions on how to regain access to this sytem. The instructions we sent will expire 30 minutes from now.</body></html>";
 			exit();
 		} else if($wfFunc == 'unlockAccess'){
-			if(! wp_verify_nonce($_GET['nonce'], 'wp-unlock')){
-				echo "Security token verification failed.";
-				exit();
-			}
 			if(! preg_match('/^\d+\.\d+\.\d+\.\d+$/', get_transient('wfunlock_' . $_GET['key']))){
 				echo "Invalid key provided for authentication.";
 				exit();

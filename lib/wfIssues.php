@@ -76,6 +76,9 @@ class wfIssues {
 		if($level == 2 && $this->totalCriticalIssues < 1 && $this->totalWarningIssues < 1){ return; }
 		if($level == 1 && $this->totalCriticalIssues < 1){ return; }
 		$emailedIssues = wfConfig::get_ser('emailedIssuesList', array());
+		if(! is_array($emailedIssues)){
+			$emailedIssues = array();
+		}
 		$finalIssues = array();
 		foreach($this->newIssues as $newIssue){
 			$alreadyEmailed = false;
