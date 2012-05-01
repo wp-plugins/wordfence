@@ -8,9 +8,10 @@ class wfIssues {
 	public $totalIssues = 0;
 	public $totalCriticalIssues = 0;
 	public $totalWarningIssues = 0;
+	private $db = false;
 	public function __construct(){
 		global $wpdb;
-		$this->issuesTable = $wpdb->prefix . 'wfIssues';
+		$this->issuesTable = $wpdb->base_prefix . 'wfIssues';
 	}
 	public function addIssue($type, $severity, 
 		
@@ -28,10 +29,6 @@ class wfIssues {
 			if($rec['status'] == 'ignoreC' && $rec['ignoreC'] == $ignoreC){ return; }
 			if($rec['status'] == 'ignoreP' && $rec['ignoreP'] == $ignoreP){ return; }
 		}
-
-		//This is flagged either during a scan or after a scan. The next scan checks to see if it's been set and will do a full scan if it's set. The next scan also sets this to zero. 
-		//So the logic is: If any new issues have been added in the previous scan or since then, then do a full scan because we delete the 'new' issues at the start of each scan and need to check if they still exist.
-		wfConfig::set('newIssueAddedLastScan', 1);	
 
 		$this->totalIssues++;
 		if($severity == 1){
@@ -61,14 +58,12 @@ class wfIssues {
 			);
 	}
 	public function deleteIgnored(){
-		wfConfig::set('ignoreListChanged', 1);
 		$this->getDB()->query("delete from " . $this->issuesTable . " where status='ignoreP' or status='ignoreC'");
 	}
 	public function deleteNew(){
 		$this->getDB()->query("delete from " . $this->issuesTable . " where status='new'");
 	}
 	public function ignoreAllNew(){
-		wfConfig::set('ignoreListChanged', 1);
 		$this->getDB()->query("update " . $this->issuesTable . " set status='ignoreC' where status='new'");
 	}
 	public function emailNewIssues(){
@@ -81,6 +76,9 @@ class wfIssues {
 		if($level == 2 && $this->totalCriticalIssues < 1 && $this->totalWarningIssues < 1){ return; }
 		if($level == 1 && $this->totalCriticalIssues < 1){ return; }
 		$emailedIssues = wfConfig::get_ser('emailedIssuesList', array());
+		if(! is_array($emailedIssues)){
+			$emailedIssues = array();
+		}
 		$finalIssues = array();
 		foreach($this->newIssues as $newIssue){
 			$alreadyEmailed = false;
@@ -122,10 +120,6 @@ class wfIssues {
 	}
 	public function updateIssue($id, $status){ //ignoreC, ignoreP, delete or new
 		$currentStatus = $this->getDB()->querySingle("select status from " . $this->issuesTable . " where id=%d", $id);
-		if($currentStatus == 'ignoreC' || $currentStatus == 'ignoreP'){
-			//We are removing something from the ignore list so we need to flag ignoreListChanged so that the next scan is a full scan
-			wfConfig::set('ignoreListChanged', 1);
-		}
 		if($status == 'delete'){
 			$this->getDB()->query("delete from " . $this->issuesTable . " where id=%d", $id);
 		} else if($status == 'ignoreC' || $status == 'ignoreP' || $status == 'new'){

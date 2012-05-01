@@ -206,3 +206,15 @@ table th.wfSubheading { font-weight: bold; padding-top: 10px; }
 	background-image: url(../images/icons/arrow_refresh.png);
 }
 #wfActivity { position: relative; }
+h3.wfConfigHeading {
+	font-size: 22px;
+	color: #777;
+	font-family: Georgia;
+	font-style: italic;
+	font-weight: normal
+}
+.wfTipText {
+	color: #777;
+	font-family: Georgia;
+	font-style: italic;
+}
