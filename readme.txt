@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 1.5.4
+Stable tag: 1.5.5
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,21 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 1.5.5 =
+* Added ability for admin's to unlock login and unblock their IP addresses if they're accidentally locked out by the firewall or login security. Uses two security tokens to prevent abuse.
+* Admins can now also disable firewall and login security from the unlock-me email, just in case of emergency.
+* Made advanced options visible so you know they exist.
+* Fixed dns_get_record() function not existing bug on Windows sytems pre PHP 5.3.0. Was causing scans to hang.
+* Increased login lockout defaults to be much higher which still protects against brute force hacks.
+* Removed CURLOPT_MAXREDIRS in curl to avoid safe mode warnings.
+* Fixed ability to view and diff files on blogs installed in subdirectories.
+* Fixed ability to see individual IP hits on subdir sites.
+* Plugin and theme update messages now include links to the upgrade page.
+* Removed the link on the login form that mentions the site is protected by Wordfence.
+* Changed lockout defaults to be much higher.
+* Added options for higher number of failures before lockout in options page.
+* Now including plugin version in the activity log when the admin chooses to email it to us for debugging.
+
 = 1.5.4 =
 * Admin can now select to scan outside the WordPress base dir and standard WordPress directories.
 * Max memory size for scans is now configurable for larger installations. 256M is the default.

@@ -159,7 +159,6 @@ class wordfence {
 		add_action('wp_logout','wordfence::logoutAction');
 		add_action('profile_update', 'wordfence::profileUpdateAction', '99', 2);
 		add_action('lostpassword_post', 'wordfence::lostPasswordPost', '1');
-		add_action('login_form', 'wordfence::loginForm', '1');
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
 		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
@@ -244,6 +243,86 @@ class wordfence {
 		return self::getLog()->isIPLockedOut($IP);
 	}
 	public static function veryFirstAction(){
+		$wfFunc = $_GET['_wfsf'];
+		if($wfFunc == 'unlockEmail'){
+			if(! wp_verify_nonce($_GET['nonce'], 'wp-ajax')){
+				echo "Security token verification failed.";
+				exit();
+			}
+			$email = trim($_POST['email']);
+			global $wpdb;
+			$ws = $wpdb->get_results("SELECT ID, user_login FROM $wpdb->users");
+			$users = array();
+			foreach($ws as $user){
+				if($user->user_level > 7){
+					if($email == $user->user_email){
+						$found = true;
+						break;
+					}
+				}
+			}
+			if(! $found){
+				foreach(wfConfig::getAlertEmails() as $alertEmail){
+					if($alertEmail == $email){
+						$found = true;
+						break;
+					}
+				}
+			}
+			if($found){
+				$key = wfUtils::bigRandomHex();
+				$IP = wfUtils::getIP();
+				set_transient('wfunlock_' . $key, $IP, 1800);
+				$content = wfUtils::tmpl('email_unlockRequest.php', array(
+					'siteName' => get_bloginfo('name', 'raw'),
+					'siteURL' => wfUtils::getSiteBaseURL(),
+					'unlockHref' => wfUtils::getSiteBaseURL() . '?_wfsf=unlockAccess&nonce=' . wp_create_nonce('wp-unlock') . '&key=' . $key,
+					'key' => $key,
+					'IP' => $IP
+					));
+				wp_mail($email, "Unlock email requested", $content, "Content-Type: text/html");
+			}
+			echo "<html><body><h1>Your request was received</h1><p>We received a request to email \"$email\" instructions to unlock their access. If that is the email address of a site administrator or someone on the Wordfence alert list, then they have been emailed instructions on how to regain access to this sytem. The instructions we sent will expire 30 minutes from now.</body></html>";
+			exit();
+		} else if($wfFunc == 'unlockAccess'){
+			if(! wp_verify_nonce($_GET['nonce'], 'wp-unlock')){
+				echo "Security token verification failed.";
+				exit();
+			}
+			if(! preg_match('/^\d+\.\d+\.\d+\.\d+$/', get_transient('wfunlock_' . $_GET['key']))){
+				echo "Invalid key provided for authentication.";
+				exit();
+			}
+			/* You can enable this for paranoid security leve.
+			if(get_transient('wfunlock_' . $_GET['key']) != wfUtils::getIP()){
+				echo "You can only use this link from the IP address you used to generate the unlock email.";
+				exit();
+			}
+			*/
+			$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+			if($_GET['func'] == 'unlockMyIP'){
+				$wfLog->unblockIP(wfUtils::getIP());
+				$wfLog->unlockOutIP(wfUtils::getIP());
+				header('Location: ' . wp_login_url());
+				exit();
+			} else if($_GET['func'] == 'unlockAllIPs'){
+				$wfLog->unblockAllIPs();
+				$wfLog->unlockAllIPs();
+				header('Location: ' . wp_login_url());
+				exit();
+			} else if($_GET['func'] == 'disableRules'){
+				wfConfig::set('firewallEnabled', 0);
+				wfConfig::set('loginSecurityEnabled', 0);
+				$wfLog->unblockAllIPs();
+				$wfLog->unlockAllIPs();
+				header('Location: ' . wp_login_url());
+				exit();
+			} else {
+				echo "Invalid function specified. Please check the link we emailed you and make sure it was not cut-off by your email reader.";
+				exit();
+			}
+		}
+
 		$wfLog = self::getLog();
 		$wfLog->firewallBadIPs();
 	}
@@ -355,7 +434,7 @@ class wordfence {
 		}
 	}
 	public static function ajax_sendActivityLog_callback(){
-		$content = "SITE: " . site_url() . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
+		$content = "SITE: " . site_url() . "\nPLUGIN VERSION: " . wfUtils::myVersion() . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
 		$wfdb = new wfDB();
 		global $wpdb;
 		$p = $wpdb->base_prefix;
@@ -801,6 +880,7 @@ class wordfence {
 		return false;
 	}
 	public static function templateRedir(){
+		$wfFunc = get_query_var('_wfsf');		
 		$wfLog = self::getLog();
 		if($wfLog->logHitOK()){
 			if(is_404() ){
@@ -814,7 +894,6 @@ class wordfence {
 			}
 		}
 
-		$wfFunc = get_query_var('_wfsf');
 		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'IPTraf')){
 			return;
 		}
@@ -991,7 +1070,8 @@ class wordfence {
 		wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'));
 		wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
 			'ajaxURL' => admin_url('admin-ajax.php'),
-			'firstNonce' => wp_create_nonce('wp-ajax')
+			'firstNonce' => wp_create_nonce('wp-ajax'),
+			'siteBaseURL' => wfUtils::getSiteBaseURL()
 			));
 
 	}
@@ -1127,9 +1207,6 @@ class wordfence {
 			self::$wfLog = $wfLog;
 		}
 		return self::$wfLog;
-	}
-	public static function loginForm(){
-		echo "<p><a href='http://www.wordfence.com/' target='_blank'>WordPress Security powered by Wordfence</a><br /><br /><br /></p>";
 	}
 }
 ?>

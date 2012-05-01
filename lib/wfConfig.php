@@ -48,8 +48,8 @@ class wfConfig {
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
 				"loginSec_lockoutMins" => "5",
-				'loginSec_maxFailures' => "5",
-				'loginSec_maxForgotPasswd' => "5",
+				'loginSec_maxFailures' => "500",
+				'loginSec_maxForgotPasswd' => "500",
 				'maxGlobalRequests' => "DISABLED",
 				'maxGlobalRequests_action' => "throttle",
 				'maxRequestsCrawlers' => "DISABLED",
@@ -109,8 +109,8 @@ class wfConfig {
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
 				"loginSec_lockoutMins" => "5",
-				'loginSec_maxFailures' => "10",
-				'loginSec_maxForgotPasswd' => "10",
+				'loginSec_maxFailures' => "50",
+				'loginSec_maxForgotPasswd' => "50",
 				'maxGlobalRequests' => "960",
 				'maxGlobalRequests_action' => "throttle",
 				'maxRequestsCrawlers' => "960",
@@ -170,8 +170,8 @@ class wfConfig {
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "240",
 				"loginSec_lockoutMins" => "240",
-				'loginSec_maxFailures' => "3",
-				'loginSec_maxForgotPasswd' => "5",
+				'loginSec_maxFailures' => "20",
+				'loginSec_maxForgotPasswd' => "20",
 				'maxGlobalRequests' => "960",
 				'maxGlobalRequests_action' => "throttle",
 				'maxRequestsCrawlers' => "960",
@@ -231,8 +231,8 @@ class wfConfig {
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
 				"loginSec_lockoutMins" => "1440",
-				'loginSec_maxFailures' => "3",
-				'loginSec_maxForgotPasswd' => "3",
+				'loginSec_maxFailures' => "10",
+				'loginSec_maxForgotPasswd' => "10",
 				'maxGlobalRequests' => "960",
 				'maxGlobalRequests_action' => "throttle",
 				'maxRequestsCrawlers' => "960",
@@ -292,8 +292,8 @@ class wfConfig {
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
 				"loginSec_lockoutMins" => "1440",
-				'loginSec_maxFailures' => "3",
-				'loginSec_maxForgotPasswd' => "3",
+				'loginSec_maxFailures' => "5",
+				'loginSec_maxForgotPasswd' => "5",
 				'maxGlobalRequests' => "960",
 				'maxGlobalRequests_action' => "throttle",
 				'maxRequestsCrawlers' => "960",
@@ -435,7 +435,7 @@ class wfConfig {
 		$emails = array();
 		foreach($dat as $email){
 			if(preg_match('/\@/', $email)){
-				$emails[] = $email;
+				$emails[] = trim($email);
 			}
 		}
 		return $emails;

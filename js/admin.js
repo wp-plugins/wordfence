@@ -549,15 +549,18 @@ window['wordfenceAdmin'] = {
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	},
 	makeIPTrafLink: function(IP){
-		return '/?_wfsf=IPTraf&nonce=' + this.nonce + '&IP=' + encodeURIComponent(IP);
+		return WordfenceAdminVars.siteBaseURL + '?_wfsf=IPTraf&nonce=' + this.nonce + '&IP=' + encodeURIComponent(IP);
 	},
 	makeDiffLink: function(dat){
-		return '/?_wfsf=diff&nonce=' + this.nonce +
+		return WordfenceAdminVars.siteBaseURL + '?_wfsf=diff&nonce=' + this.nonce +
 			'&file=' + encodeURIComponent(this.es(dat['file'])) +
 			'&cType=' + encodeURIComponent(this.es(dat['cType'])) +
 			'&cKey=' + encodeURIComponent(this.es(dat['cKey'])) +
 			'&cName=' + encodeURIComponent(this.es(dat['cName'])) +
 			'&cVersion=' + encodeURIComponent(this.es(dat['cVersion']));
+	},
+	makeViewFileLink: function(file){
+		return WordfenceAdminVars.siteBaseURL + '?_wfsf=view&nonce=' + this.nonce + '&file=' + encodeURIComponent(file);
 	},
 	makeTimeAgo: function(t){
 		var months = Math.floor(t / (86400 * 30));

@@ -67,8 +67,6 @@ class wfAPI {
 			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
 			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
 			curl_setopt ($curl, CURLOPT_WRITEFUNCTION, array($this, 'curlWrite'));
-			@curl_setopt ($curl, CURLOPT_FOLLOWLOCATION, true);
-			@curl_setopt ($curl, CURLOPT_MAXREDIRS, 10);
 			curl_setopt($curl, CURLOPT_POST, true);
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $postParams);
 			
@@ -106,9 +104,6 @@ class wfAPI {
 		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
 		curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
-
-		@curl_setopt ($curl, CURLOPT_FOLLOWLOCATION, true);
-		@curl_setopt ($curl, CURLOPT_MAXREDIRS, 10);
 		curl_setopt($curl, CURLOPT_POST, true);
 		if($postData){                  
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);

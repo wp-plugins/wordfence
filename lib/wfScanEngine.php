@@ -415,13 +415,13 @@ class wfScanEngine {
 		for($i = 0; $i < sizeof($words); $i++){
 			if($hasher->CheckPassword($words[$i], $userDat->user_pass)){
 				$this->status(2, 'info', "Adding issue " . $shortMsg);
-				$this->addIssue('easyPassword', $level, $user->ID, $user->ID . '-' . $userDat->user_pass, $shortMsg, $longMsg, array(
-					'ID' => $user->ID,
+				$this->addIssue('easyPassword', $level, $userDat->ID, $userDat->ID . '-' . $userDat->user_pass, $shortMsg, $longMsg, array(
+					'ID' => $userDat->ID,
 					'user_login' => $userDat->user_login,
 					'user_email' => $userDat->user_email,
 					'first_name' => $userDat->first_name,
 					'last_name' => $userDat->last_name,
-					'editUserLink' => wfUtils::editUserLink($user->ID)
+					'editUserLink' => wfUtils::editUserLink($userDat->ID)
 					));
 				break;
 			}
@@ -453,6 +453,10 @@ class wfScanEngine {
 
 	}
 	private function scanDNSChanges(){
+		if(! function_exists('dns_get_record')){
+			$this->status(1, 'info', "Skipping DNS scan because this system does not support dns_get_record()");
+			return;
+		}
 		$this->status(2, 'info', "Starting DNS checks");
 		$home = get_home_url();
 		if(preg_match('/https?:\/\/([^\/]+)/i', $home, $matches)){

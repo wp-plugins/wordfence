@@ -70,6 +70,7 @@
 	</p>
 	<p>
 		{{html longMsg}}
+		<a href="<?php echo get_admin_url() . 'update-core.php'; ?>">Click here to update now</a>.
 	</p>
 	<div class="wfIssueOptions">
 		{{if (status == 'new')}}
@@ -104,6 +105,7 @@
 	</p>
 	<p>
 		{{html longMsg}}
+		<a href="<?php echo get_admin_url() . 'update-core.php'; ?>">Click here to update now</a>.
 	</p>
 	<div class="wfIssueOptions">
 	{{if status == 'new'}}
@@ -136,6 +138,7 @@
 	</p>
 	<p>
 		{{html longMsg}}
+		<a href="<?php echo get_admin_url() . 'update-core.php'; ?>">Click here to update now</a>.
 	</p>
 	<div class="wfIssueOptions">
 	{{if (status == 'new')}}
@@ -348,7 +351,7 @@
 	<div class="wfIssueOptions">
 		<strong>Tools:</strong> 
 		{{if data.fileExists}}
-		<a target="_blank" href="/?_wfsf=view&nonce=${WFAD.nonce}&file=${encodeURIComponent(data.file)}">View the file.</a>
+		<a target="_blank" href="${WFAD.makeViewFileLink(data.file)}">View the file.</a>
 		{{/if}}
 		{{if data.canFix}}
 		<a href="#" onclick="WFAD.restoreFile('${id}'); return false;">Restore the original version of this file.</a>

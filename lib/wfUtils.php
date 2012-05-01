@@ -149,6 +149,22 @@ class wfUtils {
 		}
 		return false;
 	}
+	public static function getSiteBaseURL(){
+		return rtrim(site_url(), '/') . '/';
+	}
+	public static function myVersion(){
+		if(! function_exists( 'get_plugin_data')){
+			require_once ABSPATH . '/wp-admin/includes/plugin.php';
+		}
+		$file = dirname(__FILE__) . '/../wordfence.php';
+		if(is_file($file)){
+			$dat = get_plugin_data($file);
+			if(is_array($dat)){
+				return $dat['Version'];
+			}
+		}
+		return 'unknown';
+	}
 }
 
 
