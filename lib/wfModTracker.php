@@ -1,4 +1,5 @@
 <?php
+require_once('wordfenceClass.php');
 class wfModTracker {
 	private $themeSum = false;
 	private $pluginSum = false;
@@ -8,13 +9,19 @@ class wfModTracker {
 	private $anyFilesChangedCached = false;
 	public function __construct(){
 		global $wpdb;
-		$this->changesTable = $wpdb->prefix . 'wfFileChanges';
+		$this->changesTable = $wpdb->base_prefix . 'wfFileChanges';
+		$this->status(2, 'info', "Getting file change DB handle");
 		$this->db = new wfDB();
+		$this->status(2, 'info', "Starting theme change check");
 		$this->themeSum = $this->makeSum(get_theme_root());
+		$this->status(2, 'info', "Starting plugin change scan");
 		$this->pluginSum = $this->makeSum(WP_PLUGIN_DIR);
+		$this->status(2, 'info', "Starting core file change scan");
 		$this->coreSum = $this->makeCoreSum();
 		$this->allFilesSum = array();
+		$this->status(2, 'info', "Getting changes in all other files");
 		$this->getAllFilesSum(ABSPATH);
+		$this->status(2, 'info', "Done compiling file changes");
 	}
 	public static function resetChanges(){
 		wfConfig::set('wfmdt_coreSum', '');
@@ -22,7 +29,7 @@ class wfModTracker {
 		wfConfig::set('wfmdt_pluginSum', '');
 		$db = new wfDB();
 		global $wpdb;
-		$db->query("delete from " . $wpdb->prefix . 'wfFileChanges');
+		$db->query("delete from " . $wpdb->base_prefix . 'wfFileChanges');
 	}
 	public function filesModifiedInCore(){  if(wfConfig::get('wfmdt_coreSum') != $this->coreSum){ return true; } else { return false; } }
 	public function filesModifiedInThemes(){  if(wfConfig::get('wfmdt_themeSum') != $this->themeSum){ return true; } else { return false; } }
@@ -110,6 +117,9 @@ class wfModTracker {
 			}
 		}
 		return md5($str);
+	}
+	private function status($level, $type, $msg){
+		wordfence::status($level, $type, $msg);
 	}
 }
 ?>

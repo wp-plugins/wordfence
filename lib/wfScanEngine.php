@@ -6,7 +6,6 @@ require_once('wordfenceScanner.php');
 require_once('wfIssues.php');
 require_once('wfDB.php');
 require_once('wfUtils.php');
-require_once('wfModTracker.php');
 class wfScanEngine {
 	private $i = false;
 	private $api = false;
@@ -14,65 +13,24 @@ class wfScanEngine {
 	private $wp_version = false;
 	private $apiKey = false;
 	private $errorStopped = false;
-	private $modTracker = false;
 	private $dictWords = array();
+	private $startTime = 0;
 	public function __construct(){
+		$this->startTime = time();
 		$this->i = new wfIssues();
-		global $wp_version;
-		$this->wp_version = $wp_version;
+		$this->wp_version = wfUtils::getWPVersion();
 		$this->apiKey = wfConfig::get('apiKey');
-		$this->api = new wfAPI($this->apiKey, $wp_version);
+		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 	}
 	public function go(){
-		$this->status(1, 'info', "Initializing scan");
-		
-		/*
-			The logic for determining if we need to do a full scan or only scan files that have changed is as follows:
-			
-			NOTE NOTE: We delete all 'new' issues at the start of every scan.
-			
-			If the last scan added any new issues, or if new issues have been added since then, we do a full scan
-			because at the start of this scan we delete those 'new' issues and we need to check which of those new issues
-			are still issues.
-
-			If the previous scan didn't detect any new issues, no issues have been added since then and no files have changed
-			then we don't need to do a full scan UNLESS:
-
-			If the user has deleted 'ignored' issues then we need to do a full scan to see if any of those previously
-			ignored issues need to show up in the 'new' list.
-
-			So to accomplish this we track if new issues have been added during or since the previous scan and if any ignored issues
-			have been modified since the previous scan. If any of that is true, then we force a new scan. 
-
-			NOTE that we don't have to 'resetChanges()' if the user deletes 'new' issues or moves them to 'ignore' because a full scan
-			will already occur because the previous scan called addIssue to create those issues (because we delete all new issues at the start of each scan)
-			and thereby set newIssueAddedLastScan.
-
-		*/
-
-		$forceFullScan = false;
-		if(wfConfig::get('newIssueAddedLastScan', false)){
-			$forceFullScan = true; //Do a full scan if a new issue was added in the last scan (or since the last scan) because we need to check if that issue has been resolved or still exists.
-		}
-		if(wfConfig::get('ignoreListChanged', false)){
-			$forceFullScan = true; //Do a full scan if the ignore list changed because we need to show that issue in 'new' list if it still exists.
-		}
-		wfConfig::set('newIssueAddedLastScan', 0);
-		wfConfig::set('ignoreListChanged', 0);
+		$this->status(1, 'info', "Initializing scan. Memory available: " . @ini_get('memory_limit') );
 		$this->i->deleteNew();
 
 		try {
-			if($forceFullScan){
-				$this->status(1, 'info', "Getting ready to do a full scan by reinitializing change tracking");
-				wfModTracker::resetChanges();
-			}
-			$this->status(1, 'info', "Compiling list of changed files");
-			$this->modTracker = new wfModTracker();
 			$this->doScan();
 			if(! $this->errorStopped){
-				$this->modTracker->logCurrentState();
 				wfConfig::set('lastScanCompleted', 'ok');
 			}
 			//updating this scan ID will trigger the scan page to load/reload the results.
@@ -80,7 +38,6 @@ class wfScanEngine {
 			//scan ID only incremented at end of scan to make UI load new results
 			$this->emailNewIssues();
 		} catch(Exception $e){
-			wfModTracker::resetChanges();	
 			$this->errorStop($e->getMessage());
 		}
 		wordfence::scheduleNextScan(true);
@@ -95,15 +52,13 @@ class wfScanEngine {
 			$this->errorStop($this->api->errorMsg);
 			return;
 		}
-		$knownFiles = $this->scanKnownFiles();
+		$unknownFiles = $this->scanKnownFiles();
 		if($this->errorStopped){ 
-			wfModTracker::resetChanges();	
 			return; 
 		}
 		if(wfConfig::get('scansEnabled_fileContents')){
-			$this->scanFileContents($knownFiles);
+			$this->scanFileContents($unknownFiles);
 			if($this->errorStopped){ 
-				wfModTracker::resetChanges();	
 				return; 
 			}
 		}
@@ -133,63 +88,75 @@ class wfScanEngine {
 			$this->scanOldVersions();
 			if($this->errorStopped){ return; }
 		}
-		$this->status(1, 'info', "Scan complete.");
+		$summary = $this->i->getSummaryItems();
+		$this->status(1, 'info', "Scan Complete. Scanned " . $summary['totalFiles'] . " files, " . $summary['totalPlugins'] . " plugins, " . $summary['totalThemes'] . " themes, " . ($summary['totalPages'] + $summary['totalPosts']) . " pages, " . $summary['totalComments'] . " comments and " . $summary['totalRows'] . " records in " . (time() - $this->startTime) . " seconds.");
+		if($this->i->totalIssues > 0){
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below for details.");
+		} else {
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, there were no problems found.");
+		}
 		return;
 	}
 	private function scanKnownFiles(){
 		$malwareScanEnabled = $coreScanEnabled = $pluginScanEnabled = $themeScanEnabled = false;
+		$statusIDX = array(
+			'core' => false,
+			'plugin' => false,
+			'theme' => false,
+			'unknown' => false
+			);
 		if(wfConfig::get('scansEnabled_core')){
-			if($this->modTracker->filesModifiedInCore()){
-				$this->status(2, 'info', "Enabling core scan because core files have been modified.");
-				$coreScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping core scan because no core files were modified.");
-			}
+			$coreScanEnabled = true;
+			$statusIDX['core'] = wordfence::statusStart("Comparing core WordPress files against originals in repository");
 		} else {
-			$this->status(2, 'info', "Skipping core scan because it's disabled.");
+			wordfence::statusDisabled("Skipping core scan");
 		}
 		if(wfConfig::get('scansEnabled_plugins')){
-			if($this->modTracker->filesModifiedInPlugins()){
-				$this->status(2, 'info', "Enabling plugin scan because files in plugins directory have been modified.");
-				$pluginScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping plugin scan because no files in plugins directory have been modified.");
-			}	
+			$pluginScanEnabled = true;
+			$statusIDX['plugin'] = wordfence::statusStart("Comparing plugin files against originals in repository");
 		} else {
+			wordfence::statusDisabled("Skipping plugin scan");
 			$this->status(2, 'info', "Skipping plugin scan because it's disabled.");
 		}
 		if(wfConfig::get('scansEnabled_themes')){
-			if($this->modTracker->filesModifiedInThemes()){
-				$this->status(2, 'info', "Enabling theme scan because files in themes dir have been modified.");
-				$themeScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping theme scan because no files in themes directory have been modified.");
-			}
+			$themeScanEnabled = true;
+			$statusIDX['theme'] = wordfence::statusStart("Comparing theme files against originals in repository");
 		} else {
+			wordfence::statusDisabled("Skipping theme scan");
 			$this->status(2, 'info', "Skipping themes scan because it's disabled.");
 		}
 
 		if(wfConfig::get('scansEnabled_malware')){
-			if($this->modTracker->anyFilesChanged()){
-				$this->status(2, 'info', "Enabling malware scan because we have modified files in the dir structure.");
-				$malwareScanEnabled = true;
-			} else {
-				$this->status(2, 'info', "Skipping malware scan because no files were modified in the dir structure.");
-			} 
+			$statusIDX['unknown'] = wordfence::statusStart("Scanning for known malware files");
+			$malwareScanEnabled = true;
 		} else {
+			wordfence::statusDisabled("Skipping malware scan");
 			$this->status(2, 'info', "Skipping malware scan because it's disabled.");
 		}
 		$summaryUpdateRequired = $this->i->summaryUpdateRequired();
 		if((! $summaryUpdateRequired) && (! ($coreScanEnabled || $pluginScanEnabled || $themeScanEnabled || $malwareScanEnabled))){
-			$this->status(2, 'info', "Finishign this stage because we don't have to do a summary update and we don't need to do a core, plugin, theme or malware scan.");
+			$this->status(2, 'info', "Finishing this stage because we don't have to do a summary update and we don't need to do a core, plugin, theme or malware scan.");
 			return array();
 		}
 			
-		$this->status(1, 'info', "Scanning known files.");
 		//CORE SCAN
-		$this->status(2, 'info', "Generating a hash of directory structure.");
-		$hasher = new wordfenceHash();
-		$hashes = $hasher->dirHash(ABSPATH, strlen(ABSPATH) );
+		$hasher = new wordfenceHash(strlen(ABSPATH));
+		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
+		$baseContents = scandir(ABSPATH);
+		$scanOutside = wfConfig::get('other_scanOutside');
+		if($scanOutside){
+			wordfence::status(2, 'info', "Including files that are outside the WordPress installation in the scan.");
+		}
+		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
+			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
+			if($scanOutside){
+				$includeInScan[] = $file;
+			} else if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && filesize($fullFile) < 1000000) ){
+				$includeInScan[] = $file;
+			}
+		}
+		$this->status(2, 'info', "Hashing your WordPress files for comparison against originals.");
+		$hashes = $hasher->hashPaths(ABSPATH, $includeInScan);
 		$this->status(2, 'info', "Done hash. Updating summary items.");
 		$this->i->updateSummaryItem('totalData', wfUtils::formatBytes($hasher->totalData));
 		$this->i->updateSummaryItem('totalFiles', $hasher->totalFiles);
@@ -239,57 +206,80 @@ class wfScanEngine {
 		$result1 = $this->api->call('main_scan', array(), array(
 			'data' => json_encode($scanData)
 			));
-		$this->status(2, 'info', "Done API call to Wordfence servers and got a result.");
 		if($this->api->errorMsg){
 			$this->errorStop($this->api->errorMsg);
+			wordfence::statusEndErr();
 			return;
 		}
-		if($result1['errorMsg']){
+		if(empty($result1['errorMsg']) === false){
 			$this->errorStop($result['errorMsg']);
+			wordfence::statusEndErr();
 			return;
 		}
 		if(! $result1){
 			$this->errorStop("We received an empty response from the Wordfence server when scanning core, plugin and theme files.");
+			wordfence::statusEndErr();
 			return;
 		}
 		$this->status(2, 'info', "Processing scan results");
+		$haveIssues = array(
+			'core' => false,
+			'plugin' => false,
+			'theme' => false,
+			'unknown' => false
+			);
 		foreach($result1['results'] as $issue){
 			$this->status(2, 'info', "Adding issue: " . $issue['shortMsg']);
-			$this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+			if($this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data'])){
+				$haveIssues[$issue['data']['cType']] = true;
+			}
 		}
-		return $result1['knownFiles'];
+		foreach($haveIssues as $type => $have){
+			if($statusIDX[$type] !== false){
+				wordfence::statusEnd($statusIDX[$type], $have);
+			}
+		}
+		return $result1['unknownFiles'];
 	}
-	private function scanFileContents($knownFiles){
-		$this->status(1, 'info', "Scanning file contents.");
-		if(! is_array($knownFiles)){
-			$knownFiles = array();
+	private function scanFileContents($unknownFiles){
+		$statusIDX = wordfence::statusStart('Scanning file contents for infections and vulnerabilities');
+		$statusIDX2 = wordfence::statusStart('Scanning files for URLs in Google\'s Safe Browsing List');
+		if(! is_array($unknownFiles)){
+			$unknownFiles = array();
 		}
 		$this->status(2, 'info', "Getting list of changed files since last scan.");
-		$filesToScan = $this->modTracker->getChangedFiles(ABSPATH, $knownFiles); //get changed files since last scan and exclude $knownFiles
-		$this->status(2, 'info', "Got " . sizeof($filesToScan) . " changed files to scan.");
 		$scanner = new wordfenceScanner($this->apiKey, $this->wp_version);
 		$this->status(2, 'info', "Starting scan of file contents");
-		$result2 = $scanner->scan(ABSPATH, $filesToScan, array($this, 'status'));
+		$result2 = $scanner->scan(ABSPATH, $unknownFiles);
 		$this->status(2, 'info', "Done file contents scan");
 		if($scanner->errorMsg){
 			$this->errorStop($scanner->errorMsg);
 		}
+		$haveIssues = false;
+		$haveIssuesGSB = false;
 		foreach($result2 as $issue){
 			$this->status(2, 'info', "Adding issue: " . $issue['shortMsg']);
-			$this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+			if($this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data'])){
+				if(empty($issue['data']['gsb']) === false){
+					$haveIssuesGSB = true;
+				} else {
+					$haveIssues = true;
+				}
+			}
 		}
+		wordfence::statusEnd($statusIDX, $haveIssues);
+		wordfence::statusEnd($statusIDX2, $haveIssuesGSB);
 	}
 	private function scanPosts(){
-		$this->status(1, 'info', "Starting posts scan");
+		$statusIDX = wordfence::statusStart('Scanning posts for URL\'s in Google\'s Safe Browsing List');
 		global $wpdb;
 		$wfdb = new wfDB();
+		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
 		$q1 = $wfdb->uQuery("select ID, post_title, post_type, post_date, post_content from $wpdb->posts where post_type IN ('page', 'post') and post_status = 'publish'");
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$postDat = array();
 		while($row = mysql_fetch_assoc($q1)){
-			$this->status(2, 'info', "Scanning " . $row['post_type'] . ": \"" . $row['post_title'] . "\"");
 			$h->hoover($row['ID'], $row['post_title'] . ' ' . $row['post_content']);
-			
 			$postDat[$row['ID']] = array(
 				'contentMD5' => md5($row['post_content']),
 				'title' => $row['post_title'],
@@ -304,8 +294,11 @@ class wfScanEngine {
 		$this->status(2, 'info', "Done examining URls");
 		if($h->errorMsg){
 			$this->errorStop($h->errorMsg);
+			wordfence::statusEndErr();
 			return;
+		
 		}
+		$haveIssues = false;
 		foreach($hooverResults as $id => $hresults){
 			$uctype = ucfirst($postDat[$id]['type']);
 			$type = $postDat[$id]['type'];
@@ -321,7 +314,7 @@ class wfScanEngine {
 					continue;
 				}
 				$this->status(2, 'info', "Adding issue: $shortMsg");
-				$this->addIssue('postBadURL', 1, $id, $id . $postDat[$id]['contentMD5'], $shortMsg, $longMsg, array(
+				if($this->addIssue('postBadURL', 1, $id, $id . $postDat[$id]['contentMD5'], $shortMsg, $longMsg, array(
 					'postID' => $id,
 					'badURL' => $result['URL'],
 					'postTitle' => $postDat[$id]['title'],
@@ -330,9 +323,12 @@ class wfScanEngine {
 					'permalink' => get_permalink($id),
 					'editPostLink' => get_edit_post_link($id),
 					'postDate' => $postDat[$id]['postDate']
-					));
+					))){
+					$haveIssues = true;
+				}
 			}
 		}
+		wordfence::statusEnd($statusIDX, $haveIssues);
 	}
 	public function isBadComment($author, $email, $url, $IP, $content){
 		$content = $author . ' ' . $email . ' ' . $url . ' ' . $IP . ' ' . $content;
@@ -371,10 +367,13 @@ class wfScanEngine {
 		return false;
 	}
 	private function scanComments(){
+		$statusIDX = wordfence::statusStart('Scanning comments for URL\'s in Google\'s Safe Browsing List');
 		global $wpdb;
 		$wfdb = new wfDB();
+		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
 		$q1 = $wfdb->uQuery("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from $wpdb->comments where comment_approved=1");
 		if( ! $q1){
+			wordfence::statusEndErr();
 			return;
 		}
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
@@ -382,7 +381,6 @@ class wfScanEngine {
 		$gotRow = false;
 		while($row = mysql_fetch_assoc($q1)){
 			$gotRow = true; //because we can't use mysql_num_rows on unbuffered queries
-			$this->status(2, 'info', "Scanning comment ID " . $row['comment_ID'] . " with author " . $row['comment_author']);
 			$h->hoover($row['comment_ID'], $row['comment_author_url'] . ' ' . $row['comment_author'] . ' ' . $row['comment_content']);
 			$commentDat[$row['comment_ID']] = array(
 				'contentMD5' => md5($row['comment_content'] . $row['comment_author'] . $row['comment_author_url']),
@@ -392,12 +390,17 @@ class wfScanEngine {
 				);
 		}
 		mysql_free_result($q1);
-		if(! $gotRow){ return; }
+		if(! $gotRow){ 
+			wordfence::statusEnd($statusIDX, false);
+			return; 
+		}
 		$hooverResults = $h->getBaddies();
 		if($h->errorMsg){
 			$this->errorStop($h->errorMsg);
+			wordfence::statusEndErr();
 			return;
 		}
+		$haveIssues = false;
 		foreach($hooverResults as $id => $hresults){
 			$uctype = ucfirst($commentDat[$id]['type']);
 			$type = $commentDat[$id]['type'];
@@ -412,7 +415,7 @@ class wfScanEngine {
 					//A list type that may be new and the plugin has not been upgraded yet.
 					continue;
 				}
-				$this->addIssue('commentBadURL', 1, $id, $id . $commentDat[$id]['contentMD5'], $shortMsg, $longMsg, array(
+				if($this->addIssue('commentBadURL', 1, $id, $id . $commentDat[$id]['contentMD5'], $shortMsg, $longMsg, array(
 					'commentID' => $id,
 					'badURL' => $result['URL'],
 					'author' => $commentDat[$id]['author'],
@@ -420,13 +423,16 @@ class wfScanEngine {
 					'uctype' => $uctype,
 					'editCommentLink' => get_edit_comment_link($id),
 					'commentDate' => $commentDat[$id]['date']
-					));
+					))){
+					$haveIssues = true;
+				}
 			}
 		}
+		wordfence::statusEnd($statusIDX, $haveIssues);
 	}
 	private function highestCap($caps){
 		foreach(array('administrator', 'editor', 'author', 'contributor', 'subscriber') as $cap){
-			if($caps[$cap]){
+			if(empty($caps[$cap]) === false && $caps[$cap]){
 				return $cap;
 			}
 		}
@@ -434,19 +440,23 @@ class wfScanEngine {
 	}
 	private function isEditor($caps){
 		foreach(array('contributor', 'author', 'editor', 'administrator') as $cap){
-			if($caps[$cap]){
+			if(empty($caps[$cap]) === false && $caps[$cap]){
 				return true;
 			}
 		}
 		return false;
 	}
 	private function scanAllPasswords(){
+		$statusIDX = wordfence::statusStart('Scanning for weak passwords');
 		global $wpdb;
 		$ws = $wpdb->get_results("SELECT ID, user_login FROM $wpdb->users");
+		$haveIssues = false;
 		foreach($ws as $user){
 			$this->status(2, 'info', "Checking password strength for: " . $user->user_login);
-			$this->scanUserPassword($user->ID);
+			$isWeak = $this->scanUserPassword($user->ID);
+			if($isWeak){ $haveIssues = true; }
 		}
+		wordfence::statusEnd($statusIDX, $haveIssues);
 	}
 	public function scanUserPassword($userID){
 		require_once( ABSPATH . 'wp-includes/class-phpass.php');
@@ -468,28 +478,33 @@ class wfScanEngine {
 			$level = 2;
 			$words = array($userDat->user_login);
 		}
+		$haveIssue = false;
 		for($i = 0; $i < sizeof($words); $i++){
 			if($hasher->CheckPassword($words[$i], $userDat->user_pass)){
 				$this->status(2, 'info', "Adding issue " . $shortMsg);
-				$this->addIssue('easyPassword', $level, $user->ID, $user->ID . '-' . $userDat->user_pass, $shortMsg, $longMsg, array(
-					'ID' => $user->ID,
+				if($this->addIssue('easyPassword', $level, $userDat->ID, $userDat->ID . '-' . $userDat->user_pass, $shortMsg, $longMsg, array(
+					'ID' => $userDat->ID,
 					'user_login' => $userDat->user_login,
 					'user_email' => $userDat->user_email,
 					'first_name' => $userDat->first_name,
 					'last_name' => $userDat->last_name,
-					'editUserLink' => wfUtils::editUserLink($user->ID)
-					));
+					'editUserLink' => wfUtils::editUserLink($userDat->ID)
+					))){
+					$haveIssue = true;
+				}
 				break;
 			}
 		}
 		$this->status(2, 'info', "Completed checking password strength of user '" . $userDat->user_login . "'");
+		return $haveIssue;
 	}
 	private function scanDiskSpace(){
-		$this->status(2, 'info', "Starting disk space check.");
+		$statusIDX = wordfence::statusStart("Scanning to check available disk space");
 		$total = disk_total_space('.');
 		$free = disk_free_space('.');
 		$this->status(2, 'info', "Total space: $total Free space: $free");
 		if( (! $total) || (! $free )){ //If we get zeros it's probably not reading right. If free is zero then we're out of space and already in trouble.
+			wordfence::statusEnd($statusIDX, false);
 			return;
 		}
 		$level = false;
@@ -500,16 +515,23 @@ class wfScanEngine {
 		} else if($spaceLeft < 5){
 			$level = 2;
 		} else {
+			wordfence::statusEnd($statusIDX, false);
 			return;
 		}
-		$this->status(2, 'info', "Adding issue due to low disk space.");
-		$this->addIssue('diskSpace', $level, 'diskSpace' . $level, 'diskSpace' . $level, "You have $spaceLeft" . "% disk space remaining", "You only have $spaceLeft" . "% of your disk space remaining. Please free up disk space or your website may stop serving requests.", array(
-			'spaceLeft' => $spaceLeft ));
-
-
+		if($this->addIssue('diskSpace', $level, 'diskSpace' . $level, 'diskSpace' . $level, "You have $spaceLeft" . "% disk space remaining", "You only have $spaceLeft" . "% of your disk space remaining. Please free up disk space or your website may stop serving requests.", array(
+			'spaceLeft' => $spaceLeft ))){
+			wordfence::statusEnd($statusIDX, true);
+		} else {
+			wordfence::statusEnd($statusIDX, true);
+		}
 	}
 	private function scanDNSChanges(){
-		$this->status(2, 'info', "Starting DNS checks");
+		if(! function_exists('dns_get_record')){
+			$this->status(1, 'info', "Skipping DNS scan because this system does not support dns_get_record()");
+			return;
+		}
+		$statusIDX = wordfence::statusStart("Scanning DNS for unauthorized changes");
+		$haveIssues = false;
 		$home = get_home_url();
 		if(preg_match('/https?:\/\/([^\/]+)/i', $home, $matches)){
 			$host = strtolower($matches[1]);
@@ -532,12 +554,14 @@ class wfScanEngine {
 			$loggedCNAME = wfConfig::get('wf_dnsCNAME');
 			$dnsLogged = wfConfig::get('wf_dnsLogged', false);
 			if($dnsLogged && $loggedCNAME != $currentCNAME){
-				$this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the CNAME records of your DNS configuration for the domain $host. A CNAME record is an alias that is used to point a domain name to another domain name. For example foo.example.com can point to bar.example.com which then points to an IP address of 10.1.1.1. $msg", array( 
+				if($this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the CNAME records of your DNS configuration for the domain $host. A CNAME record is an alias that is used to point a domain name to another domain name. For example foo.example.com can point to bar.example.com which then points to an IP address of 10.1.1.1. $msg", array( 
 					'type' => 'CNAME',
 					'host' => $host,
 					'oldDNS' => $loggedCNAME,
 					'newDNS' => $currentCNAME
-					));
+					))){
+					$haveIssues = true;
+				}
 			}
 			wfConfig::set('wf_dnsCNAME', $currentCNAME);
 
@@ -557,12 +581,14 @@ class wfScanEngine {
 			$dnsLogged = wfConfig::get('wf_dnsLogged', false);
 			$msg = "A change in your DNS records may indicate that a hacker has hacked into your DNS administration system and has pointed your email or website to their own server for malicious purposes. It could also indicate that your domain has expired. If you made this change yourself you can mark it 'resolved' and safely ignore it.";
 			if($dnsLogged && $loggedA != $currentA){
-				$this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the A records of your DNS configuration that may affect the domain $host. An A record is a record in DNS that points a domain name to an IP address. $msg", array( 
+				if($this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the A records of your DNS configuration that may affect the domain $host. An A record is a record in DNS that points a domain name to an IP address. $msg", array( 
 					'type' => 'A',
 					'host' => $host,
 					'oldDNS' => $loggedA,
 					'newDNS' => $currentA
-					));
+					))){
+					$haveIssues = true;
+				}
 			}
 			wfConfig::set('wf_dnsA', $currentA);
 
@@ -582,30 +608,36 @@ class wfScanEngine {
 			$currentMX = implode(', ', $mxArr);
 			$loggedMX = wfConfig::get('wf_dnsMX');
 			if($dnsLogged && $loggedMX != $currentMX){
-				$this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the email server (MX) records of your DNS configuration for the domain $host. $msg", array( 
+				if($this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the email server (MX) records of your DNS configuration for the domain $host. $msg", array( 
 					'type' => 'MX',
 					'host' => $host,
 					'oldDNS' => $loggedMX,
 					'newDNS' => $currentMX
-					));
+					))){
+					$haveIssues = true;
+				}
 			
 			}
 			wfConfig::set('wf_dnsMX', $currentMX);
 				
 			wfConfig::set('wf_dnsLogged', 1);
 		}
+		wordfence::statusEnd($statusIDX, $haveIssues);
 	}
 	private function scanOldVersions(){
+		$statusIDX = wordfence::statusStart("Scanning for old themes, plugins and core files");
 		if(! function_exists( 'get_preferred_from_update_core')){
 			require_once(ABSPATH . 'wp-admin/includes/update.php');
 		}
 		$cur = get_preferred_from_update_core();
+		$haveIssues = false;
 		if(isset( $cur->response ) && $cur->response == 'upgrade'){
-			global $wp_version;
-			$this->addIssue('wfUpgrade', 1, 'wfUpgrade' . $cur->current, 'wfUpgrade' . $cur->current, "Your WordPress version is out of date", "WordPress version " . $cur->current . " is now available. Please upgrade immediately to get the latest security updates from WordPress.", array(
-				'currentVersion' => $wp_version,
+			if($this->addIssue('wfUpgrade', 1, 'wfUpgrade' . $cur->current, 'wfUpgrade' . $cur->current, "Your WordPress version is out of date", "WordPress version " . $cur->current . " is now available. Please upgrade immediately to get the latest security updates from WordPress.", array(
+				'currentVersion' => $this->wp_version,
 				'newVersion' => $cur->current
-				));
+				))){
+				$haveIssues = true;
+			}
 		}
 		$update_plugins = get_site_transient( 'update_plugins' );
 		if(isset($update_plugins) && (! empty($update_plugins->response))){
@@ -617,8 +649,10 @@ class wfScanEngine {
 					$pluginFile = wfUtils::getPluginBaseDir() . $plugin;
 					$data = get_plugin_data($pluginFile);
 					$data['newVersion'] = $vals->new_version;
-					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['oldVersion'] . ' ' . $data['Version'];
-					$this->addIssue('wfPluginUpgrade', 1, $key, $key, "The Plugin \"" . $data['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $data['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $data);
+					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['newVersion'] . ' ' . $data['Version'];
+					if($this->addIssue('wfPluginUpgrade', 1, $key, $key, "The Plugin \"" . $data['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $data['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $data)){
+						$haveIssues = true;
+					}
 				}
 			}
 		}
@@ -639,13 +673,15 @@ class wfScanEngine {
 							'version' => $themeData['Version']
 							);
 						$key = 'wfThemeUpgrade' . ' ' . $theme . ' ' . $tData['version'] . ' ' . $tData['newVersion'];
-						$this->addIssue('wfThemeUpgrade', 1, $key, $key, "The Theme \"" . $themeData['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $themeData['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $tData);
+						if($this->addIssue('wfThemeUpgrade', 1, $key, $key, "The Theme \"" . $themeData['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $themeData['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $tData)){
+							$haveIssues = true;
+						}
 					}
 				}
 
 			}
 		}
-
+		wordfence::statusEnd($statusIDX, $haveIssues);
 	}
 	private function errorStop($msg){
 		$this->errorStopped = true;
@@ -656,7 +692,7 @@ class wfScanEngine {
 		wordfence::status($level, $type, $msg);
 	}
 	private function addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData){
-		$this->i->addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData);
+		return $this->i->addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData);
 	}
 }
 
