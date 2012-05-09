@@ -20,6 +20,9 @@ require_once('lib/wfScanEngine.php');
 
 class wfScan {
 	public static function wfScanMain(){
+		if(! wordfence::wfSchemaExists()){
+			self::errorExit("Looks like the Wordfence database tables have been deleted. You can fix this by de-activating and re-activating the Wordfence plugin from your Plugins menu.");
+		}
 		if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
 			self::errorExit("The Wordfence scanner did not receive the x_wordfence_cronkey secure header.");
 		}
@@ -43,15 +46,8 @@ class wfScan {
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
 			self::errorExit("There is already a scan running.");
 		}
-		if(wfConfig::get('maxMem', false) && (int) wfConfig::get('maxMem') > 0){
-			$maxMem = (int) wfConfig::get('maxMem');
-		} else {
-			$maxMem = 256;
-		}
-		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < $maxMem ) ){
-			wordfence::status(1, 'info', "Requesting a maximum memory limit of $maxMem megabytes from PHP.");
-			@ini_set('memory_limit', $maxMem . 'M');
-		}
+		wordfence::status(10, 'info', "SUM_PREP:Preparing a new scan.");
+		wfUtils::requestMaxMemory();
 
 		set_error_handler('wfScan::error_handler', E_ALL);
 		register_shutdown_function('wfScan::shutdown');
@@ -62,6 +58,7 @@ class wfScan {
 		wfConfig::set('wf_scanRunning', time());
 		$scan = new wfScanEngine();
 		$scan->go();
+
 		wfConfig::set('wf_scanRunning', '');
 	}
 	public static function obHandler($buf){

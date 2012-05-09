@@ -126,7 +126,8 @@ class wfSchema {
 	level tinyint UNSIGNED NOT NULL,
 	type char(5) NOT NULL,
 	msg varchar(255) NOT NULL,
-	KEY k1(ctime)
+	KEY k1(ctime),
+	KEY k2(type)
 ) default charset=utf8",
 'wfNet404s' => "(
 	sig binary(16) NOT NULL PRIMARY KEY,

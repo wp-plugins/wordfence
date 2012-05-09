@@ -1,6 +1,7 @@
 if(! window['wordfenceAdmin']){
 window['wordfenceAdmin'] = {
 	loading16: '<div class="wfLoading16"></div>',
+	actUpdateInterval: 2000,
 	dbCheckTables: [],
 	dbCheckCount_ok: 0,
 	dbCheckCount_skipped: 0,
@@ -11,7 +12,6 @@ window['wordfenceAdmin'] = {
 	scanIDLoaded: 0,
 	colorboxQueue: [],
 	colorboxOpen: false,
-	scanPending: false,
 	mode: '',
 	visibleIssuesPanel: 'new',
 	preFirstScanMsgsLoaded: false,
@@ -19,32 +19,178 @@ window['wordfenceAdmin'] = {
 	elementGeneratorIter: 1,
 	reloadConfigPage: false,
 	nonce: false,
+	tickerUpdatePending: false,
+	activityLogUpdatePending: false,
+	lastALogCtime: 0,
+	activityQueue: [],
+	totalActAdded: 0,
+	maxActivityLogItems: 1000,
+	scanReqAnimation: false,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
+		var startTicker = false;
 		if(jQuery('#wordfenceMode_scan').length > 0){
 			this.mode = 'scan';
+			jQuery('#consoleActivity').scrollTop(jQuery('#consoleActivity').prop('scrollHeight'));
+			jQuery('#consoleScan').scrollTop(jQuery('#consoleScan').prop('scrollHeight'));
 			this.noScanHTML = jQuery('#wfNoScanYetTmpl').tmpl().html();
+			this.loadIssues();
+			this.startActivityLogUpdates();
 		} else if(jQuery('#wordfenceMode_activity').length > 0){
 			this.mode = 'activity';
 			this.activityMode = 'hit';
-			this.updateTicker(true);
+			startTicker = true;
 		} else if(jQuery('#wordfenceMode_options').length > 0){
 			this.mode = 'options';
 			jQuery('.wfConfigElem').change(function(){ jQuery('#securityLevel').val('CUSTOM'); });
 			this.updateTicker(true);
+			startTicker = true;
 		} else if(jQuery('#wordfenceMode_blockedIPs').length > 0){
 			this.mode = 'blocked';
 			this.staticTabChanged();
 			this.updateTicker(true);
+			startTicker = true;
 		} else {
 			this.mode = false;
 		}
 		if(this.mode){ //We are in a Wordfence page
 			var self = this;
-			this.liveInt = setInterval(function(){ self.updateTicker(); }, 2000);
+			if(startTicker){
+				this.liveInt = setInterval(function(){ self.updateTicker(); }, 2000);
+			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
 
+	},
+	startActivityLogUpdates: function(){
+		var self = this;
+		setInterval(function(){
+			self.updateActivityLog();
+			}, this.actUpdateInterval);
+	},
+	updateActivityLog: function(){
+		if(this.activityLogUpdatePending){
+			return;
+		}
+		this.activityLogUpdatePending = true;
+		var self = this;
+		this.ajax('wordfence_activityLogUpdate', {
+			lastctime: this.lastALogCtime
+			}, function(res){ self.doneUpdateActivityLog(res); }, function(){ self.activityLogUpdatePending = false; });
+
+	},
+	doneUpdateActivityLog: function(res){
+		this.actNextUpdateAt = (new Date()).getTime() + this.actUpdateInterval;
+		if(res.ok){
+			if(res.items.length > 0){
+				this.activityQueue.push.apply(this.activityQueue, res.items);
+				this.lastALogCtime = res.items[res.items.length - 1].ctime;
+				this.processActQueue(res.currentScanID);
+			}
+		}
+		this.activityLogUpdatePending = false;
+	},
+	processActQueue: function(currentScanID){
+		if(this.activityQueue.length > 0){
+			
+			this.addActItem(this.activityQueue.shift());
+			this.totalActAdded++;
+			if(this.totalActAdded > this.maxActivityLogItems){
+				jQuery('#consoleActivity div:first').remove();
+				this.totalActAdded--;
+			}
+			
+			var timeTillNextUpdate = this.actNextUpdateAt - (new Date()).getTime();
+			var maxRate = 50 / 1000; //Rate per millisecond
+			var bulkTotal = 0;
+			while(this.activityQueue.length > 0 && this.activityQueue.length / timeTillNextUpdate > maxRate ){
+				var item = this.activityQueue.shift();
+				if(item){
+					bulkTotal++;
+					this.addActItem(item);
+				}
+			}
+			this.totalActAdded += bulkTotal;
+			if(this.totalActAdded > this.maxActivityLogItems){
+				jQuery('#consoleActivity div:lt(' + bulkTotal + ')').remove();
+				this.totalActAdded -= bulkTotal;
+			}
+			var minDelay = 100;
+			var delay = minDelay;
+			if(timeTillNextUpdate < 1){
+				delay = minDelay;
+			} else {
+				delay = Math.round(timeTillNextUpdate / this.activityQueue.length);
+				if(delay < minDelay){ delay = minDelay; }
+			}
+			var self = this;
+			setTimeout(function(){ self.processActQueue(); }, delay);
+		}
+		jQuery('#consoleActivity').scrollTop(jQuery('#consoleActivity').prop('scrollHeight'));
+	},
+	processActArray: function(arr){
+		for(var i = 0; i < arr.length; i++){
+			this.addActItem(arr[i]);
+		}
+	},
+	addActItem: function(item){
+		if(item.msg.indexOf('SUM_') == 0){
+			this.processSummaryLine(item);
+			jQuery('#consoleSummary').scrollTop(jQuery('#consoleSummary').prop('scrollHeight'));
+			jQuery('#wfStartingScan').addClass('wfSummaryOK').html('Done.');
+		} else {
+			jQuery('#consoleActivity').append('<div class="wfActivityLine wf' + item.type + '">[' + item.date + ']&nbsp;' + item.msg + '</div>');
+			if(/Scan complete\./i.test(item.msg)){
+				this.loadIssues();
+			}
+		}
+	},
+	processSummaryLine: function(item){
+		if(item.msg.indexOf('SUM_START:') != -1){
+			var msg = item.msg.replace('SUM_START:', '');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><div class="wfSummaryLoading"></div></div><div class="wfClear"></div>');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDBAD') != -1){
+			var msg = item.msg.replace('SUM_ENDBAD:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Problems found.');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDOK') != -1){
+			var msg = item.msg.replace('SUM_ENDOK:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Secure.');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDERR') != -1){
+			var msg = item.msg.replace('SUM_ENDERR:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryErr').html('An error occured.');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_DISABLED:') != -1){
+			var msg = item.msg.replace('SUM_DISABLED:', '');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult">Disabled</div><div class="wfClear"></div>');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_PAIDONLY:') != -1){
+			var msg = item.msg.replace('SUM_PAIDONLY:', '');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="http://www.wordfence.com/" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_FINAL:') != -1){
+			var msg = item.msg.replace('SUM_FINAL:', '');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg wfSummaryFinal">' + msg + '</div><div class="wfSummaryResult wfSummaryOK">Scan Complete.</div><div class="wfClear"></div>');
+		} else if(item.msg.indexOf('SUM_PREP:') != -1){
+			var msg = item.msg.replace('SUM_PREP:', '');
+			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult" id="wfStartingScan"><div class="wfSummaryLoading"></div></div><div class="wfClear"></div>');
+		}
+	},
+	processActQueueItem: function(){
+		var item = this.activityQueue.shift();
+		if(item){
+			jQuery('#consoleActivity').append('<div class="wfActivityLine wf' + item.type + '">[' + item.date + ']&nbsp;' + item.msg + '</div>');
+			this.totalActAdded++;
+			if(this.totalActAdded > this.maxActivityLogItems){
+				jQuery('#consoleActivity div:first').remove();
+				this.totalActAdded--;
+			}
+			if(item.msg == 'Scan complete.'){
+				this.loadIssues();
+			}
+		}
 	},
 	updateTicker: function(forceUpdate){
 		if( (! forceUpdate) && this.tickerUpdatePending){
@@ -80,27 +226,7 @@ window['wordfenceAdmin'] = {
 			jQuery('#wfLiveStatus').hide().html(newMsg).fadeIn(200);
 		}
 
-		if(this.mode == 'scan'){
-			if(res.running){
-				jQuery('.wfStartScanButton').addClass('button-wf-grey').val("A scan is in progress...").unbind('click').click(function(){ wordfenceAdmin.scanRunningMsg(); }).show();
-			} else {
-				if(! this.scanPending){
-					jQuery('.wfStartScanButton').removeClass('button-wf-grey').val("Start a Wordfence Scan").unbind('click').click(function(){ wordfenceAdmin.startScan(); }).show();
-				}
-			}
-			if(res.currentScanID && res.currentScanID != this.scanIDLoaded){
-				this.scanIDLoaded = res.currentScanID;
-				this.loadIssues();
-			} else if( (! res.currentScanID) && (! this.scanIDLoaded)){
-				//We haven't done our first scan yet. 
-				if(! this.preFirstScanMsgsLoaded){
-					this.preFirstScanMsgsLoaded = true;
-					jQuery('#wfSummaryTables').html(this.noScanHTML);
-					this.switchIssuesTab(jQuery('#wfNewIssuesTab'), 'new');
-					jQuery('#wfActivity').html('<p>No events to report yet. Please complete your first scan.</p>');
-				}
-			}
-		} else if(this.mode == 'activity'){
+		if(this.mode == 'activity'){
 			if(res.alsoGet != 'logList_' + this.activityMode){ return; } //user switched panels since ajax request started
 			if(/^(?:topScanners|topLeechers)$/.test(this.activityMode)){
 				if(statusMsgChanged){ this.updateTicker(true); } return;
@@ -202,12 +328,20 @@ window['wordfenceAdmin'] = {
 			});
 	},
 	startScan: function(){
-		var self = this;
-		jQuery('.wfStartScanButton').addClass('button-wf-grey').val("A scan is in progress...").unbind('click').click(function(){ wordfenceAdmin.scanRunningMsg(); }).show();
-		//scanPending prevents the button from switching to grey when clicked and then quickly to blue and grey again as the ticker us updated.
-		this.scanPending = true;
-		var self = this;
-		setTimeout(function(){ self.scanPending = false; }, 10000);
+		var scanReqAnimation = setInterval(function(){
+			var str = jQuery('#wfStartScanButton1').prop('value');
+			ch = str.charAt(str.length - 1);
+			if(ch == '/'){ ch = '-'; }
+			else if(ch == '-'){ ch = '\\'; }
+			else if(ch == '\\'){ ch = '|'; }
+			else if(ch == '|'){ ch = '/'; }
+			else {ch = '/'; }
+			jQuery('#wfStartScanButton1,#wfStartScanButton2').prop('value', "Requesting a New Scan " + ch);
+			}, 100);
+		setTimeout(function(res){ 
+			clearInterval(scanReqAnimation); 
+			jQuery('#wfStartScanButton1,#wfStartScanButton2').prop('value', "Start a Wordfence Scan");
+			}, 2000);
 		this.ajax('wordfence_scan', {}, function(res){ } );
 	},
 	loadIssues: function(callback){
@@ -231,7 +365,6 @@ window['wordfenceAdmin'] = {
 	displayIssues: function(res, callback){
 		var self = this;
 		res.summary['lastScanCompleted'] = res['lastScanCompleted'];
-		jQuery('#wfSummaryTables').html( jQuery('#wfScanSummaryTmpl').tmpl(res.summary).html() );
 		jQuery('.wfIssuesContainer').hide();
 		for(issueStatus in res.issuesLists){ 
 			var containerID = 'wfIssues_dataTable_' + issueStatus;

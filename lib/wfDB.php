@@ -117,6 +117,25 @@ class wfDB {
 		error_log($msg);
 		exit(1);
 	}
+	public function createKeyIfNotExists($table, $col, $keyName){
+		global $wpdb; $prefix = $wpdb->prefix;
+		$table = $prefix . $table;
+		$exists = $this->querySingle("show tables like '$table'");
+		$keyFound = false;
+		if($exists){
+			$q = $this->query("show keys from $table");
+			if($q){
+				while($row = mysql_fetch_assoc($q)){
+					if($row['Key_name'] == $keyName){
+						$keyFound = true;
+					}
+				}
+			}
+		}
+		if(! $keyFound){
+			$this->query("alter table $table add KEY $keyName($col)");
+		}
+	}
 }
 
 ?>

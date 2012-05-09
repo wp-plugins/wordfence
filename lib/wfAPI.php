@@ -15,7 +15,6 @@ class wfAPI {
 		$this->wordpressVersion = $wordpressVersion;
 	}
 	public function call($action, $getParams = array(), $postParams = array()){
-		wordfence::status(3, 'info', "Starting API call: $action");
 		$this->errorMsg = false;
 		$json = $this->getURL(WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
 			array_merge(
@@ -42,7 +41,7 @@ class wfAPI {
 		if($this->errorMsg){
 			wordfence::status(3, 'error', "API Error: " . $this->errorMsg);
 		} else {
-			wordfence::status(3, 'info', "Completed API call: $action");
+			//wordfence::status(3, 'info', "Completed API call: $action");
 		}
 		return $dat;
 	}
@@ -94,7 +93,6 @@ class wfAPI {
 
 	}
 	public function binCall($func, $postData){
-		wordfence::status(3, 'info', "Starting binary API call: $func");
 		$this->errorMsg = false;
 		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		$curl = curl_init($url);
@@ -120,7 +118,6 @@ class wfAPI {
 				return false;
 			}
 		}
-		wordfence::status(3, 'info', "Completed binary API call $func with code: $httpStatus");
 		return array('code' => $httpStatus, 'data' => $data);
 	}
 	public function makeAPIQueryString(){

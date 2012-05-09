@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 1.5.6
+Stable tag: 2.0.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,21 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.0.1 =
+* Improved scanning for specific attacks being used in the PHP-CGI vulnerability ( CVE-2012-1823)
+* API keys no longer required. WF fetches a temporary anonymous API key for you on activation.
+* Added real-time activity log on scan page.
+* Added real-time summary updates on scan page.
+* Fixed ability to view files that have symlinks in path.
+* Added message to configure alert email address for multi-site and single site installs on activation.
+* Disabled firewall rules by default because most sites don't need them.
+* Disabled blocking of fake googlebots except for high security levels to prevent users who like to pretend they're googlebot from blocking themselves.
+* Geshi the syntax highlighter now asks for more memory before running.
+* Fixed bug that caused scan to hang on very large files.
+* Added an index to wfStatus to make it faster for summary statuses
+* Removed multisite pre-activation check to make activation more reliable on multisite installs.
+* Better problem reporting if you trashed your Wordfence schema but the plugin is still installed.
+
 = 1.5.6 =
 * Removed use of nonces and purely using 30 minute key for unlocking emails.
 * Fixed bug that caused admin emails to not get emailed when requesting unlocking email.

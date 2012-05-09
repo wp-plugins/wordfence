@@ -575,16 +575,37 @@ class wfLog {
 		//$msg = '[' . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . '] ' . $msg;
 		$this->getDB()->query("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", microtime(true), $level, $type, $msg);
 	}
-	public function getStatusEvents(){
-		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " order by ctime desc limit 2000");
+	public function getStatusEvents($lastCtime){
+		if($lastCtime < 1){
+			$lastCtime = $this->getDB()->querySingle("select ctime from " . $this->statusTable . " order by ctime desc limit 1000,1");
+			if(! $lastCtime){
+				$lastCtime = 0;
+			}
+		}
+		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where ctime > %f order by ctime asc", $lastCtime);
 		$results = array();
 		$lastTime = false;
 		while($rec = mysql_fetch_assoc($res)){
-			$rec['timeAgo'] = wfUtils::makeTimeAgo(time() - $rec['ctime']);
+			//$rec['timeAgo'] = wfUtils::makeTimeAgo(time() - $rec['ctime']);
+			$rec['date'] = date('M d H:i:s', $rec['ctime']);
 			array_push($results, $rec);
 		}
 		return $results;
 	}
+	public function getSummaryEvents(){
+		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100", $lastCtime);
+		$results = array();
+		$lastTime = false;
+		while($rec = mysql_fetch_assoc($res)){
+			$rec['date'] = date('M d H:i:s', $rec['ctime']);
+			array_push($results, $rec);
+			if(strpos($rec['msg'], 'SUM_PREP:') === 0){
+				break;
+			}
+		}
+		return array_reverse($results);
+	}
+
 }
 
 ?>

@@ -165,6 +165,38 @@ class wfUtils {
 		}
 		return 'unknown';
 	}
+	public static function longestLine($data){
+		$lines = preg_split('/[\r\n]+/', $data);
+		$max = 0;
+		foreach($lines as $line){
+			$len = strlen($line);
+			if($len > $max){
+				$max = $len;
+			}
+		}
+		return $max;
+	}
+	public static function longestNospace($data){
+		$lines = preg_split('/[\r\n\s\t]+/', $data);
+		$max = 0;
+		foreach($lines as $line){
+			$len = strlen($line);
+			if($len > $max){
+				$max = $len;
+			}
+		}
+		return $max;
+	}
+	public static function requestMaxMemory(){
+		if(wfConfig::get('maxMem', false) && (int) wfConfig::get('maxMem') > 0){
+			$maxMem = (int) wfConfig::get('maxMem');
+		} else {
+			$maxMem = 256;
+		}
+		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < $maxMem ) ){
+			@ini_set('memory_limit', $maxMem . 'M');
+		}
+	}
 }
 
 

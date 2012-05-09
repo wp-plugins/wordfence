@@ -25,9 +25,9 @@ class wfIssues {
 		$ignoreC = md5($ignoreC);
 		$rec = $this->getDB()->querySingleRec("select status, ignoreP, ignoreC from " . $this->issuesTable . " where (ignoreP='%s' OR ignoreC='%s')", $ignoreP, $ignoreC);
 		if($rec){
-			if($rec['status'] == 'new' && ($rec['ignoreC'] == $ignoreC || $rec['ignoreP'] == $ignoreP)){ return; }
-			if($rec['status'] == 'ignoreC' && $rec['ignoreC'] == $ignoreC){ return; }
-			if($rec['status'] == 'ignoreP' && $rec['ignoreP'] == $ignoreP){ return; }
+			if($rec['status'] == 'new' && ($rec['ignoreC'] == $ignoreC || $rec['ignoreP'] == $ignoreP)){ return false; }
+			if($rec['status'] == 'ignoreC' && $rec['ignoreC'] == $ignoreC){ return false; }
+			if($rec['status'] == 'ignoreP' && $rec['ignoreP'] == $ignoreP){ return false; }
 		}
 
 		$this->totalIssues++;
@@ -56,6 +56,7 @@ class wfIssues {
 			$longMsg,
 			serialize($templateData)
 			);
+		return true;
 	}
 	public function deleteIgnored(){
 		$this->getDB()->query("delete from " . $this->issuesTable . " where status='ignoreP' or status='ignoreC'");
@@ -190,7 +191,7 @@ class wfIssues {
 			$this->updateSummaryItems();
 		}
 		$arr = wfConfig::get_ser('wf_summaryItems', array());
-		$arr['scanTimeAgo'] = wfUtils::makeTimeAgo(sprintf('%.0f', time() - $arr['scanTime']));
+		//$arr['scanTimeAgo'] = wfUtils::makeTimeAgo(sprintf('%.0f', time() - $arr['scanTime']));
 		$arr['scanRunning'] = wfConfig::get('wf_scanRunning') ? '1' : '0';
 		$arr['scheduledScansEnabled'] = wfConfig::get('scheduledScansEnabled');
 		$secsToGo = wp_next_scheduled('wordfence_scheduled_scan') - time();
