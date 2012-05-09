@@ -1,27 +1,49 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scan"></div>
 <div class="wrap wordfence">
 	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2>Wordfence Scan</h2>
-	<div class="wordfenceLive">
-		<table border="0" cellpadding="0" cellspacing="0">
-		<tr><td><h2>Wordfence Activity Log:</h2></td><td id="wfLiveStatus"></td></tr>
-		</table>
-	</div>
 	<div class="wordfenceWrap">
+		<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" id="wfStartScanButton1" class="wfStartScanButton button-primary" onclick="wordfenceAdmin.startScan();" />
+		<a target="_blank" href="http://www.wordfence.com/forums/">You can always get help on our support forum.</a>
+		</div>
 		<div>
-			<div id="wfTabs">
-				<a href="#" class="wfTab1 wfTabSwitch selected" onclick="wordfenceAdmin.switchToSummaryTab(this); return false;">Summary</a>
-				<a href="#" class="wfTab1 wfTabSwitch"          onclick="wordfenceAdmin.switchToLiveTab(this); return false;">Activity Log</a>
+			<div class="consoleHead">
+				<span class="consoleHeadText">Scan Summary</span>
 			</div>
-			<div class="wfTabsContainer">
-				<div id="wfSummaryTables" class="wfDataPanel">
-					<div class="wfLoadingWhite32"></div>
-					&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />
+			<?php 
+				$events = wordfence::getLog()->getStatusEvents(0);
+			?>
+			<div class="bevelDiv1 consoleOuter"><div class="bevelDiv2"><div class="bevelDiv3 consoleInner" id="consoleSummary">
+			<?php if(sizeof($events) < 1){ ?>
+				<div style="width: 500px;">
+					Welcome to Wordfence!<br /><br />
+					To get started, simply click the blue button at the top of this page to start your first scan.
 				</div>
-				<div id="wfActivity" class="wfDataPanel" style="display: none; overflow: scroll; height: 400px; border: 1px solid #CCC; padding: 2px;">
-					<div class="wfLoadingWhite32"></div>
-					&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />
-				</div>
+			<?php } ?>
+			</div></div></div>
+			<div class="consoleHead">
+				<span class="consoleHeadText">Scan Detailed Activity</span>
+				<a href="#" class="wfALogMailLink" onclick="WFAD.emailActivityLog(); return false;">Email Activity Log</a>
 			</div>
+			<div class="bevelDiv1 consoleOuter"><div class="bevelDiv2"><div class="bevelDiv3 consoleInner" id="consoleActivity">
+				<?php 
+					if(sizeof($events) > 0){
+						$newestItem = 0;
+						$sumEvents = array();
+						foreach($events as $e){
+							if(strpos($e['msg'], 'SUM_') !== 0){
+								echo '<div class="wfActivityLine wf' . $e['type'] . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+							}
+							$newestItem = $e['ctime'];
+						}
+
+						echo '<script type="text/javascript">WFAD.lastALogCtime = ' . $newestItem . '; WFAD.processActArray(' . json_encode(wordfence::getLog()->getSummaryEvents()) . ');</script>';
+					} else { ?>
+						A live stream of what Wordfence is busy with right now will appear in this box.
+
+					<?php
+					}
+				?>
+			</div></div></div>
 		</div>
 		<div style="margin-top: 20px;">
 			<div id="wfTabs">
@@ -36,7 +58,8 @@
 						If you have fixed all the issues below, you can <a href="#" onclick="WFAD.updateAllIssues('deleteNew'); return false;">click here to mark all new issues as fixed</a>.
 						You can also <a href="#" onclick="WFAD.updateAllIssues('ignoreAllNew'); return false;">ignore all new issues</a> which will exclude all issues listed below from future scans.
 					</p>
-					 <div id="wfIssues_dataTable_new"></div>
+					 <div id="wfIssues_dataTable_new">
+					 </div>
 				</div>
 				<div id="wfIssues_ignored" class="wfIssuesContainer">
 					<h2>Ignored Issues</h2>
@@ -70,6 +93,7 @@
 	</p>
 	<p>
 		{{html longMsg}}
+		<a href="<?php echo get_admin_url() . 'update-core.php'; ?>">Click here to update now</a>.
 	</p>
 	<div class="wfIssueOptions">
 		{{if (status == 'new')}}
@@ -104,6 +128,7 @@
 	</p>
 	<p>
 		{{html longMsg}}
+		<a href="<?php echo get_admin_url() . 'update-core.php'; ?>">Click here to update now</a>.
 	</p>
 	<div class="wfIssueOptions">
 	{{if status == 'new'}}
@@ -136,6 +161,7 @@
 	</p>
 	<p>
 		{{html longMsg}}
+		<a href="<?php echo get_admin_url() . 'update-core.php'; ?>">Click here to update now</a>.
 	</p>
 	<div class="wfIssueOptions">
 	{{if (status == 'new')}}
@@ -348,7 +374,7 @@
 	<div class="wfIssueOptions">
 		<strong>Tools:</strong> 
 		{{if data.fileExists}}
-		<a target="_blank" href="/?_wfsf=view&nonce=${WFAD.nonce}&file=${encodeURIComponent(data.file)}">View the file.</a>
+		<a target="_blank" href="${WFAD.makeViewFileLink(data.file)}">View the file.</a>
 		{{/if}}
 		{{if data.canFix}}
 		<a href="#" onclick="WFAD.restoreFile('${id}'); return false;">Restore the original version of this file.</a>
@@ -382,15 +408,17 @@
 <script type="text/x-jquery-template" id="wfNoScanYetTmpl">
 <div>
 	<table class="wfSummaryParent" cellpadding="0" cellspacing="0">
-	<tr><th class="wfHead">Please start your first scan</th></tr>
+	<tr><th class="wfHead">Your first scan is starting now</th></tr>
 	<tr><td>
 		<table class="wfSC1"  cellpadding="0" cellspacing="0">
 		<tr><td>
-			You have not completed your first Wordfence scan yet.
-			Please click the button below to start your first scan.
+			Your first Wordfence scan should be automatically starting now
+			and you will see the scan details in the "Activity Log" above in a few seconds.
+			While you're waiting, why not visit the <a href="http://www.wordfence.com/forums/" target="_blank">Wordfence Forums</a>
+			where you can post your comments or questions. We would love to hear from you.
 		</td></tr>
 		<tr><td>
-			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" class="wfStartScanButton button-primary" /></div>
+			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" id="wfStartScanButton2" class="wfStartScanButton button-primary" /></div>
 		</td></tr>
 		</table>
 	</td>
@@ -398,73 +426,4 @@
 </div>
 </script>
 
-<script type="text/x-jquery-template" id="wfScanSummaryTmpl">
-<div>
-	<table class="wfSummaryParent" cellpadding="0" cellspacing="0">
-	<tr><th class="wfHead">Activity Summary:</th><th class="wfHead" colspan="3">Wordfence is Protecting:</th></tr>
-	<tr><td>
-		<table class="wfSC1"  cellpadding="0" cellspacing="0">
-		<tr><td>
-			The most recent scan completed ${scanTimeAgo} ago.
-		</td></tr>
-		<tr><td>
-			{{if scanRunning == '1'}}
-			There is currently a scan running
-			{{else}}
-			A scan is not running at this time
-			{{/if}}
-			{{if scheduledScansEnabled}}
-			and the next scan is scheduled to run approximately ${nextRun}.
-			{{else}}
-			and scheduled scans are disabled.
-			{{/if}}
-		</td></tr>
-		<tr><td>
-			{{if totalCritical > 0 || totalWarning > 0}}
-				There are currently 
-				{{if totalCritical > 0 && totalWarning > 0}}
-				${totalCritical} critical issues and ${totalWarning} warning issues 
-				{{else totalCritical > 0}}
-				${totalCritical} critical issues
-				{{else totalWarning > 0}}
-				${totalWarning} warning issues
-				{{/if}}
-				you need to investigate. See below for full details.
-			{{else lastScanCompleted == 'ok'}}
-				Congratulations, you have no security issues that need investigating.
-			{{else lastScanCompleted}}
-				<span style="color: #A00;">Latest scan failed: ${lastScanCompleted}</span>
-			{{/if}}
-		</td></tr>
-		<tr><td>
-			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" class="wfStartScanButton button-primary" /></div>
-		</td></tr>
-		</table>
-	</td>
-	<td>
-		<table class="wfSummaryChild wfSC2" cellpadding="0" cellspacing="0">
-		<tr><th>${wordfenceAdmin.commify(totalFiles)}</th><td>Files</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalDirs)}</th><td>Directories</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalUsers)}</th><td>Users</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalPlugins)}</th><td>Plugins</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalThemes)}</th><td>Themes</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalPages)}</th><td>Pages</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalPosts)}</th><td>Posts</td></tr>
-		</table>
-	</td>
-	<td>&nbsp;&nbsp;</td>
-	<td>
-		<table class="wfSummaryChild wfSC3" cellpadding="0" cellspacing="0">
-		<tr><th>${wordfenceAdmin.commify(totalComments)}</th><td>Comments</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalCategories)}</th><td>Categories</td></tr>
-		<tr><th>${wordfenceAdmin.commify(linesOfPHP)}</th><td>Lines of PHP code</td></tr>
-		<tr><th>${wordfenceAdmin.commify(linesOfJCH)}</th><td>Lines of JS, HTML and CSS code</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalData)}</th><td>of data in ${wordfenceAdmin.commify(totalFiles)} files</td></tr>
-		<tr><th>${wordfenceAdmin.commify(totalTables)}</th><td>Database Tables</td><tr>
-		<tr><th>${wordfenceAdmin.commify(totalRows)}</th><td>Database Rows</td></tr>
-		</table>
-	</td>
-	</tr></table>
-</div>
-</script>
 

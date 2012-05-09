@@ -15,7 +15,7 @@ class wordfenceScanner {
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 	}
-	public function scan($path, $fileList, $userfunc = false){
+	public function scan($path, $fileList){
 		$this->errorMsg = false;
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
@@ -42,14 +42,16 @@ class wordfenceScanner {
 			if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt)){
 				continue;
 			}
-			if($userfunc){
-				$fsize = filesize($this->path . $file);
-				if($fsize > 1000000){
-					$fsize = sprintf('%.2f', ($fsize / 1000000)) . " Megs";
-				} else {
-					$fsize = $fsize . " bytes";
-				}
-				call_user_func($userfunc, 2, 'info', "Currently scanning: $file ($fsize)");
+			$fsize = filesize($this->path . $file);
+			if($fsize > 1000000){
+				$fsize = sprintf('%.2f', ($fsize / 1000000)) . "M";
+			} else {
+				$fsize = $fsize . "B";
+			}
+			if(function_exists('memory_get_usage')){
+				wordfence::status(2, 'info', "Scanning contents: $file (Size:$fsize Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+			} else {
+				wordfence::status(2, 'info', "Scanning contents: $file (Size: $fsize)");
 			}
 			$stime = microtime(true);
 			$fileSum = @md5_file($this->path . $file);
@@ -69,7 +71,7 @@ class wordfenceScanner {
 					break;
 				}
 				if($isPHP){
-					if((strpos($data, '\$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false) || strpos($data, "TimThum"."b script created by") !== false){
+					if(strpos($data, '\$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false && strpos($data, "TimThum"."b script created by") !== false){
 						$this->addResult(array(
 							'type' => 'file',
 							'severity' => 1,
@@ -86,14 +88,15 @@ class wordfenceScanner {
 							));
 						break;
 					}
-					if(strpos($data, 'eval') !== false && strpos($data, 'base64_decode') !== false && preg_match('/[a-zA-Z0-9\+\/\=]{200,}/', $data) ){
+					$longestNospace = wfUtils::longestNospace($data);
+					if($longestNospace > 1000 && (strpos($data, 'eval') !== false || preg_match('/preg_replace\([^\(]+\/[a-z]*e/', $data)) ){
 						$this->addResult(array(
 							'type' => 'file',
 							'severity' => 1,
 							'ignoreP' => $this->path . $file,
 							'ignoreC' => $fileSum,
-							'shortMsg' => "This file may contain hidden executable code",
-							'longMsg' => "This file is a PHP executable file and contains the 'eval' and 'base64_decode' functions which are very common in backdoor programs and other malicious files. If you know about this file you can choose to ignore it to exclude it from future scans.",
+							'shortMsg' => "This file may contain malicious executable code",
+							'longMsg' => "This file is a PHP executable file and contains a line $longestNospace characters long without spaces that may be encoded data along with functions that may be used to execute that code. If you know about this file you can choose to ignore it to exclude it from future scans.",
 							'data' => array(
 								'file' => $file,
 								'canDiff' => false,
@@ -118,6 +121,10 @@ class wordfenceScanner {
 			fclose($fh);
 			$mtime = sprintf("%.5f", microtime(true) - $stime);
 		}
+		if(function_exists('memory_get_usage')){
+			wordfence::status(3, 'info', "Total memory being used: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "MB");
+		}
+		wordfence::status(2, 'info', "Asking Wordfence to check URL's against malware list.");
 		$hooverResults = $urlHoover->getBaddies();
 		if($urlHoover->errorMsg){
 			$this->errorMsg = $urlHoover->errorMsg;
@@ -137,7 +144,8 @@ class wordfenceScanner {
 							'file' => $file,
 							'canDiff' => false,
 							'canFix' => false,
-							'canDelete' => true
+							'canDelete' => true,
+							'gsb' => 'goog-malware-shavar'
 							)
 						));
 				} else if($result['badList'] == 'googpub-phish-shavar'){
@@ -152,7 +160,8 @@ class wordfenceScanner {
 							'file' => $file,
 							'canDiff' => false,
 							'canFix' => false,
-							'canDelete' => true
+							'canDelete' => true,
+							'gsb' => 'googpub-phish-shavar'
 							)
 						));
 				}
