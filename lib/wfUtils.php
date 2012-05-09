@@ -1,6 +1,7 @@
 <?php
 class wfUtils {
 	private static $reverseLookupCache = array();
+	private static $myVersion = false;
 	public static function makeTimeAgo($secs, $noSeconds = false) {
 		if($secs < 1){
 			return "a moment";
@@ -153,17 +154,22 @@ class wfUtils {
 		return rtrim(site_url(), '/') . '/';
 	}
 	public static function myVersion(){
-		if(! function_exists( 'get_plugin_data')){
-			require_once ABSPATH . '/wp-admin/includes/plugin.php';
-		}
-		$file = dirname(__FILE__) . '/../wordfence.php';
-		if(is_file($file)){
-			$dat = get_plugin_data($file);
-			if(is_array($dat)){
-				return $dat['Version'];
+		if(! self::$myVersion){
+			if(! function_exists( 'get_plugin_data')){
+				require_once ABSPATH . '/wp-admin/includes/plugin.php';
+			}
+			$file = dirname(__FILE__) . '/../wordfence.php';
+			if(is_file($file)){
+				$dat = get_plugin_data($file);
+				if(is_array($dat)){
+					self::$myVersion = $dat['Version'];
+				}
+			}
+			if(! self::$myVersion){
+				self::$myVersion = 'unknown';
 			}
 		}
-		return 'unknown';
+		return self::$myVersion;
 	}
 	public static function longestLine($data){
 		$lines = preg_split('/[\r\n]+/', $data);
