@@ -1,11 +1,12 @@
 <?php
 class wfDB {
 	private $dbh = false;
+	private static $dbhCache = false;
 	private $dbhost = false;
 	private $dbpassword = false;
 	private $dbname = false;
 	private $dbuser = false;
-	public function __construct($dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
+	public function __construct($createNewHandle = false, $dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
 		if($dbhost && $dbuser && $dbpassword && $dbname){
 			$this->dbhost = $dbhost;
 			$this->dbuser = $dbuser;
@@ -13,13 +14,26 @@ class wfDB {
 			$this->dbname = $dbname;
 		} else {
 			global $wpdb;
-			if(! $wpdb){ die("Not running under wordpress. Please supply db creditials to constructor."); }
+			if(! $wpdb){ die("Not running under wordpress. Please supply db credentials to constructor."); }
 			$this->dbhost = $wpdb->dbhost;
 			$this->dbuser = $wpdb->dbuser;
 			$this->dbpassword = $wpdb->dbpassword;
 			$this->dbname = $wpdb->dbname;
 		}
-		$this->getDBH(); //or mysql_real_escape_string won't work
+		if($createNewHandle){
+			$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+			mysql_select_db($this->dbname, $dbh);
+			$this->dbh = $dbh;
+		} else {
+			if(self::$dbhCache){
+				$this->dbh = self::$dbhCache;
+			} else {
+				$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+				mysql_select_db($this->dbname, $dbh);
+				self::$dbhCache = $dbh;
+				$this->dbh = self::$dbhCache;
+			}
+		}
 	}
 	public function querySingleRec(){
 		$args = func_get_args();
@@ -30,7 +44,7 @@ class wfDB {
 		} else {
 			wfdie("No arguments passed to querySingle()");
 		}
-		$res = mysql_query($query, $this->getDBH());
+		$res = mysql_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
@@ -49,7 +63,7 @@ class wfDB {
 		} else {
 			wfdie("No arguments passed to querySingle()");
 		}
-		$res = mysql_query($query, $this->getDBH());
+		$res = mysql_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
@@ -73,44 +87,35 @@ class wfDB {
 		} else {
 			wfdie("No arguments passed to query()");
 		}
-		$res = mysql_query($query, $this->getDBH());
+		$res = mysql_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
 		}
 		return $res;
-	}
-	public function uQuery(){ //sprintfString, arguments
-		$args = func_get_args();
-		if(sizeof($args) == 1){
-			$query = $args[0];
-		} else if(sizeof($args) > 1){
-			for($i = 1; $i < sizeof($args); $i++){
-				$args[$i] = mysql_real_escape_string($args[$i]);
-			}
-			$query = call_user_func_array('sprintf', $args);
-		} else {
-			wfdie("No arguments passed to query()");
-		}
-		$res = mysql_unbuffered_query($query, $this->getDBH());
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-		}
-		return $res;
-	}
-	private function getDBH(){
-		if($this->dbh){
-			return $this->dbh;
-		}
-		$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
-		mysql_select_db($this->dbname, $dbh);
-		$this->dbh = $dbh;
-		return $dbh;
 	}
 	private function wfdie($msg){
 		error_log($msg);
 		exit(1);
+	}
+	public function createKeyIfNotExists($table, $col, $keyName){
+		global $wpdb; $prefix = $wpdb->prefix;
+		$table = $prefix . $table;
+		$exists = $this->querySingle("show tables like '$table'");
+		$keyFound = false;
+		if($exists){
+			$q = $this->query("show keys from $table");
+			if($q){
+				while($row = mysql_fetch_assoc($q)){
+					if($row['Key_name'] == $keyName){
+						$keyFound = true;
+					}
+				}
+			}
+		}
+		if(! $keyFound){
+			$this->query("alter table $table add KEY $keyName($col)");
+		}
 	}
 }
 

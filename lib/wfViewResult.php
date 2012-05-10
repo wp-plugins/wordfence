@@ -15,6 +15,7 @@
 	if($isEmpty){
 		echo "File is empty.";
 	} else {
+		wfUtils::requestMaxMemory();
 		echo $geshi->parse_code(); 
 	}
 ?>

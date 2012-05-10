@@ -1,32 +1,83 @@
 <?php
 ignore_user_abort(true);
+$wordfence_wp_version = false;
 if ( !defined('ABSPATH') ) {
 	/** Set up WordPress environment */
-	require_once('../../../wp-load.php');
+	if($_SERVER['SCRIPT_FILENAME']){
+		$wfBaseDir = preg_replace('/[^\/]+\/[^\/]+\/[^\/]+\/wfscan\.php$/', '', $_SERVER['SCRIPT_FILENAME']);
+		require_once($wfBaseDir . 'wp-load.php');
+		global $wp_version;
+		global $wordfence_wp_version;
+		require($wfBaseDir . 'wp-includes/version.php');
+		$wordfence_wp_version = $wp_version;
+	} else {
+		require_once('../../../wp-load.php');
+		require_once('../../../wp-includes/version.php');
+	}
 }
 require_once('lib/wordfenceConstants.php');
 require_once('lib/wfScanEngine.php');
 
 class wfScan {
 	public static function wfScanMain(){
-		if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ exit(); }
-		$savedKey = explode(',',wfConfig::get('currentCronKey'));
-		if(time() - $savedKey[0] > 60){ exit(); } //keys only last 60 seconds and are used within milliseconds of creation
-		if($savedKey[1] != $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ exit(); }
+		if(! wordfence::wfSchemaExists()){
+			self::errorExit("Looks like the Wordfence database tables have been deleted. You can fix this by de-activating and re-activating the Wordfence plugin from your Plugins menu.");
+		}
+		if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
+			self::errorExit("The Wordfence scanner did not receive the x_wordfence_cronkey secure header.");
+		}
+		$currentCronKey = wfConfig::get('currentCronKey', false);
+		if(! $currentCronKey){
+			self::errorExit("Wordfence could not find a saved cron key to start the scan.");
+		}
+
+		$savedKey = explode(',',$currentCronKey);
+		if(time() - $savedKey[0] > 60){ 
+			self::errorExit("The key used to start a scan has expired.");
+		} //keys only last 60 seconds and are used within milliseconds of creation
+		if($savedKey[1] != $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
+			self::errorExit("Wordfence could not start a scan because the cron key does not match the saved key.");
+		}
 		wfConfig::set('currentCronKey', '');
 		ini_set('max_execution_time', 1800); //30 mins
 		self::becomeAdmin();
 
 		$scanRunning = wfConfig::get('wf_scanRunning');
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
-			return;
+			self::errorExit("There is already a scan running.");
 		}
-		wfConfig::set('wf_scanRunning', time());
-		register_shutdown_function('wfScan::clearScan');
+		wordfence::status(10, 'info', "SUM_PREP:Preparing a new scan.");
+		wfUtils::requestMaxMemory();
 
+		set_error_handler('wfScan::error_handler', E_ALL);
+		register_shutdown_function('wfScan::shutdown');
+		ob_start('wfScan::obHandler');
+		@error_reporting(E_ALL);
+		@ini_set('display_errors','On');
+
+		wfConfig::set('wf_scanRunning', time());
 		$scan = new wfScanEngine();
 		$scan->go();
+
 		wfConfig::set('wf_scanRunning', '');
+	}
+	public static function obHandler($buf){
+		if(strlen($buf) > 1000){
+			$buf = substr($buf, 0, 255);
+		}
+		if(empty($buf) === false && preg_match('/[a-zA-Z0-9]+/', $buf)){
+			wordfence::status(1, 'error', $buf);
+		}
+	}
+	public static function error_handler($errno, $errstr, $errfile, $errline){
+		wordfence::status(1, 'error', "$errstr ($errno) File: $errfile Line: $errline");
+	}
+	public static function shutdown(){
+		wfConfig::set('wf_scanRunning', '');
+	}
+	private static function errorExit($msg){
+		echo json_encode(array('errorMsg' => $msg)); 
+		exit();	
 	}
 	public static function becomeAdmin(){
 		global $wpdb;
@@ -46,9 +97,6 @@ class wfScan {
 	public static function usort($b, $a){
 		if($a['level'] == $b['level']){ return 0; }
 		return ($a['level'] < $b['level']) ? -1 : 1;
-	}
-	public static function clearScan(){
-		wfConfig::set('wf_scanRunning', '');
 	}
 }
 wfScan::wfScanMain();
