@@ -75,6 +75,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Check the strength of passwords</th><td><input type="checkbox" id="scansEnabled_passwds" class="wfConfigElem" name="scansEnabled_passwds" value="1" <?php $w->cb('scansEnabled_passwds'); ?>/></td></tr>
 	<tr><th>Monitor disk space</th><td><input type="checkbox" id="scansEnabled_diskSpace" class="wfConfigElem" name="scansEnabled_diskSpace" value="1" <?php $w->cb('scansEnabled_diskSpace'); ?>/></td></tr>
 	<tr><th>Scan for unauthorized DNS changes</th><td><input type="checkbox" id="scansEnabled_dns" class="wfConfigElem" name="scansEnabled_dns" value="1" <?php $w->cb('scansEnabled_dns'); ?>/></td></tr>
+	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
 	<tr><td colspan="2">
 		<h3 class="wfConfigHeading">Firewall Rules</h3>
 	</td></tr>
@@ -185,7 +186,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Scan comments for malware and phishing URL's</th><td><input type="checkbox" id="other_scanComments" class="wfConfigElem" name="other_scanComments" value="1" <?php $w->cb('other_scanComments'); ?> /></td></tr>
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
-	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
 	<tr><th>Your Wordfence API Key</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="20" /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>

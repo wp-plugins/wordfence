@@ -14,7 +14,7 @@ class wfDB {
 			$this->dbname = $dbname;
 		} else {
 			global $wpdb;
-			if(! $wpdb){ die("Not running under wordpress. Please supply db creditials to constructor."); }
+			if(! $wpdb){ die("Not running under wordpress. Please supply db credentials to constructor."); }
 			$this->dbhost = $wpdb->dbhost;
 			$this->dbuser = $wpdb->dbuser;
 			$this->dbpassword = $wpdb->dbpassword;
@@ -88,25 +88,6 @@ class wfDB {
 			wfdie("No arguments passed to query()");
 		}
 		$res = mysql_query($query, $this->dbh);
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-		}
-		return $res;
-	}
-	public function uQuery(){ //sprintfString, arguments NOTE: Very important that there is no other DB activity between uQuery and when you call mysql_free_result on the return value of uQuery.
-		$args = func_get_args();
-		if(sizeof($args) == 1){
-			$query = $args[0];
-		} else if(sizeof($args) > 1){
-			for($i = 1; $i < sizeof($args); $i++){
-				$args[$i] = mysql_real_escape_string($args[$i]);
-			}
-			$query = call_user_func_array('sprintf', $args);
-		} else {
-			wfdie("No arguments passed to query()");
-		}
-		$res = mysql_unbuffered_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");

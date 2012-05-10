@@ -274,11 +274,11 @@ class wfScanEngine {
 		$statusIDX = wordfence::statusStart('Scanning posts for URL\'s in Google\'s Safe Browsing List');
 		global $wpdb;
 		$wfdb = new wfDB();
-		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
-		$q1 = $wfdb->uQuery("select ID, post_title, post_type, post_date, post_content from $wpdb->posts where post_type IN ('page', 'post') and post_status = 'publish'");
+		$q1 = $wfdb->query("select ID from $wpdb->posts where post_type IN ('page', 'post') and post_status = 'publish'");
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$postDat = array();
-		while($row = mysql_fetch_assoc($q1)){
+		while($idRow = mysql_fetch_assoc($q1)){
+			$row = $wfdb->querySingleRec("select ID, post_title, post_type, post_date, post_content from $wpdb->posts where ID=%d", $idRow['ID']);
 			$h->hoover($row['ID'], $row['post_title'] . ' ' . $row['post_content']);
 			$postDat[$row['ID']] = array(
 				'contentMD5' => md5($row['post_content']),
@@ -288,7 +288,6 @@ class wfScanEngine {
 				);
 
 		}
-		mysql_free_result($q1);
 		$this->status(2, 'info', "Examining URLs found in posts we scanned for dangerous websites");
 		$hooverResults = $h->getBaddies();
 		$this->status(2, 'info', "Done examining URls");
@@ -370,17 +369,20 @@ class wfScanEngine {
 		$statusIDX = wordfence::statusStart('Scanning comments for URL\'s in Google\'s Safe Browsing List');
 		global $wpdb;
 		$wfdb = new wfDB();
-		//NOTE: There must be no other DB activity by wfDB between here and free_result below because we're doing an unbuffered query. THAT INCLUDES calls to status() which updates the DB
-		$q1 = $wfdb->uQuery("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from $wpdb->comments where comment_approved=1");
+		$q1 = $wfdb->query("select comment_ID from $wpdb->comments where comment_approved=1");
 		if( ! $q1){
 			wordfence::statusEndErr();
 			return;
 		}
+		if(! (mysql_num_rows($q1) > 0)){
+			wordfence::statusEnd($statusIDX, false);
+			return; 
+		}
+		
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$commentDat = array();
-		$gotRow = false;
-		while($row = mysql_fetch_assoc($q1)){
-			$gotRow = true; //because we can't use mysql_num_rows on unbuffered queries
+		while($idRow = mysql_fetch_assoc($q1)){
+			$row = $wfdb->querySingleRec("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from $wpdb->comments where comment_ID=%d", $idRow['comment_ID']);
 			$h->hoover($row['comment_ID'], $row['comment_author_url'] . ' ' . $row['comment_author'] . ' ' . $row['comment_content']);
 			$commentDat[$row['comment_ID']] = array(
 				'contentMD5' => md5($row['comment_content'] . $row['comment_author'] . $row['comment_author_url']),
@@ -388,11 +390,6 @@ class wfScanEngine {
 				'type' => ($row['comment_type'] ? $row['comment_type'] : 'comment'),
 				'date' => $row['comment_date']
 				);
-		}
-		mysql_free_result($q1);
-		if(! $gotRow){ 
-			wordfence::statusEnd($statusIDX, false);
-			return; 
 		}
 		$hooverResults = $h->getBaddies();
 		if($h->errorMsg){

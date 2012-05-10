@@ -134,6 +134,14 @@ class wfSchema {
 	ctime int UNSIGNED NOT NULL,
 	URI varchar(1000) NOT NULL,
 	KEY k1(ctime)
+) default charset=utf8",
+'wfHoover' => "(
+	id int UNSIGNED auto_increment PRIMARY KEY,
+	owner text,
+	host text,
+	path text,
+	hostKey binary(4),
+	KEY k2(hostKey)
 ) default charset=utf8"
 );
 	private $db = false;

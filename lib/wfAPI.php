@@ -27,7 +27,6 @@ class wfAPI {
 			} else {
 				$this->errorMsg = "We could not fetch data from the API when calling '$action': " . $this->lastURLError;
 			}
-			wordfence::status(3, 'error', "API Error: " . $this->errorMsg);
 			return false;
 		}
 
@@ -37,11 +36,6 @@ class wfAPI {
 		}
 		if(empty($dat['errorMsg']) === false){
 			$this->errorMsg = $dat['errorMsg'];
-		}
-		if($this->errorMsg){
-			wordfence::status(3, 'error', "API Error: " . $this->errorMsg);
-		} else {
-			//wordfence::status(3, 'info', "Completed API call: $action");
 		}
 		return $dat;
 	}
@@ -114,7 +108,6 @@ class wfAPI {
 			$jdat = @json_decode($data, true);
 			if(is_array($jdat) && $jdat['errorMsg']){
 				$this->errorMsg = $jdat['errorMsg'];
-				wordfence::status(3, 'error', "Error in binary API call $func: " . $this->errorMsg);
 				return false;
 			}
 		}
