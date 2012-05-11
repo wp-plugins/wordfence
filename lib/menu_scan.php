@@ -20,7 +20,17 @@
 				</div>
 			<?php } ?>
 			</div></div></div>
-			<div class="consoleHead">
+			<?php if(wfConfig::get('isPaid')){ ?>
+			<div style="margin: 0 0 20px 5px; width: 795px; font-weight: bold; color: #0A0;">
+				Premium scanning enabled.	
+			</div>
+			<?php } else { ?>
+			<div style="margin: 0 0 20px 5px; width: 795px;">
+				<strong>How to upgrade:</strong> <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Visit www.wordfence.com</a> and sign up for a paid option. Then go to the Wordfence options page on this site and replace your free API key with your new premium key. You will then be able to activate the premium scanning options on the Wordfence options page.
+			</div>
+
+			<?php } ?>
+			<div class="consoleHead" style="margin-top: 20px;">
 				<span class="consoleHeadText">Scan Detailed Activity</span>
 				<a href="#" class="wfALogMailLink" onclick="WFAD.emailActivityLog(); return false;">Email Activity Log</a>
 			</div>
@@ -283,6 +293,11 @@
 		<tr><th>Author</th><td>${data.author}</td></tr>
 		<tr><th>Bad URL:</th><td><strong class="wfWarn">${data.badURL}</strong></td></tr>
 		<tr><th>Posted on:</th><td>${data.commentDate}</td></tr>
+		{{if data.isMultisite}}
+		<tr><th>Multisite Blog ID:</th><td>${data.blog_id}</td></tr>
+		<tr><th>Multisite Blog Domain:</th><td>${data.domain}</td></tr>
+		<tr><th>Multisite Blog Path:</th><td>${data.path}</td></tr>
+		{{/if}}
 		<tr><th>Severity:</th><td>Critical</td></tr>
 		<tr><th>Status</th><td>
 			{{if status == 'new' }}New{{/if}}
@@ -316,9 +331,18 @@
 	<h2>${shortMsg}</h2>
 	<p>
 		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		{{if data.isMultisite}}
 		<tr><th>Title:</th><td><a href="${data.permalink}" target="_blank">${data.postTitle}</a></td></tr>
+		{{else}}
+		<tr><th>Title:</th><td><a href="${data.permalink}" target="_blank">${data.postTitle}</a></td></tr>
+		{{/if}}
 		<tr><th>Bad URL:</th><td><strong class="wfWarn">${data.badURL}</strong></td></tr>
 		<tr><th>Posted on:</th><td>${data.postDate}</td></tr>
+		{{if data.isMultisite}}
+		<tr><th>Multisite Blog ID:</th><td>${data.blog_id}</td></tr>
+		<tr><th>Multisite Blog Domain:</th><td>${data.domain}</td></tr>
+		<tr><th>Multisite Blog Path:</th><td>${data.path}</td></tr>
+		{{/if}}
 		<tr><th>Severity:</th><td>Critical</td></tr>
 		<tr><th>Status</th><td>
 			{{if status == 'new' }}New{{/if}}

@@ -228,7 +228,7 @@ h3.wfConfigHeading {
 	-webkit-font-smoothing: antialiased;
 
 }
-.consoleOuter { width: 800px; margin-bottom: 20px; }
+.consoleOuter { width: 800px; }
 .consoleInner { height: 116px; overflow: auto; z-index: 1; }
 .bevelDiv1 { border: 1px solid #EFEFEF; }
 .bevelDiv2 { border: 1px solid #AAA; }

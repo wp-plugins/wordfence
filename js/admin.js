@@ -138,7 +138,7 @@ window['wordfenceAdmin'] = {
 			this.processSummaryLine(item);
 			jQuery('#consoleSummary').scrollTop(jQuery('#consoleSummary').prop('scrollHeight'));
 			jQuery('#wfStartingScan').addClass('wfSummaryOK').html('Done.');
-		} else {
+		} else if(item.level < 4){
 			jQuery('#consoleActivity').append('<div class="wfActivityLine wf' + item.type + '">[' + item.date + ']&nbsp;' + item.msg + '</div>');
 			if(/Scan complete\./i.test(item.msg)){
 				this.loadIssues();
@@ -164,11 +164,11 @@ window['wordfenceAdmin'] = {
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_DISABLED:') != -1){
 			var msg = item.msg.replace('SUM_DISABLED:', '');
-			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult">Disabled</div><div class="wfClear"></div>');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult">Disabled [<a href="admin.php?page=WordfenceSecOpt">Visit Options to Enable</a>]</div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_PAIDONLY:') != -1){
 			var msg = item.msg.replace('SUM_PAIDONLY:', '');
-			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="http://www.wordfence.com/" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_FINAL:') != -1){
 			var msg = item.msg.replace('SUM_FINAL:', '');
@@ -770,7 +770,10 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_saveConfig', qstr, function(res){
 			jQuery('.wfAjax24').hide();
 			if(res.ok){
-				if(res['reload'] == 'reload' || WFAD.reloadConfigPage){
+				if(res['paidKeyMsg']){
+					self.colorbox('400px', "Congratulations! You have been upgraded to Premium Scanning.", "You have upgraded to a Premium API key. Once this page reloads, you can choose which premium scanning options you would like to enable and then click save. Click the button below to reload this page now.<br /><br /><center><input type='button' name='wfReload' value='Reload page and enable Premium options' onclick='window.location.reload();' /></center>");
+					return;
+				} else if(res['reload'] == 'reload' || WFAD.reloadConfigPage){
 					self.colorbox('400px', "Please reload this page", "You selected a config option that requires a page reload. Click the button below to reload this page to update the menu.<br /><br /><center><input type='button' name='wfReload' value='Reload page' onclick='window.location.reload();' /></center>");
 					return;
 				} else {

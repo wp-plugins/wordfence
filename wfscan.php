@@ -20,41 +20,54 @@ require_once('lib/wfScanEngine.php');
 
 class wfScan {
 	public static function wfScanMain(){
+		$db = new wfDB();
+		if($db->errorMsg){
+			self::errorExit("Could not connect to database to start scan: " . $db->errorMsg);
+		}
+		wordfence::status(4, 'info', "Scan engine received request.");
 		if(! wordfence::wfSchemaExists()){
 			self::errorExit("Looks like the Wordfence database tables have been deleted. You can fix this by de-activating and re-activating the Wordfence plugin from your Plugins menu.");
 		}
+		wordfence::status(4, 'info', "Checking cronkey header");
 		if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
 			self::errorExit("The Wordfence scanner did not receive the x_wordfence_cronkey secure header.");
 		}
+		wordfence::status(4, 'info', "Fetching stored cronkey for comparison.");
 		$currentCronKey = wfConfig::get('currentCronKey', false);
 		if(! $currentCronKey){
 			self::errorExit("Wordfence could not find a saved cron key to start the scan.");
 		}
 
+		wordfence::status(4, 'info', "Exploding stored cronkey"); 
 		$savedKey = explode(',',$currentCronKey);
 		if(time() - $savedKey[0] > 60){ 
 			self::errorExit("The key used to start a scan has expired.");
 		} //keys only last 60 seconds and are used within milliseconds of creation
+		wordfence::status(4, 'info', "Checking saved cronkey against cronkey header");
 		if($savedKey[1] != $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
 			self::errorExit("Wordfence could not start a scan because the cron key does not match the saved key.");
 		}
+		wordfence::status(4, 'info', "Deleting stored cronkey");
 		wfConfig::set('currentCronKey', '');
 		ini_set('max_execution_time', 1800); //30 mins
+		wordfence::status(4, 'info', "Becoming admin for scan");
 		self::becomeAdmin();
 
+		wordfence::status(4, 'info', "Checking if scan is already running");
 		$scanRunning = wfConfig::get('wf_scanRunning');
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
 			self::errorExit("There is already a scan running.");
 		}
 		wordfence::status(10, 'info', "SUM_PREP:Preparing a new scan.");
+		wordfence::status(4, 'info', "Requesting max memory");
 		wfUtils::requestMaxMemory();
-
+		wordfence::status(4, 'info', "Setting up error handling environment");
 		set_error_handler('wfScan::error_handler', E_ALL);
 		register_shutdown_function('wfScan::shutdown');
 		ob_start('wfScan::obHandler');
 		@error_reporting(E_ALL);
 		@ini_set('display_errors','On');
-
+		wordfence::status(4, 'info', "Setting up scanRunning and starting scan");
 		wfConfig::set('wf_scanRunning', time());
 		$scan = new wfScanEngine();
 		$scan->go();

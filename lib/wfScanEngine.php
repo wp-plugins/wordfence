@@ -111,21 +111,27 @@ class wfScanEngine {
 		} else {
 			wordfence::statusDisabled("Skipping core scan");
 		}
-		if(wfConfig::get('scansEnabled_plugins')){
-			$pluginScanEnabled = true;
-			$statusIDX['plugin'] = wordfence::statusStart("Comparing plugin files against originals in repository");
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('scansEnabled_plugins')){
+				$pluginScanEnabled = true;
+				$statusIDX['plugin'] = wordfence::statusStart("Premium: Comparing plugin files against originals in repository");
+			} else {
+				wordfence::statusDisabled("Skipping comparing plugin files against originals in repository");
+			}
 		} else {
-			wordfence::statusDisabled("Skipping plugin scan");
-			$this->status(2, 'info', "Skipping plugin scan because it's disabled.");
+			wordfence::statusPaidOnly("Skipping comparing plugin files against originals in repository");
 		}
-		if(wfConfig::get('scansEnabled_themes')){
-			$themeScanEnabled = true;
-			$statusIDX['theme'] = wordfence::statusStart("Comparing theme files against originals in repository");
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('scansEnabled_themes')){
+				$themeScanEnabled = true;
+				$statusIDX['theme'] = wordfence::statusStart("Premium: Comparing theme files against originals in repository");
+			} else {
+				wordfence::statusDisabled("Skipping comparing theme files against originals in repository");
+			}
 		} else {
-			wordfence::statusDisabled("Skipping theme scan");
-			$this->status(2, 'info', "Skipping themes scan because it's disabled.");
+			wordfence::statusPaidOnly("Skipping comparing theme files against originals in repository");
 		}
-
+	
 		if(wfConfig::get('scansEnabled_malware')){
 			$statusIDX['unknown'] = wordfence::statusStart("Scanning for known malware files");
 			$malwareScanEnabled = true;
@@ -272,21 +278,27 @@ class wfScanEngine {
 	}
 	private function scanPosts(){
 		$statusIDX = wordfence::statusStart('Scanning posts for URL\'s in Google\'s Safe Browsing List');
-		global $wpdb;
+		$blogsToScan = $this->getBlogsToScan('posts');
 		$wfdb = new wfDB();
-		$q1 = $wfdb->query("select ID from $wpdb->posts where post_type IN ('page', 'post') and post_status = 'publish'");
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$postDat = array();
-		while($idRow = mysql_fetch_assoc($q1)){
-			$row = $wfdb->querySingleRec("select ID, post_title, post_type, post_date, post_content from $wpdb->posts where ID=%d", $idRow['ID']);
-			$h->hoover($row['ID'], $row['post_title'] . ' ' . $row['post_content']);
-			$postDat[$row['ID']] = array(
-				'contentMD5' => md5($row['post_content']),
-				'title' => $row['post_title'],
-				'type' => $row['post_type'],
-				'postDate' => $row['post_date']
-				);
+		foreach($blogsToScan as $blog){
+			$q1 = $wfdb->query("select ID from " . $blog['table'] . " where post_type IN ('page', 'post') and post_status = 'publish'");
+			while($idRow = mysql_fetch_assoc($q1)){
+				$row = $wfdb->querySingleRec("select ID, post_title, post_type, post_date, post_content from " . $blog['table'] . " where ID=%d", $idRow['ID']);
+				$h->hoover($blog['blog_id'] . '-' . $row['ID'], $row['post_title'] . ' ' . $row['post_content']);
+				$postDat[$blog['blog_id'] . '-' . $row['ID']] = array(
+					'contentMD5' => md5($row['post_content']),
+					'title' => $row['post_title'],
+					'type' => $row['post_type'],
+					'postDate' => $row['post_date'],
+					'isMultisite' => $blog['isMultisite'],
+					'domain' => $blog['domain'],
+					'path' => $blog['path'],
+					'blog_id' => $blog['blog_id']
+					);
 
+			}
 		}
 		$this->status(2, 'info', "Examining URLs found in posts we scanned for dangerous websites");
 		$hooverResults = $h->getBaddies();
@@ -298,9 +310,12 @@ class wfScanEngine {
 		
 		}
 		$haveIssues = false;
-		foreach($hooverResults as $id => $hresults){
-			$uctype = ucfirst($postDat[$id]['type']);
-			$type = $postDat[$id]['type'];
+		foreach($hooverResults as $idString => $hresults){
+			$arr = explode('-', $idString);
+			$blogID = $arr[0];
+			$postID = $arr[1];
+			$uctype = ucfirst($postDat[$idString]['type']);
+			$type = $postDat[$idString]['type'];
 			foreach($hresults as $result){
 				if($result['badList'] == 'goog-malware-shavar'){
 					$shortMsg = "$uctype contains a suspected malware URL.";
@@ -313,17 +328,29 @@ class wfScanEngine {
 					continue;
 				}
 				$this->status(2, 'info', "Adding issue: $shortMsg");
-				if($this->addIssue('postBadURL', 1, $id, $id . $postDat[$id]['contentMD5'], $shortMsg, $longMsg, array(
-					'postID' => $id,
+				if(is_multisite()){
+					switch_to_blog($blogID);
+				}
+				$ignoreP = $idString;
+				$ignoreC = $idString . $postDat[$idString]['contentMD5'];
+				if($this->addIssue('postBadURL', 1, $ignoreP, $ignoreC, $shortMsg, $longMsg, array(
+					'postID' => $postID,
 					'badURL' => $result['URL'],
-					'postTitle' => $postDat[$id]['title'],
-					'type' => $postDat[$id]['type'],
+					'postTitle' => $postDat[$idString]['title'],
+					'type' => $postDat[$idString]['type'],
 					'uctype' => $uctype,
-					'permalink' => get_permalink($id),
-					'editPostLink' => get_edit_post_link($id),
-					'postDate' => $postDat[$id]['postDate']
+					'permalink' => get_permalink($postID),
+					'editPostLink' => get_edit_post_link($postID),
+					'postDate' => $postDat[$idString]['postDate'],
+					'isMultisite' => $postDat[$idString]['isMultisite'],
+					'domain' => $postDat[$idString]['domain'],
+					'path' => $postDat[$idString]['path'],
+					'blog_id' => $blogID
 					))){
 					$haveIssues = true;
+				}
+				if(is_multisite()){
+					restore_current_blog();
 				}
 			}
 		}
@@ -369,27 +396,33 @@ class wfScanEngine {
 		$statusIDX = wordfence::statusStart('Scanning comments for URL\'s in Google\'s Safe Browsing List');
 		global $wpdb;
 		$wfdb = new wfDB();
-		$q1 = $wfdb->query("select comment_ID from $wpdb->comments where comment_approved=1");
-		if( ! $q1){
-			wordfence::statusEndErr();
-			return;
-		}
-		if(! (mysql_num_rows($q1) > 0)){
-			wordfence::statusEnd($statusIDX, false);
-			return; 
-		}
-		
-		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		$commentDat = array();
-		while($idRow = mysql_fetch_assoc($q1)){
-			$row = $wfdb->querySingleRec("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from $wpdb->comments where comment_ID=%d", $idRow['comment_ID']);
-			$h->hoover($row['comment_ID'], $row['comment_author_url'] . ' ' . $row['comment_author'] . ' ' . $row['comment_content']);
-			$commentDat[$row['comment_ID']] = array(
-				'contentMD5' => md5($row['comment_content'] . $row['comment_author'] . $row['comment_author_url']),
-				'author' => $row['comment_author'],
-				'type' => ($row['comment_type'] ? $row['comment_type'] : 'comment'),
-				'date' => $row['comment_date']
-				);
+		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
+		$blogsToScan = $this->getBlogsToScan('comments');
+		foreach($blogsToScan as $blog){
+			$q1 = $wfdb->query("select comment_ID from " . $blog['table'] . " where comment_approved=1");
+			if( ! $q1){
+				wordfence::statusEndErr();
+				return;
+			}
+			if(! (mysql_num_rows($q1) > 0)){
+				continue;
+			}
+			
+			while($idRow = mysql_fetch_assoc($q1)){
+				$row = $wfdb->querySingleRec("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from " . $blog['table'] . " where comment_ID=%d", $idRow['comment_ID']);
+				$h->hoover($blog['blog_id'] . '-' . $row['comment_ID'], $row['comment_author_url'] . ' ' . $row['comment_author'] . ' ' . $row['comment_content']);
+				$commentDat[$blog['blog_id'] . '-' . $row['comment_ID']] = array(
+					'contentMD5' => md5($row['comment_content'] . $row['comment_author'] . $row['comment_author_url']),
+					'author' => $row['comment_author'],
+					'type' => ($row['comment_type'] ? $row['comment_type'] : 'comment'),
+					'date' => $row['comment_date'],
+					'isMultisite' => $blog['isMultisite'],
+					'domain' => $blog['domain'],
+					'path' => $blog['path'],
+					'blog_id' => $blog['blog_id']
+					);
+			}
 		}
 		$hooverResults = $h->getBaddies();
 		if($h->errorMsg){
@@ -398,9 +431,12 @@ class wfScanEngine {
 			return;
 		}
 		$haveIssues = false;
-		foreach($hooverResults as $id => $hresults){
-			$uctype = ucfirst($commentDat[$id]['type']);
-			$type = $commentDat[$id]['type'];
+		foreach($hooverResults as $idString => $hresults){
+			$arr = explode('-', $idString);
+			$blogID = $arr[0];
+			$commentID = $arr[1];
+			$uctype = ucfirst($commentDat[$idString]['type']);
+			$type = $commentDat[$idString]['type'];
 			foreach($hresults as $result){
 				if($result['badList'] == 'goog-malware-shavar'){
 					$shortMsg = "$uctype contains a suspected malware URL.";
@@ -412,20 +448,59 @@ class wfScanEngine {
 					//A list type that may be new and the plugin has not been upgraded yet.
 					continue;
 				}
-				if($this->addIssue('commentBadURL', 1, $id, $id . $commentDat[$id]['contentMD5'], $shortMsg, $longMsg, array(
-					'commentID' => $id,
+				if(is_multisite()){
+					switch_to_blog($blogID);
+				}
+				$ignoreP = $idString;
+				$ignoreC = $idString . '-' . $commentDat[$idString]['contentMD5'];
+				if($this->addIssue('commentBadURL', 1, $ignoreP, $ignoreC, $shortMsg, $longMsg, array(
+					'commentID' => $commentID,
 					'badURL' => $result['URL'],
-					'author' => $commentDat[$id]['author'],
+					'author' => $commentDat[$idString]['author'],
 					'type' => $type,
 					'uctype' => $uctype,
-					'editCommentLink' => get_edit_comment_link($id),
-					'commentDate' => $commentDat[$id]['date']
+					'editCommentLink' => get_edit_comment_link($commentID),
+					'commentDate' => $commentDat[$idString]['date'],
+					'isMultisite' => $commentDat[$idString]['isMultisite'],
+					'domain' => $commentDat[$idString]['domain'],
+					'path' => $commentDat[$idString]['path'],
+					'blog_id' => $blogID
 					))){
 					$haveIssues = true;
+				}
+				if(is_multisite()){
+					restore_current_blog();
 				}
 			}
 		}
 		wordfence::statusEnd($statusIDX, $haveIssues);
+	}
+	public function getBlogsToScan($table){
+		$wfdb = new wfDB();
+		global $wpdb;
+		$prefix = $wpdb->base_prefix;
+		$blogsToScan = array();
+		if(is_multisite()){
+			$q1 = $wfdb->query("select blog_id, domain, path from $prefix"."blogs where deleted=0 order by blog_id asc");
+			while($row = mysql_fetch_assoc($q1)){
+				$row['isMultisite'] = true;
+				if($row['blog_id'] == 1){
+					$row['table'] = $prefix . $table;
+				} else {
+					$row['table'] = $prefix . $row['blog_id'] . '_' . $table;
+				}
+				array_push($blogsToScan, $row); 
+			}
+		} else {
+			array_push($blogsToScan, array(
+				'isMultisite' => false,
+				'table' => $prefix . $table,
+				'blog_id' => '1',
+				'domain' => '',
+				'path' => '',
+				));
+		}
+		return $blogsToScan;
 	}
 	private function highestCap($caps){
 		foreach(array('administrator', 'editor', 'author', 'contributor', 'subscriber') as $cap){

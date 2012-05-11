@@ -375,7 +375,7 @@ class wfConfig {
 	public static function get($key, $default = false){
 		if(! isset(self::$cache[$key])){ 
 			$val = self::getDB()->querySingle("select val from " . self::table() . " where name='%s'", $key);
-			if($val){
+			if(isset($val)){
 				self::$cache[$key] = $val;
 			} else {
 				self::$cache[$key] = $default;

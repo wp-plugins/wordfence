@@ -6,6 +6,7 @@ class wfDB {
 	private $dbpassword = false;
 	private $dbname = false;
 	private $dbuser = false;
+	public $errorMsg = false;
 	public function __construct($createNewHandle = false, $dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
 		if($dbhost && $dbuser && $dbpassword && $dbname){
 			$this->dbhost = $dbhost;
@@ -14,7 +15,15 @@ class wfDB {
 			$this->dbname = $dbname;
 		} else {
 			global $wpdb;
-			if(! $wpdb){ die("Not running under wordpress. Please supply db credentials to constructor."); }
+			if(! $wpdb){ 
+				$this->errorMsg = "The WordPress variable wpdb is not defined.";
+				return;
+			}
+			if(! $wpdb->dbhost ){ $this->errorMsg = "The WordPress variable from wpdb dbhost is not defined."; }
+			if(! $wpdb->dbuser ){ $this->errorMsg = "The WordPress variable from wpdb dbuser is not defined."; }
+			if(! $wpdb->dbpassword ){ $this->errorMsg = "The WordPress variable from wpdb dbpassword is not defined."; }
+			if(! $wpdb->dbname ){ $this->errorMsg = "The WordPress variable from wpdb dbname is not defined."; }
+			if($this->errorMsg){ return; }	
 			$this->dbhost = $wpdb->dbhost;
 			$this->dbuser = $wpdb->dbuser;
 			$this->dbpassword = $wpdb->dbpassword;
@@ -22,6 +31,10 @@ class wfDB {
 		}
 		if($createNewHandle){
 			$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+			if($dbh === false){
+				$this->errorMsg = "Could not connect to database on " . $this->dbhost . " with user " . $this->dbuser;
+				return;
+			}
 			mysql_select_db($this->dbname, $dbh);
 			$this->dbh = $dbh;
 		} else {
@@ -29,6 +42,11 @@ class wfDB {
 				$this->dbh = self::$dbhCache;
 			} else {
 				$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+				if($dbh === false){
+					$this->errorMsg = "Could not connect to database on " . $this->dbhost . " with user " . $this->dbuser;
+					return;
+				}
+
 				mysql_select_db($this->dbname, $dbh);
 				self::$dbhCache = $dbh;
 				$this->dbh = self::$dbhCache;
@@ -99,7 +117,7 @@ class wfDB {
 		exit(1);
 	}
 	public function createKeyIfNotExists($table, $col, $keyName){
-		global $wpdb; $prefix = $wpdb->prefix;
+		global $wpdb; $prefix = $wpdb->base_prefix;
 		$table = $prefix . $table;
 		$exists = $this->querySingle("show tables like '$table'");
 		$keyFound = false;

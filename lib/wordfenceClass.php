@@ -4,7 +4,6 @@ require_once('wfScanEngine.php');
 require_once('wfCrawl.php');
 require_once 'Diff.php';
 require_once 'Diff/Renderer/Html/SideBySide.php';
-require_once 'geshi.php';
 require_once 'wfAPI.php';
 require_once 'wfIssues.php';
 require_once('wfDB.php');
@@ -51,6 +50,11 @@ class wordfence {
 
 		//Upgrading from 1.5.6 or earlier needs:
 		$db->createKeyIfNotExists($prefix . 'wfStatus', 'level', 'k2');
+
+		if(wfConfig::get('isPaid') == 'free'){
+			wfConfig::set('isPaid', '');
+		}
+		wfConfig::set('alertEmailMsgCount', 0);
 	}
 	public static function uninstallPlugin(){
 		update_option('wordfenceActivated', 0);
@@ -165,6 +169,13 @@ class wordfence {
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
 		}
+
+		//Upgrading from 2.0.3 we changed isPaid from 'free' or 'paid' to true and false
+		if(wfConfig::get('isPaid') == 'free'){
+			wfConfig::set('isPaid', '');
+		}
+		//end
+
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
 		add_action('plugins_loaded', 'wordfence::veryFirstAction');
@@ -530,13 +541,17 @@ class wordfence {
 			$opts['liveTraf_ignoreIPs'] = implode(',', $validIPs);
 		}
 		$reload = '';
+		$paidKeyMsg = false;
 		if($opts['apiKey'] != wfConfig::get('apiKey')){
 			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
 			$res = $api->call('check_api_key', array(), array());
-			if($res['ok'] && $res['isPaid']){
+			if($res['ok'] && isset($res['isPaid'])){
 				wfConfig::set('apiKey', $opts['apiKey']);
 				$reload = 'reload';
 				wfConfig::set('isPaid', $res['isPaid']);
+				if($res['isPaid']){
+					$paidKeyMsg = true;
+				}
 			} else if($res['errorMsg']){
 				return array('errorMsg' => $res['errorMsg']);
 			} else {
@@ -564,7 +579,7 @@ class wordfence {
 		if($err){
 			return array('errorMsg' => $err);
 		} else {
-			return array('ok' => 1, 'reload' => $reload );
+			return array('ok' => 1, 'reload' => $reload, 'paidKeyMsg' => $paidKeyMsg );
 		}
 	}
 	public static function ajax_clearAllBlocked_callback(){
@@ -782,7 +797,7 @@ class wordfence {
 			wfConfig::set('apiKey', '');
 			return array("errorMsg" => $api->errorMsg );
 		}
-		if($result['ok'] && $result['isPaid']){
+		if($result['ok'] && isset($result['isPaid'])){
 			wfConfig::set('isPaid', $result['isPaid']);
 			$err = self::startScan();
 			if($err){
@@ -981,41 +996,6 @@ class wordfence {
 		$fileSize = @filesize($localFile);
 		$fileSize = number_format($fileSize, 0, '', ',') . ' bytes';
 
-		if(preg_match('/\.php$/i', $localFile)){
-			$lang = 'php';
-			//echo highlight_string($cont, true);
-			//exit(0);
-		} else if(preg_match('/\.js$/i', $localFile)){
-			$lang = 'javascript';
-		} else if(preg_match('/\.css$/i', $localFile)){
-			$lang = 'css';
-		} else if(preg_match('/\.(?:html|htm)$/i', $localFile)){
-			$lang = 'html4strict';
-		} else if(preg_match('/\.txt$/i', $localFile)){
-			$lang = 'text';
-		} else if(preg_match('/^\.htaccess$/i', $localFile)){
-			$lang = 'apache';
-		} else if(preg_match('/\.sh$/i', $localFile)){
-			$lang = 'bash';
-		} else if(preg_match('/\.java$/i', $localFile)){
-			$lang = 'java';
-		} else if(preg_match('/\.pl$/i', $localFile)){
-			$lang = 'perl';
-		} else if(preg_match('/\.py$/i', $localFile)){
-			$lang = 'python';
-		} else if(preg_match('/\.rb$/i', $localFile)){
-			$lang = 'ruby';
-		} else {
-			header('Content-Type: text/plain');	
-			echo $cont;
-			exit(0);
-		}
-		$geshi = new GeSHi($cont, $lang);
-		$geshi->set_header_type(GESHI_HEADER_DIV);
-		$geshi->enable_line_numbers(GESHI_NORMAL_LINE_NUMBERS);
-		$geshi->enable_keyword_links(false);
-
-		//echo $geshi->parse_code();
 		require 'wfViewResult.php';
 		exit(0);
 	}
@@ -1086,7 +1066,12 @@ class wordfence {
 	}
 	public static function configure_warning(){
 		if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
-			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please set up an email address to receive Wordfence security alerts. </strong> You can do this on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a>.</p></div>';
+			$numRun = wfConfig::get('alertEmailMsgCount', 0);
+			if($numRun <= 3){
+				echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please set up an email address to receive Wordfence security alerts</strong> on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a>. This message will appear ' . (3 - $numRun) . ' more times.</p></div>';
+				wfConfig::set('alertEmailMsgCount', ++$numRun);
+			}
+
 		}
 	}
 	public static function admin_menus(){
@@ -1242,15 +1227,14 @@ class wordfence {
 		}
 	}
 	public static function statusDisabled($msg){
-		if(wfConfig::get('isPaid') == 'free'){
-			self::status(10, 'info', "SUM_PAIDONLY:" . $msg);
-		} else {
-			self::status(10, 'info', "SUM_DISABLED:" . $msg);
-		}
+		self::status(10, 'info', "SUM_DISABLED:" . $msg);
+	}
+	public static function statusPaidOnly($msg){
+		self::status(10, 'info', "SUM_PAIDONLY:" . $msg);
 	}
 	public static function wfSchemaExists(){
 		$db = new wfDB();
-		global $wpdb; $prefix = $wpdb->prefix;
+		global $wpdb; $prefix = $wpdb->base_prefix;
 		$exists = $db->querySingle("show tables like '$prefix"."wfConfig'");
 		return $exists ? true : false;
 	}
