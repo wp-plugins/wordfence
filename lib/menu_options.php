@@ -17,6 +17,15 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<table class="wfConfigForm">
 	<tr><td colspan="2"><h2>Basic Options</h2></td></tr>
 	<tr><th>Where to email alerts:</th><td><input type="text" id="alertEmails" name="alertEmails" value="<?php $w->f('alertEmails'); ?>" size="50" />&nbsp;<span class="wfTipText">Separate multiple emails with commas</span></td></tr>
+	<tr><th>Your Wordfence API Key:</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="50" />
+		</td></tr>
+	<tr><th>Key type currently active:</th><td>
+		<?php if(wfConfig::get('isPaid')){ ?>
+		The currently active API Key is a Premium Key. <span style="font-weight: bold; color: #0A0;">Premium scanning enabled!</span>
+		<?php } else {?>
+		The currently active API Key is a <span style="color: #F00; font-weight: bold;">Free Key</a>. <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Upgrade to Premium Scanning now.</a>
+		<?php } ?>
+	</td></tr>
 	<tr><th>Security Level:</th><td>
 		<select id="securityLevel" name="securityLevel" onchange="WFAD.changeSecurityLevel(); return true;">
 			<option value="0"<?php $w->sel('securityLevel', '0'); ?>>Level 0: Disable all Wordfence security measures</option>
@@ -58,9 +67,11 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> /></td></tr>
 	<tr><th>Scan core files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_core" class="wfConfigElem" name="scansEnabled_core" value="1" <?php $w->cb('scansEnabled_core'); ?>/></td></tr>
 	
-	<?php if(wfConfig::get('isPaid') == 'paid'){ ?>
-	<tr><th>Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" <?php $w->cb('scansEnabled_themes'); ?>/></td></tr>
-	<tr><th>Scan plugin files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_plugins" class="wfConfigElem" name="scansEnabled_plugins" value="1" <?php $w->cb('scansEnabled_plugins'); ?>/></td></tr>
+	<?php if(wfConfig::get('isPaid')){ ?>
+	<tr><th style="color: #0A0; padding-top: 10px; font-weight: bold;" colspan="2">Premium Scanning:</th><td></td></tr>
+	<tr><th style="font-weight: bold;">Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" <?php $w->cb('scansEnabled_themes'); ?>/></td></tr>
+	<tr><th style="font-weight: bold;">Scan plugin files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_plugins" class="wfConfigElem" name="scansEnabled_plugins" value="1" <?php $w->cb('scansEnabled_plugins'); ?>/></td></tr>
+	<tr><td colspan="2">&nbsp;</td></tr>
 	<?php } else { ?>
 	<tr><th style="color: #F00; padding-top: 10px;" colspan="2">Only available to Premium Members: <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/" target="_blank">[click to upgrade]</a></th><td></td></tr>
 	<tr><th style="color: #999;">Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" DISABLED /></td></tr>
@@ -176,6 +187,12 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 			<option value="360"<?php $w->sel('loginSec_lockoutMins', '360'); ?>>6 hours</option>
 			<option value="720"<?php $w->sel('loginSec_lockoutMins', '720'); ?>>12 hours</option>
 			<option value="1440"<?php $w->sel('loginSec_lockoutMins', '1440'); ?>>1 day</option>
+			<option value="2880"<?php $w->sel('loginSec_lockoutMins', '2880'); ?>>2 days</option>
+			<option value="7200"<?php $w->sel('loginSec_lockoutMins', '7200'); ?>>5 days</option>
+			<option value="14400"<?php $w->sel('loginSec_lockoutMins', '14400'); ?>>10 days</option>
+			<option value="28800"<?php $w->sel('loginSec_lockoutMins', '28800'); ?>>20 days</option>
+			<option value="43200"<?php $w->sel('loginSec_lockoutMins', '43200'); ?>>30 days</option>
+			<option value="86400"<?php $w->sel('loginSec_lockoutMins', '86400'); ?>>60 days</option>
 		</select>	
 		</td></tr>
 	<tr><th>Immediately lock out invalid usernames</th><td><input type="checkbox" id="loginSec_lockInvalidUsers" class="wfConfigElem" name="loginSec_lockInvalidUsers" <?php $w->cb('loginSec_lockInvalidUsers'); ?> /></td></tr>
@@ -186,8 +203,8 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Scan comments for malware and phishing URL's</th><td><input type="checkbox" id="other_scanComments" class="wfConfigElem" name="other_scanComments" value="1" <?php $w->cb('other_scanComments'); ?> /></td></tr>
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
-	<tr><th>Your Wordfence API Key</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="20" /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
+	<tr><th>Enable debugging mode</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>

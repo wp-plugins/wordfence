@@ -12,7 +12,7 @@ class wordfenceURLHoover {
 		$this->api = new wfAPI($apiKey, $wordpressVersion);
 		$this->db = new wfDB();
 		global $wpdb;
-		$this->table = $wpdb->prefix . 'wfHoover';
+		$this->table = $wpdb->base_prefix . 'wfHoover';
 		$this->db->query("truncate table $this->table");
 	}
 	public function hoover($id, $data){

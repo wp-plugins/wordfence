@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 2.0.3
+Stable tag: 2.0.5
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -15,20 +15,20 @@ Wordfence is now Multi-Site compatible. Support for Multi-Site is currently in B
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
-Wordfence is 100% free. You need to sign up on Wordfence.com to get a free API key.
-We also offer a Premium API key that adds additional scanning capabilities. See below for details.
+Wordfence is 100% free. We also offer a Premium API key that adds additional scanning capabilities.
 
 Wordfence:
 
 * Scans core files against repository versions to check their integrity.
 * WordPress Multi-Site (or WordPress MU in the older parlance) compatible (beta).
-* Premium API key also scans themes and plugins against repository versions. This is currently the only difference between free and premium API keys.
-* See how files have changed. Optionally repair changed files.
+* Wordfence Security for multi-site also scans all posts and comments across all blogs from one admin panel.
+* Premium API key also scans themes and plugins against repository versions.
+* See how files have changed. Optionally repair changed files that are security threats.
 * Scans for signatures of over 44,000 known malware variants that are known security threats.
 * Continuously scans for malware and phishing URL's in all your comments, posts and files that are security threats.
 * Scans for heuristics of backdoors, trojans,  suspicious code and other security issues.
 * Checks the strength of all user and admin passwords to enhance login security.
-* Monitor for unauthorized DNS changes.
+* Monitor your DNS security for unauthorized DNS changes.
 * Includes a firewall to block common security threats like fake Googlebots, malicious scans from hackers and botnets.
 * Rate limit or block security threats like aggressive crawlers, scrapers and bots doing security scans for vulnerabilities in your site.
 * Choose whether you want to block or throttle users and robots who break your security rules.
@@ -37,6 +37,7 @@ Wordfence:
 * A real-time view of all traffic including automated bots that often constitute security threats that Javascript analytics packages never show you.
 * Real-time traffic includes reverse DNS and city-level geolocation. Know which geographic area security threats originate from.
 * Monitors disk space which is related to security because many DDoS attacks attempt to consume all disk space to create denial of service.
+* Our online forums are available 24/7 to answer your WordPress security questions. 
 
 Wordfence Security is full-featured and constantly updated by our team to incorporate the latest security features and to hunt for the 
 newest security threats to your WordPress website.
@@ -49,44 +50,43 @@ To install Wordfence Security and start protecting your WordPress website:
 
 1. Install Wordfence Security automatically or by uploading the ZIP file. 
 1. Activate the security plugin through the 'Plugins' menu in WordPress.
-1. Visit [Wordfence.com to get an API key](http://wordfence.com/) which you need to security scans.
-1. Go to the Wordfence menu option that appears on the left or your site's admin section.
-1. Enter your API key and click the button.
-1. Wordfence is now activated. Your first security scan will start automatically and scheduled security scanning will also be enabled.
+1. Wordfence is now activated. Go to the scan menu and start your first security scan. Scheduled security scanning will also be enabled.
+1. Once your first scan has completed a list of security threats will appear. Go through them one by one to secure your site.
 1. Visit the Wordfence options page to enter your email address so that you can receive email security alerts.
 1. Optionally change your security level or click the advanced options link to see individual security scanning and protection options.
-1. Click the "Live Traffic" menu option to watch your site activity in real-time.
+1. Click the "Live Traffic" menu option to watch your site activity in real-time. Situational awareness is an important part of website security.
 
 To install Wordfence on WordPress Multi-Site installations (support is currently in Beta):
 
-1. Install Wordfence via the plugin directory or by uploading the ZIP file.
-1. Network Activate Wordfence. This step is important because until you network activate it, your sites will see the plugin option on their plugins menu. Once activated that option dissapears. If one of your users manages to sneak in and try to activate Wordfence between you installing Wordfence and network activating it, don't worry because they won't be allowed to activate the plugin. It will generate a warning and won't activate for an individual site.
+1. Install Wordfence Security via the plugin directory or by uploading the ZIP file.
+1. Network Activate Wordfence Security. This step is important because until you network activate it, your sites will see the plugin option on their plugins menu. Once activated that option dissapears. 
 1. Now that Wordfence is network activated it will appear on your Network Admin menu. Wordfence will not appear on any individual site's menu. 
-1. Enter your API key to start your first scan.
-1. Wordfence will scan all files in your WordPress installation including those in the blogs.dir directory of your individual sites. 
-1. Live Traffic will appear for ALL sites in your network. If you have a heavily trafficed system you may want to disable live traffic which will stop logging to the DB. 
+1. Go to the "Scan" menu and start your first security scan. 
+1. Wordfence will do a security scan all files in your WordPress installation including those in the blogs.dir directory of your individual sites. 
+1. Live Traffic will appear for ALL sites in your network. If you have a heavily trafficked system you may want to disable live traffic which will stop logging to the DB. 
 1. Firewall rules and login rules apply to the WHOLE system. So if you fail a login on site1.example.com and site2.example.com it counts as 2 failures. Crawler traffic is counted between blogs, so if you hit three sites in the network, all the hits are totalled and that counts as the rate you're accessing the system.
-1. Wordfence has been tested with subdomains, not with subdirectories yet, but it should work. Please report all bugs and we'll fix them as fast as we can.
 
 == Frequently Asked Questions ==
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
-= Why does Wordfence Security need an API key? =
+= What does Wordfence Security do that other WordPress security plugins don't do? =
 
-Wordfence securely contacts our servers when doing a security scan. These include: comparing the hashes of your core, theme and plugin files
-against the official versions to see if security has been compromised, checking if URL's in your comments, posts and files are on any known list of dangerous URL's and checking
-if any of your file signatures match a large list of known malware files that constitute a security threat.
+* Wordfence security scans including checking all your files, comments and posts for URL's in Google's Safe Browsing list.
+* All Wordfence security scans happen hourly instead of daily or even less frequently.
+* Wordfence scans do not consume large amounts of your precious bandwidth because all scans happen on your web server which makes them very fast.
+* Wordfence fully supports WordPress Multi-Site which means you can security scan every blog in your Multi-Site installation with one click.
+* Wordfence checks the integrity of your WordPress core files, plugins and themes against the original files in the WordPress repository. We alert you to any changes which may be a security threat, let you see what has changed and you can even repair changed files.
 
 = Does Wordfence support Multi-Site installations? =
 
-Yes. WordPress MU or Multi-Site as it's called now is supported and support is currently in beta. See the installation tab for more info.
+Yes. WordPress MU or Multi-Site as it's called now is fully supported. Using Wordfence you can security scan every blog in your network with one click. If one of your customers posts a page or post with a known malware URL that threatens your whole domain with being blacklisted by Google, we will tell you within a maximum of one hour which is how often scans occur. 
 
 = Will Wordfence slow my site down? =
 
 We have spent a lot of time making sure Wordfence runs very quickly and securely. Wordfence uses its own database
 tables and advanced mysql features to ensure it runs as fast as possible. The creators of Wordfence
-also run a large scale real-time analytics product and much of the technology and knowledge from
+also run Feedjit, a large scale real-time analytics product and ad network and much of the technology and knowledge from
 our real-time analytics products is built into Wordfence.
 
 = How often is Wordfence updated? =
@@ -152,6 +152,25 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.0.5 =
+* If your plugin PHP files are viewable by the world, we now give you a detailed warning on the seriousness of this security threat with ability to view the offending .htaccess files.
+* Added a debug mode in options for very verbose logging and marking errors in red.
+* Added more logging for the process that starts the security scan.
+* Ability to securely view the entire activity log added.
+* Using plugin version in all CSS URL's instead of API version.
+* Activity log microtime is more accurate now.
+* Fixed bug that would cause security scanning of PHP files with base64 content to stop.
+
+= 2.0.4 =
+* Now security scanning all comments, posts and pages on multi-site installation for malware and phishing URL's.
+* Improved messages on multisite when a bad comment or post is found.
+* Fixed bug that caused paid users to not be able to activate their premium key.
+* Made upgrade process much friendlier. 
+* Got rid of GeSHi syntax highlighting because it segfaults and is resource intensive. Using built in PHP highlighting instead.
+* Message asking you to configure an alert email address only appears for 3 pageviews after plugin activation so it's less irritating.
+* Fixed bug for MU users that caused WF to tell you that your WF schema is missing and you need to reactivate. 
+* Fixed bug that caused malware URL scanner to not work for MU users.
+
 = 2.0.3 =
 * Removed unbuffered queries and switched to conventional queries that are memory efficient for better stability.
 * Made scanning large numbers of URL's contained in things like awstats log files extremely memory efficient and way faster.

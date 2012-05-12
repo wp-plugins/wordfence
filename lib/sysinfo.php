@@ -3,7 +3,7 @@
 <head>
 <title>Wordfence System Info</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/phpinfo.css?ver=<?php echo WORDFENCE_VERSION ?>' type='text/css' media='all' />
+<link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/phpinfo.css?ver=<?php echo wfUtils::myVersion(); ?>' type='text/css' media='all' />
 <body>
 <?php 
 ob_start();

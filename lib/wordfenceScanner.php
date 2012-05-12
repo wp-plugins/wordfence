@@ -107,9 +107,7 @@ class wordfenceScanner {
 						break;
 					}
 					
-					$decoded = array();
-					preg_replace("/([a-zA-Z0-9\+\/\=]{10,})/e", "self::array_pushRet(\$decoded, base64_decode(\"$1\"))", $data);
-					$urlHoover->hoover($file, $data . ' ' . implode(' ', $decoded));
+					$urlHoover->hoover($file, $data);
 				} else {
 					$urlHoover->hoover($file, $data);
 				}
@@ -170,7 +168,6 @@ class wordfenceScanner {
 
 		return $this->results;
 	}
-	private function array_pushRet(&$arr, $elem){ array_push($arr, $elem); return $elem; }
 	private function addEncIssue($ignoreP, $ignoreC, $encoding, $file){
 		$this->addResult(array(
 			'type' => 'file',

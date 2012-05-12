@@ -573,7 +573,7 @@ class wfLog {
 	}
 	public function addStatus($level, $type, $msg){
 		//$msg = '[' . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . '] ' . $msg;
-		$this->getDB()->query("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", microtime(true), $level, $type, $msg);
+		$this->getDB()->query("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", sprintf('%.6f', microtime(true)), $level, $type, $msg);
 	}
 	public function getStatusEvents($lastCtime){
 		if($lastCtime < 1){

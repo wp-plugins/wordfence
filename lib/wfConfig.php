@@ -39,7 +39,8 @@ class wfConfig {
 				"other_scanComments" => false,
 				"other_pwStrengthOnUpdate" => false,
 				"other_WFNet" => true,
-				"other_scanOutside" => false
+				"other_scanOutside" => false,
+				"debugOn" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
@@ -100,7 +101,8 @@ class wfConfig {
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
-				"other_scanOutside" => false
+				"other_scanOutside" => false,
+				"debugOn" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
@@ -161,7 +163,8 @@ class wfConfig {
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
-				"other_scanOutside" => false
+				"other_scanOutside" => false,
+				"debugOn" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
@@ -222,7 +225,8 @@ class wfConfig {
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
-				"other_scanOutside" => false
+				"other_scanOutside" => false,
+				"debugOn" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
@@ -283,7 +287,8 @@ class wfConfig {
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
-				"other_scanOutside" => false
+				"other_scanOutside" => false,
+				"debugOn" => false
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',
@@ -375,7 +380,7 @@ class wfConfig {
 	public static function get($key, $default = false){
 		if(! isset(self::$cache[$key])){ 
 			$val = self::getDB()->querySingle("select val from " . self::table() . " where name='%s'", $key);
-			if($val){
+			if(isset($val)){
 				self::$cache[$key] = $val;
 			} else {
 				self::$cache[$key] = $default;
