@@ -32,16 +32,19 @@
 			<?php } ?>
 			<div class="consoleHead" style="margin-top: 20px;">
 				<span class="consoleHeadText">Scan Detailed Activity</span>
-				<a href="#" class="wfALogMailLink" onclick="WFAD.emailActivityLog(); return false;">Email Activity Log</a>
+				<a href="#" class="wfALogMailLink" onclick="WFAD.emailActivityLog(); return false;">Email activity log</a>
 			</div>
 			<div class="bevelDiv1 consoleOuter"><div class="bevelDiv2"><div class="bevelDiv3 consoleInner" id="consoleActivity">
 				<?php 
 					if(sizeof($events) > 0){
+						$debugOn = wfConfig::get('debugOn', false);
 						$newestItem = 0;
 						$sumEvents = array();
 						foreach($events as $e){
 							if(strpos($e['msg'], 'SUM_') !== 0){
-								echo '<div class="wfActivityLine wf' . $e['type'] . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+								if( $debugOn || $e['level'] < 4){
+									echo '<div class="wfActivityLine wf' . $e['type'] . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+								}
 							}
 							$newestItem = $e['ctime'];
 						}
@@ -54,6 +57,10 @@
 					}
 				?>
 			</div></div></div>
+			<div style="position: relative; width: 803px;">
+				&nbsp;
+				<a href="#" target="_blank" class="wfALogViewLink" id="wfALogViewLink">View activity log</a>
+			</div>
 		</div>
 		<div style="margin-top: 20px;">
 			<div id="wfTabs">

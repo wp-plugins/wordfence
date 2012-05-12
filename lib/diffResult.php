@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"  dir="ltr" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/diff.css?ver=<?php echo WORDFENCE_VERSION ?>' type='text/css' media='all' />
+<link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/diff.css?ver=<?php echo wfUtils::myVersion(); ?>' type='text/css' media='all' />
 <body>
 <h1>Wordfence: Viewing File Differences</h1>
 <p style="width: 800px; font-size: 16px; font-family: Verdana;">

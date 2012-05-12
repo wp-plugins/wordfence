@@ -1,4 +1,5 @@
 <?php
+/* Don't remove this line. WFSOURCEVISIBLE */
 ignore_user_abort(true);
 $wordfence_wp_version = false;
 if ( !defined('ABSPATH') ) {

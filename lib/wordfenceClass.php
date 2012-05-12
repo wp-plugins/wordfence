@@ -810,6 +810,7 @@ class wordfence {
 		}
 	}
 	public static function ajax_scan_callback(){
+		self::status(4, 'info', "Ajax request received to start scan.");
 		$err = self::startScan();
 		if($err){
 			return array('errorMsg' => $err);
@@ -818,9 +819,13 @@ class wordfence {
 		}
 	}
 	public static function startScan(){
+		self::status(4, 'info', "Entering start scan routine");
 		$cron_url = plugins_url('wordfence/wfscan.php');
+		self::status(4, 'info', "Cron URL is: " . $cron_url);
 		$cronKey = wfUtils::bigRandomHex();
+		self::status(4, 'info', "cronKey is: " . $cronKey);
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
+		self::status(4, 'info', "cronKey is set");
 		$result = wp_remote_post( $cron_url, array(
 			'timeout' => 0.5, 
 			'blocking' => true, 
@@ -829,42 +834,27 @@ class wordfence {
 				'x-wordfence-cronkey' => $cronKey
 				)
 			) );
-		/* This is a timeout in all likelihood, so ignore
-		if(is_wp_error($result) && sizeof($result->errors) > 0){
-			$errs = "";
-			$isTimeout = false;
-			foreach($result->errors as $key => $val){
-				$errs .= $key . ": ";
-				foreach($val as $e){
-					$errs .= $e . ' ';
-					if(preg_match('/timed/i', $e)){
-						$isTimeout = true;
-					}
-				}
-			}
-			if(! $isTimeout){
-				return "Error connecting to Wordfence scanning system: " . $errs;
-			}
-		}
-		*/
-		if((! is_wp_error($result)) && is_array($result) && empty($result['body']) === false && strstr($result['body'], '{') !== false){
-			$resp = json_decode($result['body'], true);
-			if(empty($resp['errorMsg']) === false){
-				return $resp['errorMsg'];
-			}
-		}
-				
+		$procResp = self::processResponse($result);				
+		if($procResp){ return $procResp; }
 		//If the currentCronKey was eaten, then cron executed so return
-		wfConfig::clearCache(); if(! wfConfig::get('currentCronKey')){ return false; }
+		wfConfig::clearCache(); if(! wfConfig::get('currentCronKey')){ 
+			self::status(4, 'info', "cronkey is empty so cron executed. Returning.");
+			return false; 
+		}
 
 		//This second request is for hosts that don't know their own name. i.e. they don't have example.com in their hosts file or DNS pointing to their own IP address or loopback address. So we throw a hail mary to loopback.
+		self::status(4, 'info', "cronkey is still set so sleeping for 0.2 seconds and checking again before trying another approach");
 		usleep(200000);
 		wfConfig::clearCache();
 		if(wfConfig::get('currentCronKey')){ //cron key is still set, so cron hasn't executed yet. Maybe the request didn't go through
+			self::status(4, 'info', "cronkey is still set so about to manually set host header and try again");
 			$cron_url = preg_replace('/^(https?):\/\/[^\/]+/', '$1://127.0.0.1', $cron_url);
+			self::status(4, 'info', "cron url is: $cron_url");
 			$siteURL = site_url();
+			self::status(4, 'info', "siteURL is: $siteURL");
 			if(preg_match('/^https?:\/\/([^\/]+)/i', site_url(), $matches)){
 				$host = $matches[1];
+				self::status(4, 'info', "Extracted host $host from siteURL and trying remote post with manual host header set.");
 				$result = wp_remote_post( $cron_url, array(
 					'timeout' => 0.5, 
 					'blocking' => true, 
@@ -874,31 +864,36 @@ class wordfence {
 						'Host' => $host
 						)
 					) );
-				/* Is probably a timeout
-				if(is_wp_error($result) && sizeof($result->errors) > 0){
-					$errs = "";
-					$isTimeout = false;
-					foreach($result->errors as $key => $val){
-						$errs .= $key . ": ";
-						foreach($val as $e){
-							$errs .= $e . ' ';
-							if(preg_match('/timed/i', $e)){
-								$isTimeout = true;
-							}
-						}
-					}
-					if(! $isTimeout){
-						return "Error connecting to Wordfence scanning system: " . $errs;
-					}
+				$procResp = self::processResponse($result);				
+				if($procResp){ return $procResp; }
+			}
+		}
+		return false;
+	}
+	public function processResponse($result){
+		if((! is_wp_error($result)) && is_array($result) && empty($result['body']) === false){
+			if(strpos($result['body'], 'WFSOURCEVISIBLE') !== false){
+				self::status(4, 'info', "wfscan.php source is visible.");
+				$msg = "Wordfence can't run because the source code of your WordPress plugin files is visible from the Internet. This is a serious security risk which you need to fix. Please look for .htaccess files in your WordPress root directory and your wp-content/ and wp-content/plugins/ directories that may contain malicious code designed to reveal your site source code to a hacker.";
+				$htfiles = array();
+				if(file_exists(ABSPATH . 'wp-content/.htaccess')){
+					array_push($htfiles, '<a href="' . wfUtils::getSiteBaseURL() . '?_wfsf=view&nonce=' . wp_create_nonce('wp-ajax') . '&file=wp-content/.htaccess" target="_blank">wp-content/.htaccess</a>');
 				}
-				*/
-				if((! is_wp_error($result)) && is_array($result) && empty($result['body']) === false && strstr($result['body'], '{') !== false){
-					$resp = json_decode($result['body'], true);
-					if(empty($resp['errorMsg']) === false){
-						return $resp['errorMsg'];
-					}
+				if(file_exists(ABSPATH . 'wp-content/plugins/.htaccess')){
+					array_push($htfiles, '<a href="' . wfUtils::getSiteBaseURL() . '?_wfsf=view&nonce=' . wp_create_nonce('wp-ajax') . '&file=wp-content/plugins/.htaccess" target="_blank">wp-content/plugins/.htaccess</a>');
 				}
-	
+				if(sizeof($htfiles) > 0){
+					$msg .= "<br /><br />Click to view the .htaccess files below that may be the cause of this problem:<br />" . implode('<br />', $htfiles);
+				}
+				return $msg;	
+					
+			} else if(strpos($result['body'], '{') !== false && strpos($result['body'], 'errorMsg') !== false){
+				self::status(4, 'info', "Got response from cron containing json");
+				$resp = json_decode($result['body'], true);
+				if(empty($resp['errorMsg']) === false){
+					self::status(4, 'info', "Got an error message from cron: " . $resp['errorMsg']);
+					return $resp['errorMsg'];
+				}
 			}
 		}
 		return false;
@@ -918,7 +913,7 @@ class wordfence {
 			}
 		}
 
-		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'IPTraf')){
+		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog')){
 			return;
 		}
 		if(! self::isAdmin()){
@@ -938,6 +933,8 @@ class wordfence {
 			require('sysinfo.php');
 		} else if($wfFunc == 'IPTraf'){
 			self::wfFunc_IPTraf();
+		} else if($wfFunc == 'viewActivityLog'){
+			self::wfFunc_viewActivityLog();
 		}
 		exit(0);
 	}
@@ -945,6 +942,10 @@ class wordfence {
 		echo '<script type="text/javascript">var wfHTImg = new Image(); wfHTImg.src="' . wfUtils::getBaseURL() . 'visitor.php?hid=' . wfUtils::encrypt(self::$hitID) . '";</script>';
 	}
 	public static function shutdownAction(){
+	}
+	public static function wfFunc_viewActivityLog(){
+		require('viewFullActivityLog.php');
+		exit(0);
 	}
 	public static function wfFunc_IPTraf(){
 		$IP = $_GET['IP'];
@@ -1060,7 +1061,8 @@ class wordfence {
 		wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
 			'ajaxURL' => admin_url('admin-ajax.php'),
 			'firstNonce' => wp_create_nonce('wp-ajax'),
-			'siteBaseURL' => wfUtils::getSiteBaseURL()
+			'siteBaseURL' => wfUtils::getSiteBaseURL(),
+			'debugOn' => wfConfig::get('debugOn', 0)
 			));
 
 	}

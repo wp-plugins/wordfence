@@ -26,11 +26,14 @@ window['wordfenceAdmin'] = {
 	totalActAdded: 0,
 	maxActivityLogItems: 1000,
 	scanReqAnimation: false,
+	debugOn: false,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
+		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
 		var startTicker = false;
 		if(jQuery('#wordfenceMode_scan').length > 0){
 			this.mode = 'scan';
+			jQuery('#wfALogViewLink').prop('href', WordfenceAdminVars.siteBaseURL + '?_wfsf=viewActivityLog&nonce=' + this.nonce);
 			jQuery('#consoleActivity').scrollTop(jQuery('#consoleActivity').prop('scrollHeight'));
 			jQuery('#consoleScan').scrollTop(jQuery('#consoleScan').prop('scrollHeight'));
 			this.noScanHTML = jQuery('#wfNoScanYetTmpl').tmpl().html();
@@ -138,8 +141,14 @@ window['wordfenceAdmin'] = {
 			this.processSummaryLine(item);
 			jQuery('#consoleSummary').scrollTop(jQuery('#consoleSummary').prop('scrollHeight'));
 			jQuery('#wfStartingScan').addClass('wfSummaryOK').html('Done.');
-		} else if(item.level < 4){
-			jQuery('#consoleActivity').append('<div class="wfActivityLine wf' + item.type + '">[' + item.date + ']&nbsp;' + item.msg + '</div>');
+		} else if(this.debugOn || item.level < 4){
+			
+			var html = '<div class="wfActivityLine';
+			if(this.debugOn){
+				html += ' wf' + item.type;
+			}
+			html += '">[' + item.date + ']&nbsp;' + item.msg + '</div>';
+			jQuery('#consoleActivity').append(html);
 			if(/Scan complete\./i.test(item.msg)){
 				this.loadIssues();
 			}

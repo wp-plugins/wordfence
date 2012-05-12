@@ -625,6 +625,7 @@ class wfScanEngine {
 			$currentCNAME = implode(', ', $cnameArr);
 			$loggedCNAME = wfConfig::get('wf_dnsCNAME');
 			$dnsLogged = wfConfig::get('wf_dnsLogged', false);
+			$msg = "A change in your DNS records may indicate that a hacker has hacked into your DNS administration system and has pointed your email or website to their own server for malicious purposes. It could also indicate that your domain has expired. If you made this change yourself you can mark it 'resolved' and safely ignore it.";
 			if($dnsLogged && $loggedCNAME != $currentCNAME){
 				if($this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the CNAME records of your DNS configuration for the domain $host. A CNAME record is an alias that is used to point a domain name to another domain name. For example foo.example.com can point to bar.example.com which then points to an IP address of 10.1.1.1. $msg", array( 
 					'type' => 'CNAME',
@@ -651,7 +652,6 @@ class wfScanEngine {
 			$currentA = implode(', ', $aArr);
 			$loggedA = wfConfig::get('wf_dnsA');
 			$dnsLogged = wfConfig::get('wf_dnsLogged', false);
-			$msg = "A change in your DNS records may indicate that a hacker has hacked into your DNS administration system and has pointed your email or website to their own server for malicious purposes. It could also indicate that your domain has expired. If you made this change yourself you can mark it 'resolved' and safely ignore it.";
 			if($dnsLogged && $loggedA != $currentA){
 				if($this->addIssue('dnsChange', 2, 'dnsChanges', 'dnsChanges', "Your DNS records have changed", "We have detected a change in the A records of your DNS configuration that may affect the domain $host. An A record is a record in DNS that points a domain name to an IP address. $msg", array( 
 					'type' => 'A',

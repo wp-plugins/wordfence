@@ -187,18 +187,22 @@ table th.wfConfigEnable { font-weight: bold; }
 table th.wfSubheading { font-weight: bold; padding-top: 10px; }
 .wfALogTime { color: #999; }
 .wfALogEntry { }
-.wfALogMailLink {
+.wfALogMailLink, .wfALogViewLink {
 	display: block;
 	position: absolute;
 	padding: 0 0 0 18px;
 	margin: 0;
 	right: 10px;
 	top: 0px;
-	background-image: url(../images/icons/email_go.png);
 	background-repeat: no-repeat;
 	font-weight: normal;
 }
-
+.wfALogMailLink {
+	background-image: url(../images/icons/email_go.png);
+}
+.wfALogViewLink {
+	background-image: url(../images/icons/magnifier.png);
+}
 #wfActivity { position: relative; }
 h3.wfConfigHeading {
 	font-size: 22px;
@@ -261,4 +265,7 @@ h3.wfConfigHeading {
 	color: #555;
 }
 input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
+.wferror {
+	color: #F00;
+}
 
