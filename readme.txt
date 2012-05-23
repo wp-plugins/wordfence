@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 2.0.5
+Stable tag: 2.0.6
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -53,7 +53,7 @@ To install Wordfence Security and start protecting your WordPress website:
 1. Wordfence is now activated. Go to the scan menu and start your first security scan. Scheduled security scanning will also be enabled.
 1. Once your first scan has completed a list of security threats will appear. Go through them one by one to secure your site.
 1. Visit the Wordfence options page to enter your email address so that you can receive email security alerts.
-1. Optionally change your security level or click the advanced options link to see individual security scanning and protection options.
+1. Optionally change your security level or adjust the advanced options to set individual security scanning and protection options for your site.
 1. Click the "Live Traffic" menu option to watch your site activity in real-time. Situational awareness is an important part of website security.
 
 To install Wordfence on WordPress Multi-Site installations (support is currently in Beta):
@@ -72,7 +72,7 @@ To install Wordfence on WordPress Multi-Site installations (support is currently
 
 = What does Wordfence Security do that other WordPress security plugins don't do? =
 
-* Wordfence security scans including checking all your files, comments and posts for URL's in Google's Safe Browsing list.
+* Wordfence security scans check all your files, comments and posts for URL's in Google's Safe Browsing list.
 * All Wordfence security scans happen hourly instead of daily or even less frequently.
 * Wordfence scans do not consume large amounts of your precious bandwidth because all scans happen on your web server which makes them very fast.
 * Wordfence fully supports WordPress Multi-Site which means you can security scan every blog in your Multi-Site installation with one click.
@@ -152,6 +152,18 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.0.6 =
+* Added IP whitelisting including ability to whitelist ranges that are excluded from firewall and login security measures.
+* RFC1918 private networks and loopback address is automatically whitelisted to prevent firewall or login security blocking internal routers and proxy servers, internal firewalls and internal users.
+* Added WORDFENCE_VERSION constant to improve version lookup performance.
+* Fixed issue that caused security scans to not start and humans to not be logged in live traffic. Wordfence makes security scan script and visitors script executable on install or upgrade now.
+* Fixed bug that caused disk space scanning to still show an issue found in security scan summary even when user chooses to ignore the security issue.
+* Made disk space thresholds 1 and 1.5% space remaining because many hosts have very large disks where 1% is gigabytes.
+* Made wordfence database handle cache deal with concurrent connections to different databases.
+* Improved Wordfence database library's error reporting.
+* Improved performance when Wordfence looks up it's own version during security scans and other operations.
+* Removed three rules in base wordfence htaccess that could cause 500 errors on servers that don't allow these options to be overridden. Does not affect htaccess security because we inherit the base htaccess and still protect our lib/ directory with our own htaccess.
+
 = 2.0.5 =
 * If your plugin PHP files are viewable by the world, we now give you a detailed warning on the seriousness of this security threat with ability to view the offending .htaccess files.
 * Added a debug mode in options for very verbose logging and marking errors in red.

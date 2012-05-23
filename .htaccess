@@ -26,6 +26,4 @@ Deny From All
 Order Allow,Deny
 Deny From All
 </Files>
-DirectoryIndex index.html
-IndexIgnore *
-Options -Indexes
+

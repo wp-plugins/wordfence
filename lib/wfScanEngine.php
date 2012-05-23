@@ -582,9 +582,9 @@ class wfScanEngine {
 		$level = false;
 		$spaceLeft = sprintf('%.2f', ($free / $total * 100));
 		$this->status(2, 'info', "The disk has $spaceLeft percent space available");
-		if($spaceLeft < 3){
+		if($spaceLeft < 1){
 			$level = 1;
-		} else if($spaceLeft < 5){
+		} else if($spaceLeft < 1.5){
 			$level = 2;
 		} else {
 			wordfence::statusEnd($statusIDX, false);
@@ -594,7 +594,7 @@ class wfScanEngine {
 			'spaceLeft' => $spaceLeft ))){
 			wordfence::statusEnd($statusIDX, true);
 		} else {
-			wordfence::statusEnd($statusIDX, true);
+			wordfence::statusEnd($statusIDX, false);
 		}
 	}
 	private function scanDNSChanges(){

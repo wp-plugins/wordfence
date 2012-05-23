@@ -44,7 +44,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -106,7 +106,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -168,7 +168,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "240",
@@ -230,7 +230,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -292,7 +292,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",

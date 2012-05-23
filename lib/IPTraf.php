@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"  dir="ltr" lang="en-US">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/iptraf.css?ver=<?php echo wfUtils::myVersion(); ?>' type='text/css' media='all' />
+<link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/iptraf.css?ver=<?php echo WORDFENCE_VERSION; ?>' type='text/css' media='all' />
 <body>
 <h1>Wordfence: All recent hits for IP address <?php echo $IP; if($reverseLookup){ echo '[' . $reverseLookup . ']'; } ?></h1>
 <table border="0" cellpadding="2" cellspacing="0" style="width: 900px;">
