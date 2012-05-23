@@ -23,40 +23,12 @@ class wordfence {
 	private static $hitID = 0;
 	private static $statusStartMsgs = array();
 	public static function installPlugin(){
-		$schema = new wfSchema();
-		$schema->createAll(); //if not exists
-		wfConfig::setDefaults(); //If not set
-		
-		$api = new wfAPI('', wfUtils::getWPVersion());
-		$keyData = $api->call('get_anon_api_key');
-		if($api->errorMsg){
-			die("Error fetching free API key from Wordfence: " . $api->errorMsg);
-		}
-		if($keyData['ok'] && $keyData['apiKey']){
-			wfConfig::set('apiKey', $keyData['apiKey']);
-		} else {
-			die("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
-		}
-
-
-		if( !wp_next_scheduled( 'wordfence_daily_cron' )){
-			wp_schedule_event(time(), 'daily', 'wordfence_daily_cron');
-		}
-		if( !wp_next_scheduled( 'wordfence_hourly_cron' )){
-			wp_schedule_event(time(), 'hourly', 'wordfence_daily_cron');
-		}
+		self::runInstall();
+		//Used by MU code below
 		update_option('wordfenceActivated', 1);
-		$db = new wfDB();
-
-		//Upgrading from 1.5.6 or earlier needs:
-		$db->createKeyIfNotExists($prefix . 'wfStatus', 'level', 'k2');
-
-		if(wfConfig::get('isPaid') == 'free'){
-			wfConfig::set('isPaid', '');
-		}
-		wfConfig::set('alertEmailMsgCount', 0);
 	}
 	public static function uninstallPlugin(){
+		//Used by MU code below
 		update_option('wordfenceActivated', 0);
 	}
 	public static function hourlyCron(){
@@ -164,7 +136,58 @@ class wordfence {
 		}
 
 	}
+	public static function runInstall(){
+		//EVERYTHING HERE MUST BE IDEMPOTENT
+
+		$schema = new wfSchema();
+		$schema->createAll(); //if not exists
+		wfConfig::setDefaults(); //If not set
+	
+		if(! wfConfig::get('apiKey')){
+			$api = new wfAPI('', wfUtils::getWPVersion());
+			$keyData = $api->call('get_anon_api_key');
+			if($api->errorMsg){
+				die("Error fetching free API key from Wordfence: " . $api->errorMsg);
+			}
+			if($keyData['ok'] && $keyData['apiKey']){
+				wfConfig::set('apiKey', $keyData['apiKey']);
+			} else {
+				die("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
+			}
+		}
+
+
+		if( !wp_next_scheduled( 'wordfence_daily_cron' )){
+			wp_schedule_event(time(), 'daily', 'wordfence_daily_cron');
+		}
+		if( !wp_next_scheduled( 'wordfence_hourly_cron' )){
+			wp_schedule_event(time(), 'hourly', 'wordfence_daily_cron');
+		}
+		$db = new wfDB();
+		//Upgrading from 1.5.6 or earlier needs:
+		$db->createKeyIfNotExists($prefix . 'wfStatus', 'level', 'k2');
+		if(wfConfig::get('isPaid') == 'free'){
+			wfConfig::set('isPaid', '');
+		}
+		//End upgrade from 1.5.6
+
+		//Show an alert that user needs to enter an email address if user has not seen it before
+		if(! wfConfig::get('alertEmailMsgCount')){
+			wfConfig::set('alertEmailMsgCount', 0);
+		}
+
+		@chmod(dirname(__FILE__) . '/../wfscan.php', 0755);
+		@chmod(dirname(__FILE__) . '/../visitor.php', 0755);
+
+		//Must be the final line
+		update_option('wordfence_version', WORDFENCE_VERSION);
+	}
 	public static function install_actions(){
+		$versionInOptions = get_option('wordfence_version', false);
+		if( (! $versionInOptions) || version_compare(WORDFENCE_VERSION, $versionInOptions, '>')){
+			//Either there is no version in options or the version in options is greater and we need to run the upgrade
+			self::runInstall();
+		}
 		if(defined('MULTISITE') && MULTISITE === true){
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
@@ -457,7 +480,7 @@ class wordfence {
 		}
 	}
 	public static function ajax_sendActivityLog_callback(){
-		$content = "SITE: " . site_url() . "\nPLUGIN VERSION: " . wfUtils::myVersion() . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
+		$content = "SITE: " . site_url() . "\nPLUGIN VERSION: " . WORDFENCE_VERSION . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
 		$wfdb = new wfDB();
 		global $wpdb;
 		$p = $wpdb->base_prefix;
@@ -498,6 +521,29 @@ class wordfence {
 			if(sizeof($badEmails) > 0){
 				return array('errorMsg' => "The following emails are invalid: " . implode(', ', $badEmails));
 			}
+			$opts['alertEmails'] = implode(',', $emails);
+		} else {
+			$opts['alertEmails'] = '';
+		}
+		$whiteIPs = array();
+		foreach(explode(',', preg_replace('/[\r\n\s\t]+/', '', $opts['whitelisted'])) as $whiteIP){
+			if(strlen($whiteIP) > 0){
+				array_push($whiteIPs, $whiteIP);
+			}
+		}
+		if(sizeof($whiteIPs) > 0){
+			$badWhiteIPs = array();
+			foreach($whiteIPs as $whiteIP){
+				if(! preg_match('/^[\[\]\-\d]+\.[\[\]\-\d]+\.[\[\]\-\d]+\.[\[\]\-\d]+$/', $whiteIP)){
+					array_push($badWhiteIPs, $whiteIP);
+				}
+			}
+			if(sizeof($badWhiteIPs) > 0){
+				return array('errorMsg' => "Please make sure you separate your IP addresses with commas. The following whitelisted IP addresses are invalid: " . implode(', ', $badWhiteIPs));
+			}
+			$opts['whitelisted'] = implode(',', $whiteIPs);
+		} else {
+			$opts['whitelisted'] = '';
 		}
 		$opts['apiKey'] = trim($opts['apiKey']);
 		if(! preg_match('/^[a-fA-F0-9]+$/', $opts['apiKey'])){
@@ -620,6 +666,9 @@ class wordfence {
 		$IP = $_POST['IP'];
 		if($IP == wfUtils::getIP()){
 			return array('err' => 1, 'errorMsg' => "You can't block your own IP address.");
+		}
+		if(self::getLog()->isWhitelisted($IP)){
+			return array('err' => 1, 'errorMsg' => "The IP address $IP is whitelisted and can't be blocked or it is in a range of internal IP addresses that Wordfence does not block. You can remove this IP from the whitelist on the Wordfence options page.");
 		}
 		if(wfConfig::get('neverBlockBG') != 'treatAsOtherCrawlers'){ //Either neverBlockVerified or neverBlockUA is selected which means the user doesn't want to block google 
 			if(wfCrawl::verifyCrawlerPTR('/googlebot\.com$/i', $IP)){
@@ -1048,16 +1097,16 @@ class wordfence {
 		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
-		wp_enqueue_style('wordfence-main-style', WP_PLUGIN_URL . '/wordfence/css/main.css', '', wfUtils::myVersion());
-		wp_enqueue_style('wordfence-colorbox-style', WP_PLUGIN_URL . '/wordfence/css/colorbox.css', '', wfUtils::myVersion());
-		wp_enqueue_style('wordfence-dttable-style', WP_PLUGIN_URL . '/wordfence/css/dt_table.css', '', wfUtils::myVersion());
+		wp_enqueue_style('wordfence-main-style', WP_PLUGIN_URL . '/wordfence/css/main.css', '', WORDFENCE_VERSION);
+		wp_enqueue_style('wordfence-colorbox-style', WP_PLUGIN_URL . '/wordfence/css/colorbox.css', '', WORDFENCE_VERSION);
+		wp_enqueue_style('wordfence-dttable-style', WP_PLUGIN_URL . '/wordfence/css/dt_table.css', '', WORDFENCE_VERSION);
 
 		wp_enqueue_script('json2');
-		wp_enqueue_script('jquery.tmpl', wfUtils::getBaseURL() . 'js/jquery.tmpl.min.js', array('jquery'), wfUtils::myVersion());
-		wp_enqueue_script('jquery.colorbox', wfUtils::getBaseURL() . 'js/jquery.colorbox-min.js', array('jquery'), wfUtils::myVersion());
-		wp_enqueue_script('jquery.dataTables', wfUtils::getBaseURL() . 'js/jquery.dataTables.min.js', array('jquery'), wfUtils::myVersion());
+		wp_enqueue_script('jquery.tmpl', wfUtils::getBaseURL() . 'js/jquery.tmpl.min.js', array('jquery'), WORDFENCE_VERSION);
+		wp_enqueue_script('jquery.colorbox', wfUtils::getBaseURL() . 'js/jquery.colorbox-min.js', array('jquery'), WORDFENCE_VERSION);
+		wp_enqueue_script('jquery.dataTables', wfUtils::getBaseURL() . 'js/jquery.dataTables.min.js', array('jquery'), WORDFENCE_VERSION);
 		//wp_enqueue_script('jquery.tools', wfUtils::getBaseURL() . 'js/jquery.tools.min.js', array('jquery'));
-		wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'), wfUtils::myVersion());
+		wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'), WORDFENCE_VERSION);
 		wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
 			'ajaxURL' => admin_url('admin-ajax.php'),
 			'firstNonce' => wp_create_nonce('wp-ajax'),

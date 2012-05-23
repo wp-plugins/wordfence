@@ -111,6 +111,45 @@ class wfLog {
 			}
 		}
 	}
+	public function isWhitelisted($IP){
+		//We now whitelist all RFC1918 IP addresses and loopback
+		if(strpos($IP, '127.') === 0 || strpos($IP, '10.') === 0 || strpos($IP, '192.168.') === 0 || strpos($IP, '172.') === 0){
+			if(strpos($IP, '172.') === 0){
+				$parts = explode('.', $IP);
+				if($parts[1] >= 16 && $parts[1] <= 31){
+					return true;
+				}
+			} else {
+				return true;
+			}
+		}
+		$list = wfConfig::get('whitelisted');
+		if(! $list){ return false; }
+		$list = explode(',', $list);
+		if(sizeof($list) < 1){ return false; }
+		foreach($list as $whiteIP){
+			if(preg_match('/\[\d+\-\d+\]/', $whiteIP)){
+				$IPparts = explode('.', $IP);
+				$whiteParts = explode('.', $whiteIP);
+				$mismatch = false;
+				for($i = 0; $i <= 3; $i++){
+					if(preg_match('/^\[(\d+)\-(\d+)\]$/', $whiteParts[$i], $m)){
+						if($IPparts[$i] < $m[1] || $IPparts[$i] > $m[2]){
+							$mismatch = true;
+						}
+					} else if($whiteParts[$i] != $IPparts[$i]){
+						$mismatch = true;
+					}
+				}
+				if($mismatch === false){
+					return true; //Is whitelisted because we did not get a mismatch
+				}
+			} else if($whiteIP == $IP){
+				return true;
+			}
+		}
+		return false;
+	}
 	public function unblockAllIPs(){
 		$this->getDB()->query("delete from " . $this->blocksTable);
 	}
@@ -121,6 +160,7 @@ class wfLog {
 		$this->getDB()->query("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
 	}
 	public function blockIP($IP, $reason, $wfsn = false){				
+		if($this->isWhitelisted($IP)){ return false; }
 		$wfsn = $wfsn ? 1 : 0;
 		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn) values (%s, unix_timestamp(), '%s', %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
 			wfUtils::inet_aton($IP),
@@ -129,13 +169,16 @@ class wfLog {
 			$reason,
 			$wfsn
 			);
+		return true;
 	}
 	public function lockOutIP($IP, $reason){
+		if($this->isWhitelisted($IP)){ return false; }
 		$this->getDB()->query("insert into " . $this->lockOutTable . " (IP, blockedTime, reason) values(%s, unix_timestamp(), '%s') ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s'",
 			wfUtils::inet_aton($IP),
 			$reason,
 			$reason
 			);
+		return true;
 	}
 	public function unlockOutIP($IP){
 		$this->getDB()->query("delete from " . $this->lockOutTable . " where IP=%s", wfUtils::inet_aton($IP));
