@@ -1,7 +1,6 @@
 <?php
 class wfUtils {
 	private static $reverseLookupCache = array();
-	private static $myVersion = false;
 	public static function makeTimeAgo($secs, $noSeconds = false) {
 		if($secs < 1){
 			return "a moment";
@@ -153,24 +152,6 @@ class wfUtils {
 	public static function getSiteBaseURL(){
 		return rtrim(site_url(), '/') . '/';
 	}
-	public static function myVersion(){
-		if(! self::$myVersion){
-			if(! function_exists( 'get_plugin_data')){
-				require_once ABSPATH . '/wp-admin/includes/plugin.php';
-			}
-			$file = dirname(__FILE__) . '/../wordfence.php';
-			if(is_file($file)){
-				$dat = get_plugin_data($file);
-				if(is_array($dat)){
-					self::$myVersion = $dat['Version'];
-				}
-			}
-			if(! self::$myVersion){
-				self::$myVersion = 'unknown';
-			}
-		}
-		return self::$myVersion;
-	}
 	public static function longestLine($data){
 		$lines = preg_split('/[\r\n]+/', $data);
 		$max = 0;
@@ -202,6 +183,18 @@ class wfUtils {
 		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < $maxMem ) ){
 			@ini_set('memory_limit', $maxMem . 'M');
 		}
+	}
+	public static function isAdmin(){
+		if(is_multisite()){
+			if(current_user_can('manage_network')){
+				return true;
+			}
+		} else {
+			if(current_user_can('update_core')){
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
