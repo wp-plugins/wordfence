@@ -12,6 +12,7 @@ require_once('wfLog.php');
 require_once('wfConfig.php');
 require_once('wfSchema.php');
 class wordfence {
+	public static $printStatus = false;
 	protected static $lastURLError = false;
 	protected static $curlContent = "";
 	protected static $curlDataWritten = 0;
@@ -234,7 +235,7 @@ class wordfence {
 		}
 	}
 	public static function ajaxReceiver(){
-		if(! self::isAdmin()){
+		if(! wfUtils::isAdmin()){
 			die(json_encode(array('errorMsg' => "You appear to have logged out or you are not an admin. Please sign-out and sign-in again.")));
 		}
 		$func = $_POST['action'];
@@ -962,10 +963,10 @@ class wordfence {
 			}
 		}
 
-		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog')){
+		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
 			return;
 		}
-		if(! self::isAdmin()){
+		if(! wfUtils::isAdmin()){
 			return;
 		}
 
@@ -984,8 +985,72 @@ class wordfence {
 			self::wfFunc_IPTraf();
 		} else if($wfFunc == 'viewActivityLog'){
 			self::wfFunc_viewActivityLog();
+		} else if($wfFunc == 'testmem'){
+			self::wfFunc_testmem();
+		} else if($wfFunc == 'testtime'){
+			self::wfFunc_testtime();
 		}
 		exit(0);
+	}
+	public static function memtest_error_handler($errno, $errstr, $errfile, $errline){
+		echo "Error received: $errstr\n";
+	}
+	private static function wfFunc_testtime(){
+		header('Content-Type: text/plain');
+		ini_set('max_execution_time', 1800); //30 mins
+		@error_reporting(E_ALL);
+		@ini_set('display_errors','On');
+		set_error_handler('wordfence::memtest_error_handler', E_ALL);
+
+		echo "Wordfence process duration benchmarking utility version " . WORDFENCE_VERSION . ".\n";
+		echo "This utility tests how long your WordPress host allows a process to run.\n\n--Starting test--\n";
+		echo "Starting timed test. This will take at least three minutes. Seconds elapsed are printed below.\nAn error after this line is not unusual. Read it and the elapsed seconds to determine max process running time on your host.\n";
+		for($i = 1; $i <= 180; $i++){
+			echo "\n$i:";
+			for($j = 0; $j < 1000; $j++){
+				echo '.';
+			}
+			flush();
+			sleep(1);
+		}
+		echo "\n--Test complete.--\n\nCongratulations, your web host allows your PHP processes to run at least 3 minutes.\n";
+		exit();
+	}
+	private static function wfFunc_testmem(){
+		header('Content-Type: text/plain');
+		@error_reporting(E_ALL);
+		@ini_set('display_errors','On');
+		set_error_handler('wordfence::memtest_error_handler', E_ALL);
+
+		echo "Wordfence Memory benchmarking utility version " . WORDFENCE_VERSION . ".\n";
+		echo "This utility tests if your WordPress host respects the maximum memory configured\nin their php.ini file, or if they are using other methods to limit your access to memory.\n\n--Starting test--\n";
+		echo "Current maximum memory configured in php.ini: " . ini_get('memory_limit') . "\n";
+		echo "Current memory usage: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "M\n";
+		echo "Setting max memory to 90M.\n";
+		ini_set('memory_limit', '90M');
+		echo "Starting memory benchmark. Seeing an error after this line is not unusual. Read the error carefully\nto determine how much memory your host allows. We have requested 90 megabytes.\n";
+		if(memory_get_usage(true) < 1){
+			echo "Exiting test because memory_get_usage() returned a negative number\n";
+		}
+		if(memory_get_usage(true) > (1024 * 1024 * 1024)){
+			echo "Exiting because current memory usage is greater than a gigabyte.\n";
+		}
+		$arr = array();
+		//256 bytes
+		$chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678900000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111222222222222222222233333333333333334444444444444444444444444555555555555666666666666666666";
+		$finalUsage = '0';
+		while(true){
+			if(memory_get_usage(true) > 80 * 1024 * 1024){
+				$finalUsage = sprintf('%.2f', (memory_get_usage(true) / 1024 / 1024));
+				echo "Completing test after benchmarking up to " . $finalUsage . " megabytes.\n";
+				break;
+			}
+			for($i = 0; $i < 1024; $i++){ //Roughly 1 megabyte if it's 256K and actual array size is 4x data size
+				$arr[] = $chars;
+			}
+		}
+		echo "--Test complete.--\n\nCongratulations, your web host allows you to use at least $finalUsage megabytes of memory for each PHP process hosting your WordPress site.\n";
+		exit();
 	}
 	public static function wp_head(){
 		echo '<script type="text/javascript">var wfHTImg = new Image(); wfHTImg.src="' . wfUtils::getBaseURL() . 'visitor.php?hid=' . wfUtils::encrypt(self::$hitID) . '";</script>';
@@ -1092,27 +1157,30 @@ class wordfence {
 		setcookie($cookieName, uniqid(), time() + 1800, '/');
 	}
 	public static function admin_init(){
-		if(! self::isAdmin()){ return; }
-
+		if(! wfUtils::isAdmin()){ return; }
 		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
-		wp_enqueue_style('wordfence-main-style', WP_PLUGIN_URL . '/wordfence/css/main.css', '', WORDFENCE_VERSION);
-		wp_enqueue_style('wordfence-colorbox-style', WP_PLUGIN_URL . '/wordfence/css/colorbox.css', '', WORDFENCE_VERSION);
-		wp_enqueue_style('wordfence-dttable-style', WP_PLUGIN_URL . '/wordfence/css/dt_table.css', '', WORDFENCE_VERSION);
 
-		wp_enqueue_script('json2');
-		wp_enqueue_script('jquery.tmpl', wfUtils::getBaseURL() . 'js/jquery.tmpl.min.js', array('jquery'), WORDFENCE_VERSION);
-		wp_enqueue_script('jquery.colorbox', wfUtils::getBaseURL() . 'js/jquery.colorbox-min.js', array('jquery'), WORDFENCE_VERSION);
-		wp_enqueue_script('jquery.dataTables', wfUtils::getBaseURL() . 'js/jquery.dataTables.min.js', array('jquery'), WORDFENCE_VERSION);
-		//wp_enqueue_script('jquery.tools', wfUtils::getBaseURL() . 'js/jquery.tools.min.js', array('jquery'));
-		wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'), WORDFENCE_VERSION);
-		wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
-			'ajaxURL' => admin_url('admin-ajax.php'),
-			'firstNonce' => wp_create_nonce('wp-ajax'),
-			'siteBaseURL' => wfUtils::getSiteBaseURL(),
-			'debugOn' => wfConfig::get('debugOn', 0)
-			));
+		if(preg_match('/^Wordfence/', $_GET['page'])){
+
+			wp_enqueue_style('wordfence-main-style', WP_PLUGIN_URL . '/wordfence/css/main.css', '', WORDFENCE_VERSION);
+			wp_enqueue_style('wordfence-colorbox-style', WP_PLUGIN_URL . '/wordfence/css/colorbox.css', '', WORDFENCE_VERSION);
+			wp_enqueue_style('wordfence-dttable-style', WP_PLUGIN_URL . '/wordfence/css/dt_table.css', '', WORDFENCE_VERSION);
+
+			wp_enqueue_script('json2');
+			wp_enqueue_script('jquery.tmpl', wfUtils::getBaseURL() . 'js/jquery.tmpl.min.js', array('jquery'), WORDFENCE_VERSION);
+			wp_enqueue_script('jquery.colorbox', wfUtils::getBaseURL() . 'js/jquery.colorbox-min.js', array('jquery'), WORDFENCE_VERSION);
+			wp_enqueue_script('jquery.dataTables', wfUtils::getBaseURL() . 'js/jquery.dataTables.min.js', array('jquery'), WORDFENCE_VERSION);
+			//wp_enqueue_script('jquery.tools', wfUtils::getBaseURL() . 'js/jquery.tools.min.js', array('jquery'));
+			wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'), WORDFENCE_VERSION);
+			wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
+				'ajaxURL' => admin_url('admin-ajax.php'),
+				'firstNonce' => wp_create_nonce('wp-ajax'),
+				'siteBaseURL' => wfUtils::getSiteBaseURL(),
+				'debugOn' => wfConfig::get('debugOn', 0)
+				));
+		}
 
 	}
 	public static function configure_warning(){
@@ -1126,7 +1194,7 @@ class wordfence {
 		}
 	}
 	public static function admin_menus(){
-		if(! self::isAdmin()){ return; }
+		if(! wfUtils::isAdmin()){ return; }
 		if(! wfConfig::get('alertEmails')){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::configure_warning');
@@ -1157,21 +1225,13 @@ class wordfence {
 	public static function menu_scan(){
 		require 'menu_scan.php';
 	}
-	public static function isAdmin(){
-		if(is_multisite()){
-			if(current_user_can('manage_network')){
-				return true;
-			}
-		} else {
-			if(current_user_can('update_core')){
-				return true;
-			}
-		}
-		return false;
-	}
 	public static function status($level /* 1 has highest visibility */, $type /* info|error */, $msg){
 		if($type != 'info' && $type != 'error'){ error_log("Invalid status type: $type"); return; }
-		self::getLog()->addStatus($level, $type, $msg);
+		if(self::$printStatus){
+			echo "STATUS: $level : $type : $msg\n";
+		} else {
+			self::getLog()->addStatus($level, $type, $msg);
+		}
 	}
 	public static function profileUpdateAction($userID, $newDat){
 		if(wfConfig::get('other_pwStrengthOnUpdate')){

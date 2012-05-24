@@ -184,6 +184,18 @@ class wfUtils {
 			@ini_set('memory_limit', $maxMem . 'M');
 		}
 	}
+	public static function isAdmin(){
+		if(is_multisite()){
+			if(current_user_can('manage_network')){
+				return true;
+			}
+		} else {
+			if(current_user_can('update_core')){
+				return true;
+			}
+		}
+		return false;
+	}
 }
 
 
