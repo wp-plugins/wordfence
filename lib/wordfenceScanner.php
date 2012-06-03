@@ -5,28 +5,30 @@ require_once('wordfenceURLHoover.php');
 class wordfenceScanner {
 	protected $path = '';
 	protected $fileList = array();
-	protected $hostFileList = array();
-	protected $urlFileList = array();
 	protected $results = array(); 
 	public $errorMsg = false;
 	private $apiKey = false;
 	private $wordpressVersion = '';
-	public function __construct($apiKey, $wordpressVersion){
+	public function __sleep(){
+		return array('path', 'fileList', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover');
+	}
+	public function __wakeup(){
+	}
+	public function __construct($apiKey, $wordpressVersion, $fileList, $path){
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
-	}
-	public function scan($path, $fileList){
-		$this->errorMsg = false;
+		$this->fileList = $fileList;
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
-		$this->hostFileList = array();
 		$this->path = $path;
-		$this->fileList = $fileList;
 		$this->results = array();
+		$this->errorMsg = false;
 		//First extract hosts or IP's and their URL's into $this->hostsFound and URL's into $this->urlsFound
-		$urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
-		foreach($this->fileList as $file){
+		$this->urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
+	}
+	public function scan($forkObj){
+		while($file = array_shift($this->fileList)){
 			if(! file_exists($this->path . $file)){
 				continue;
 			}
@@ -107,9 +109,9 @@ class wordfenceScanner {
 						break;
 					}
 					
-					$urlHoover->hoover($file, $data);
+					$this->urlHoover->hoover($file, $data);
 				} else {
-					$urlHoover->hoover($file, $data);
+					$this->urlHoover->hoover($file, $data);
 				}
 
 				if($totalRead > 2 * 1024 * 1024){
@@ -118,14 +120,15 @@ class wordfenceScanner {
 			}
 			fclose($fh);
 			$mtime = sprintf("%.5f", microtime(true) - $stime);
+			$forkObj->forkIfNeeded();
 		}
 		if(function_exists('memory_get_usage')){
 			wordfence::status(3, 'info', "Total memory being used: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "MB");
 		}
 		wordfence::status(2, 'info', "Asking Wordfence to check URL's against malware list.");
-		$hooverResults = $urlHoover->getBaddies();
-		if($urlHoover->errorMsg){
-			$this->errorMsg = $urlHoover->errorMsg;
+		$hooverResults = $this->urlHoover->getBaddies();
+		if($this->urlHoover->errorMsg){
+			$this->errorMsg = $this->urlHoover->errorMsg;
 			return false;
 		}
 		foreach($hooverResults as $file => $hresults){

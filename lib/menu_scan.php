@@ -43,7 +43,11 @@
 						foreach($events as $e){
 							if(strpos($e['msg'], 'SUM_') !== 0){
 								if( $debugOn || $e['level'] < 4){
-									echo '<div class="wfActivityLine wf' . $e['type'] . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+									$typeClass = '';
+									if($debugOn){
+										$typeClass = ' wf' . $e['type'];
+									}
+									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
 								}
 							}
 							$newestItem = $e['ctime'];

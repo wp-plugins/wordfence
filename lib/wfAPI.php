@@ -16,7 +16,7 @@ class wfAPI {
 	}
 	public function call($action, $getParams = array(), $postParams = array()){
 		$this->errorMsg = false;
-		$json = $this->getURL(WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
+		$json = $this->getURL(WORDFENCE_API_URL . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
 			array_merge(
 				array('action' => $action),
 				$getParams	
@@ -88,7 +88,7 @@ class wfAPI {
 	}
 	public function binCall($func, $postData){
 		$this->errorMsg = false;
-		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
+		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		$curl = curl_init($url);
 		curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
 		//curl_setopt($curl, CURLOPT_VERBOSE, true);

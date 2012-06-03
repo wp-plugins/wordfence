@@ -1,5 +1,5 @@
 <?php
-define('WORDFENCE_VERSION', 1.5);
+define('WORDFENCE_API_VERSION', 1.6);
 define('WORDFENCE_API_URL', 'https://noc1.wordfence.com/');
 define('WORDFENCE_MAX_SCAN_TIME', 600);
 define('WORDFENCE_TRANSIENTS_TIMEOUT', 3600); //how long are items cached in seconds e.g. files downloaded for diffing

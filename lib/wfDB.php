@@ -1,7 +1,7 @@
 <?php
 class wfDB {
 	private $dbh = false;
-	private static $dbhCache = false;
+	private static $dbhCache = array();
 	private $dbhost = false;
 	private $dbpassword = false;
 	private $dbname = false;
@@ -37,9 +37,11 @@ class wfDB {
 			}
 			mysql_select_db($this->dbname, $dbh);
 			$this->dbh = $dbh;
+			$this->query("SET NAMES 'utf8'");
 		} else {
-			if(self::$dbhCache){
-				$this->dbh = self::$dbhCache;
+			$handleKey = md5($dbhost . $dbuser . $dbpassword . $dbname);
+			if(isset(self::$dbhCache[$handleKey])){
+				$this->dbh = self::$dbhCache[$handleKey];
 			} else {
 				$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
 				if($dbh === false){
@@ -48,12 +50,14 @@ class wfDB {
 				}
 
 				mysql_select_db($this->dbname, $dbh);
-				self::$dbhCache = $dbh;
-				$this->dbh = self::$dbhCache;
+				self::$dbhCache[$handleKey] = $dbh;
+				$this->dbh = self::$dbhCache[$handleKey];
+				$this->query("SET NAMES 'utf8'");
 			}
 		}
 	}
 	public function querySingleRec(){
+		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
 			$query = $args[0];
@@ -65,11 +69,13 @@ class wfDB {
 		$res = mysql_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
+			$this->errorMsg = $err;
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
 		}
 		return mysql_fetch_assoc($res); //returns false if no rows found
 	}
 	public function querySingle(){
+		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
 			$query = $args[0];
@@ -84,6 +90,7 @@ class wfDB {
 		$res = mysql_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
+			$this->errorMsg = $err;
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
 		}
 		if(! $res){
@@ -94,6 +101,7 @@ class wfDB {
 		return $row[0];
 	}
 	public function query(){ //sprintfString, arguments
+		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
 			$query = $args[0];
@@ -108,6 +116,7 @@ class wfDB {
 		$res = mysql_query($query, $this->dbh);
 		$err = mysql_error();
 		if($err){
+			$this->errorMsg = $err;
 			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
 		}
 		return $res;

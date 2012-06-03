@@ -44,7 +44,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -106,7 +106,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -168,7 +168,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "240",
@@ -230,7 +230,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -292,7 +292,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -368,7 +368,7 @@ class wfConfig {
 	}
 	public static function set($key, $val){
 		if(is_array($val)){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use ser_ser(). " . $caller['file'] . " line " . $caller['line']);	
+			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use set_ser(). " . $caller['file'] . " line " . $caller['line']);	
 		}
 
 		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
