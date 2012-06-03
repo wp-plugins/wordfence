@@ -368,7 +368,7 @@ class wfConfig {
 	}
 	public static function set($key, $val){
 		if(is_array($val)){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use ser_ser(). " . $caller['file'] . " line " . $caller['line']);	
+			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use set_ser(). " . $caller['file'] . " line " . $caller['line']);	
 		}
 
 		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);

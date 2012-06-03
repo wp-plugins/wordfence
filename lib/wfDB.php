@@ -37,6 +37,7 @@ class wfDB {
 			}
 			mysql_select_db($this->dbname, $dbh);
 			$this->dbh = $dbh;
+			$this->query("SET NAMES 'utf8'");
 		} else {
 			$handleKey = md5($dbhost . $dbuser . $dbpassword . $dbname);
 			if(isset(self::$dbhCache[$handleKey])){
@@ -51,6 +52,7 @@ class wfDB {
 				mysql_select_db($this->dbname, $dbh);
 				self::$dbhCache[$handleKey] = $dbh;
 				$this->dbh = self::$dbhCache[$handleKey];
+				$this->query("SET NAMES 'utf8'");
 			}
 		}
 	}

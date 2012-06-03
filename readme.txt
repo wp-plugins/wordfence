@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 2.0.7
+Stable tag: 2.1.0
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,24 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.1.0 =
+* Fixed scans hanging on Dreamhost and other hosts.
+* Made Wordfence more memory efficient.
+* Wordfence scans are now broken into steps so we can scan a huge number of files, posts and comments.
+* Alert emails now include IP address, hostname lookup and geographic location (city if available).
+* Improved scan locking. No longer time based but uses flock() if on unix or time on Windows.
+* Suppressed warnings that WF was generating.
+* Improve handling of non-standard wp-content directories.
+* Fix restored files were still showing as changed if they contained international characters.
+* Improve permission denied message if attempting to repair a file.
+* Fixed problem that caused scans to not start because some hosts take too long to look up their own name.
+* Fixed issue with Wordfence menu that caused it to not appear or conflict with other menus under certain conditions.
+* Upgraded to API version 1.6
+* Improved geo lookup code for IP's. 
+* Fixed debug mode output in live status box - coloring was wrong.
+* Added ajax status message to WF admin pages.
+* Fixed colorbox popup so that it doesn't jump around on refresh.
+
 = 2.0.7 =
 * Fixed CSS bug that changed plugins page layout in admin area
 * Added memory benchmark utility.

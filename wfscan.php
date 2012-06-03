@@ -68,11 +68,9 @@ class wfScan {
 		self::becomeAdmin();
 
 		wordfence::status(4, 'info', "Checking if scan is already running");
-		$scanRunning = wfConfig::get('wf_scanRunning');
-		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
+		if(! wfUtils::getScanLock()){
 			self::errorExit("There is already a scan running.");
 		}
-		wordfence::status(10, 'info', "SUM_PREP:Preparing a new scan.");
 		wordfence::status(4, 'info', "Requesting max memory");
 		wfUtils::requestMaxMemory();
 		wordfence::status(4, 'info', "Setting up error handling environment");
@@ -84,11 +82,23 @@ class wfScan {
 		@error_reporting(E_ALL);
 		@ini_set('display_errors','On');
 		wordfence::status(4, 'info', "Setting up scanRunning and starting scan");
-		wfConfig::set('wf_scanRunning', time());
-		$scan = new wfScanEngine();
+		$isFork = ($_GET['isFork'] == '1' ? true : false);
+		$scan = wfConfig::get_ser('wfsd_engine', false);
+		if($scan){
+			//Set false so that we don't get stuck in a loop where we're repeating scan stages.
+			wfConfig::set('wfsd_engine', '');
+		} else {
+			if($isFork){ //We encountered an error so blank scan and exit
+				wordfence::status(2, 'error', "Scan could not continue because the stored data could not be retrieved after a fork.");
+				//wfConfig::set('wfsd_engine', '');
+				exit();
+			} else {
+				wordfence::statusPrep(); //Re-initializes all status counters
+				$scan = new wfScanEngine();
+			}
+		}
 		$scan->go();
-
-		wfConfig::set('wf_scanRunning', '');
+		wfUtils::clearScanLock();
 	}
 	public static function obHandler($buf){
 		if(strlen($buf) > 1000){
@@ -102,7 +112,7 @@ class wfScan {
 		wordfence::status(1, 'error', "$errstr ($errno) File: $errfile Line: $errline");
 	}
 	public static function shutdown(){
-		wfConfig::set('wf_scanRunning', '');
+		wfUtils::clearScanLock();
 	}
 	private static function errorExit($msg){
 		echo json_encode(array('errorMsg' => $msg)); 

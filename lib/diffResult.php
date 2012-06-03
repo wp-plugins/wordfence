@@ -30,7 +30,14 @@
 	?>
 </table>
 
-<?php echo $diffResult; ?>
+<?php 
+	if($diffResult){
+		echo $diffResult; 
+	} else {
+		echo "<br />There are no differences between the original file and the file in the repository.";
+	}
+
+?>
 
 
 <div class="diffFooter">&copy;&nbsp;2011 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</a>
