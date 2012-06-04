@@ -44,7 +44,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -106,7 +106,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
@@ -168,7 +168,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "240",
@@ -230,7 +230,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -292,7 +292,7 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
 				"liveTraf_hitsMaxSize" => 10,
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
@@ -366,9 +366,28 @@ class wfConfig {
 	public static function clearCache(){
 		self::$cache = array();
 	}
+	public static function set_ser($key, $val){
+		//We serialize some very big values so this is ultra-memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
+		// because we would have to concatenate $val twice into the query which could also exceed max packet for the mysql server
+		$dbh = self::getDB()->getDBH();
+		$exists = self::getDB()->querySingle("select name from " . self::table() . " where name='%s'", $key);
+		if($exists){
+			$res = mysql_query("update " . self::table() . " set val='" . mysql_real_escape_string(serialize($val)) . "' where name='" . mysql_real_escape_string($key) . "'", $dbh);
+		} else {
+			$res = mysql_query("insert IGNORE into " . self::table() . " (name, val) values ('" . mysql_real_escape_string($key) . "', '" . mysql_real_escape_string(serialize($val)) . "')", $dbh);
+		}
+		$err = mysql_error();
+		if($err){
+			$trace=debug_backtrace(); 
+			$caller=array_shift($trace); 
+			wordfence::status(2, 'error', "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
+			return false;
+		}
+		return true;
+	}
 	public static function set($key, $val){
 		if(is_array($val)){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use ser_ser(). " . $caller['file'] . " line " . $caller['line']);	
+			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use set_ser(). " . $caller['file'] . " line " . $caller['line']);	
 		}
 
 		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
@@ -389,14 +408,21 @@ class wfConfig {
 		return self::$cache[$key];
 	}
 	public static function get_ser($key, $default){
-		$val = self::get($key, $default);
-		if($val){
-			$val = unserialize($val);
+		$dbh = self::getDB()->getDBH();
+		$res = mysql_query("select val from " . self::table() . " where name='" . mysql_real_escape_string($key) . "'", $dbh);
+		$err = mysql_error();
+		if($err){
+			$trace=debug_backtrace(); 
+			$caller=array_shift($trace); 
+			wordfence::status(2, 'error', "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
+			return false;
 		}
-		return $val;
-	}
-	public static function set_ser($key, $val){
-		return self::set($key, serialize($val));
+
+		if(mysql_num_rows($res) > 0){
+			$row = mysql_fetch_row($res);
+			return unserialize($row[0]);
+		}
+		return $default;
 	}
 	public static function f($key){
 		echo esc_attr(self::get($key));
