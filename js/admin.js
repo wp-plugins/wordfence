@@ -177,7 +177,7 @@ window['wordfenceAdmin'] = {
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDERR') != -1){
 			var msg = item.msg.replace('SUM_ENDERR:', '');
-			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryErr').html('An error occured.');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryErr').html('An error occurred.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_DISABLED:') != -1){
 			var msg = item.msg.replace('SUM_DISABLED:', '');
@@ -337,7 +337,7 @@ window['wordfenceAdmin'] = {
 					return;
 				} else if(res.errorAlert){ 
 					jQuery.colorbox({ width: '400px', html:  
-						"<h3>An error occured:</h3><p>" + res.errorAlert + "</p>"
+						"<h3>An error occurred:</h3><p>" + res.errorAlert + "</p>"
 						});
 				} 
 
@@ -476,7 +476,7 @@ window['wordfenceAdmin'] = {
 					self.nonce = json.nonce;
 				}
 				if(json && json.errorMsg){
-					self.colorbox('400px', 'An error occured', json.errorMsg);
+					self.colorbox('400px', 'An error occurred', json.errorMsg);
 				}
 				cb(json); 
 			},
@@ -498,7 +498,7 @@ window['wordfenceAdmin'] = {
 		jQuery.colorbox({ width: width, html: "<h3>" + heading + "</h3><p>" + body + "</p>"});
 	},
 	scanRunningMsg: function(){ this.colorbox('400px', "A scan is running", "A scan is currently in progress. Please wait until it finishes before starting another scan."); },
-	errorMsg: function(msg){ this.colorbox('400px', "An error occured:", msg); },
+	errorMsg: function(msg){ this.colorbox('400px', "An error occurred:", msg); },
 	deleteFile: function(issueID){
 		var self = this;
 		this.ajax('wordfence_deleteFile', {
@@ -511,7 +511,7 @@ window['wordfenceAdmin'] = {
 		if(res.ok){
 			this.loadIssues(function(){ self.colorbox('400px', "Success deleting file", "The file " + res.file + " containing " + res.filesize + " bytes was successfully deleted."); });
 		} else if(res.cerrorMsg){
-			this.loadIssues(function(){ self.colorbox('400px', 'An error occured', res.cerrorMsg); });
+			this.loadIssues(function(){ self.colorbox('400px', 'An error occurred', res.cerrorMsg); });
 		}
 	},
 	restoreFile: function(issueID){
@@ -525,7 +525,7 @@ window['wordfenceAdmin'] = {
 		if(res.ok){
 			this.loadIssues(function(){ self.colorbox("400px", "File restored OK", "The file " + res.file + " was restored succesfully."); });
 		} else	if(res.cerrorMsg){
-			this.loadIssues(function(){ self.colorbox('400px', 'An error occured', res.cerrorMsg); });
+			this.loadIssues(function(){ self.colorbox('400px', 'An error occurred', res.cerrorMsg); });
 		}
 	},
 	deleteIssue: function(id){
@@ -761,6 +761,19 @@ window['wordfenceAdmin'] = {
 				}
 			});
 	},
+	blockIPTwo: function(IP, reason){
+		var self = this;
+		this.ajax('wordfence_blockIP', {
+			IP: IP,
+			reason: reason
+			}, function(res){ 
+				if(res.errorMsg){
+					return;
+				} else {
+					self.staticTabChanged();
+				}
+			});
+	},
 	unlockOutIP: function(IP){
 		var self = this;
 		this.ajax('wordfence_unlockOutIP', {
@@ -770,6 +783,12 @@ window['wordfenceAdmin'] = {
 	unblockIP: function(IP){
 		var self = this;
 		this.ajax('wordfence_unblockIP', {
+			IP: IP
+			}, function(res){ self.staticTabChanged(); });
+	},
+	permBlockIP: function(IP){
+		var self = this;
+		this.ajax('wordfence_permBlockIP', {
 			IP: IP
 			}, function(res){ self.staticTabChanged(); });
 	},
@@ -801,7 +820,7 @@ window['wordfenceAdmin'] = {
 			} else if(res.errorMsg){
 				return;
 			} else {
-				self.colorbox('400px', 'An error occured', 'We encountered an error trying to save your changes.');
+				self.colorbox('400px', 'An error occurred', 'We encountered an error trying to save your changes.');
 			}
 			});
 	},

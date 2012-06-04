@@ -16,7 +16,7 @@ class wfAPI {
 	}
 	public function call($action, $getParams = array(), $postParams = array()){
 		$this->errorMsg = false;
-		$json = $this->getURL(WORDFENCE_API_URL . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
+		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
 			array_merge(
 				array('action' => $action),
 				$getParams	
@@ -76,7 +76,7 @@ class wfAPI {
 				return false;
 			}
 		} else {
-			$data = @file_get_contents ($url);
+			$data = $this->fileGet($url, $postParams);
 			if($data === false){
 				$err = error_get_last();
 				$this->lastURLError = $err;
@@ -86,24 +86,55 @@ class wfAPI {
 		}
 
 	}
+	private function fileGet($url, $postParams){
+		$body = "";
+		if(is_array($postParams)){
+			$bodyArr = array();
+			foreach($postParams as $key => $val){
+				$bodyArr[] = urlencode($key) . '=' . urlencode($val);
+			}
+			$body = implode('&', $bodyArr);
+		} else {
+			$body = $postParams;
+		}
+		$opts = array('http' =>
+				array(
+					'method'  => 'POST',
+					'content' => $body,
+					'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
+					'timeout' => 60
+				     )
+			     );
+		$context = stream_context_create($opts);
+		return @file_get_contents($url, false, $context, -1);
+	}
 	public function binCall($func, $postData){
 		$this->errorMsg = false;
-		$url = WORDFENCE_API_URL . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
-		$curl = curl_init($url);
-		curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
-		//curl_setopt($curl, CURLOPT_VERBOSE, true);
-		curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
-		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
-		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
-		curl_setopt($curl, CURLOPT_POST, true);
-		if($postData){                  
-			curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
-		} else {                        
-			curl_setopt($curl, CURLOPT_POSTFIELDS, array());
-		}                               
-		$data = curl_exec($curl);       
-		$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+		$url = $this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
+		if(function_exists('curl_init')){
+			$curl = curl_init($url);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
+			//curl_setopt($curl, CURLOPT_VERBOSE, true);
+			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
+			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($curl, CURLOPT_POST, true);
+			if($postData){                  
+				curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
+			} else {                        
+				curl_setopt($curl, CURLOPT_POSTFIELDS, array());
+			}                               
+			$data = curl_exec($curl);       
+			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+		} else {
+			$data = $this->fileGet($url, $postData);
+			if($data === false){
+				$this->errorMsg = error_get_last();
+				return false;
+			}
+			$httpStatus = '200';
+		}
 		if(preg_match('/\{.*errorMsg/', $data)){
 			$jdat = @json_decode($data, true);
 			if(is_array($jdat) && $jdat['errorMsg']){
@@ -123,6 +154,14 @@ class wfAPI {
 			's' => $siteurl, 
 			'k' => $this->APIKey
 			));
+	}
+	private function getAPIURL(){
+		$ssl_supported = false;
+		if(defined('CURL_VERSION_SSL') && function_exists('curl_version')){
+			$version = curl_version();
+			$ssl_supported = ($version['features'] & CURL_VERSION_SSL);
+		}
+		return $ssl_supported ? WORDFENCE_API_URL_SEC : WORDFENCE_API_URL_NONSEC;
 	}
 }
 

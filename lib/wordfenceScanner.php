@@ -139,7 +139,7 @@ class wordfenceScanner {
 						'severity' => 1,
 						'ignoreP' => $this->path . $file,
 						'ignoreC' => md5_file($this->path . $file),
-						'shortMsg' => "File contains suspected malware URL.",
+						'shortMsg' => "File contains suspected malware URL: " . $this->path . $file,
 						'longMsg' => "This file contains a suspected malware URL listed on Google's list of malware sites. Wordfence decodes base64 when scanning files so the URL may not be visible if you view this file. The URL is: " . $result['URL'] . " - More info available at <a href=\"http://safebrowsing.clients.google.com/safebrowsing/diagnostic?site=" . urlencode($result['URL']) . "&client=googlechrome&hl=en-US\" target=\"_blank\">Google Safe Browsing diagnostic page</a>.",
 						'data' => array(
 							'file' => $file,
@@ -155,7 +155,7 @@ class wordfenceScanner {
 						'severity' => 1,
 						'ignoreP' => $this->path . $file,
 						'ignoreC' => md5_file($this->path . $file),
-						'shortMsg' => "File contains suspected phishing URL.",
+						'shortMsg' => "File contains suspected phishing URL: " . $this->path . $file,
 						'longMsg' => "This file contains a URL that is a suspected phishing site that is currently listed on Google's list of known phishing sites. The URL is: " . $result['URL'],
 						'data' => array(
 							'file' => $file,
@@ -177,7 +177,7 @@ class wordfenceScanner {
 			'severity' => 1,
 			'ignoreP' => $ignoreP,
 			'ignoreC' => $ignoreC,
-			'shortMsg' => "File contains $encoding encoded programming language.",
+			'shortMsg' => "File contains $encoding encoded programming language: " . $file,
 			'longMsg' => "This file contains programming language code that has been encoded using $encoding. This is often used by hackers to hide their tracks.",
 			'data' => array(
 				'file' => $file,

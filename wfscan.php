@@ -86,11 +86,12 @@ class wfScan {
 		$scan = wfConfig::get_ser('wfsd_engine', false);
 		if($scan){
 			//Set false so that we don't get stuck in a loop where we're repeating scan stages.
+			wordfence::status(4, 'info', "Got a true deserialized value back from 'wfsd_engine' with type: " . gettype($scan));
 			wfConfig::set('wfsd_engine', '');
 		} else {
 			if($isFork){ //We encountered an error so blank scan and exit
-				wordfence::status(2, 'error', "Scan could not continue because the stored data could not be retrieved after a fork.");
-				//wfConfig::set('wfsd_engine', '');
+				wordfence::status(2, 'error', "Scan can't continue - stored data not found after a fork. Got type: " . gettype($scan));
+				wfConfig::set('wfsd_engine', '');
 				exit();
 			} else {
 				wordfence::statusPrep(); //Re-initializes all status counters

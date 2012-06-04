@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 2.1.0
+Stable tag: 2.1.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -130,7 +130,7 @@ and as long as it does that, it may become face a security vulnerability at some
 
 = Will Wordfence protect me against the Timthumb security problem? =
 
-The timthumb security exploit occured in 2011 and all good plugins and themes now use an updated 
+The timthumb security exploit occurred in 2011 and all good plugins and themes now use an updated 
 version of timthumb (which the creator of Wordfence wrote and donated to the timthumb author) which closes the security hole that
 caused the problem. However we do scan for old version of timthumb for good measure to make sure they don't 
 cause a security hole on your site. 
@@ -152,6 +152,24 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.1.1 =
+* Added ability to permanently block IP's
+* Added ability to manually block IP's
+* Made Wordfence more memory efficient, particularly the forking process.
+* Fixed issue that caused WF to not work on databases with blank passwords.
+* Wordfence now stops execution of a DB connection error is encountered.
+* Clear cron jobs if Wordfence is uninstalled.
+* Enabled hourly cron for Wordfence security network.
+* Wordfence now works if your server doesn't have openssl installed
+* Wordfence now works even if you don't have CURL
+* Fixed visitor logging so it works with HTTPS websites.
+* Alert emails now contain filenames in each alert description.
+* Users with weak passwords alerts now contain the username in the email.
+* Upgraded API to 1.7.
+* Fixed issue that caused DISALLOW_FILE_MODS to make WF menu disappear.
+* Modified wfDB to deal with very large queries without exceeding max_allowed_packet
+* Fixed issue that broke ability to see file changes and repair files.
+
 = 2.1.0 =
 * Fixed scans hanging on Dreamhost and other hosts.
 * Made Wordfence more memory efficient.

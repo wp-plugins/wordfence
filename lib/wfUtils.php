@@ -181,7 +181,7 @@ class wfUtils {
 				return true;
 			}
 		} else {
-			if(current_user_can('update_core')){
+			if(current_user_can('manage_options')){
 				return true;
 			}
 		}

@@ -156,15 +156,18 @@ class wfLog {
 	public function unblockIP($IP){
 		$this->getDB()->query("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
 	}
-	public function blockIP($IP, $reason, $wfsn = false){				
+	public function blockIP($IP, $reason, $wfsn = false, $permanent = false){ //wfsn indicates it comes from Wordfence secure network
 		if($this->isWhitelisted($IP)){ return false; }
 		$wfsn = $wfsn ? 1 : 0;
-		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn) values (%s, unix_timestamp(), '%s', %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
+		$permanent = $permanent ? 1 : 0;
+		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
 			wfUtils::inet_aton($IP),
 			$reason,
 			$wfsn,
+			$permanent,
 			$reason,
-			$wfsn
+			$wfsn,
+			$permanent
 			);
 		return true;
 	}
@@ -217,7 +220,7 @@ class wfLog {
 		return $results;
 	}
 	public function getBlockedIPs(){
-		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->blocksTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
+		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
 		$results = array();
 		while($elem = mysql_fetch_assoc($res)){			
 			$lastHitAgo = 0;
@@ -468,7 +471,7 @@ class wfLog {
 	}
 	public function firewallBadIPs(){
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
-		if($secsToGo = $this->getDB()->querySingle("select (blockedTime + %s) - unix_timestamp() as secsToGo from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
+		if($secsToGo = $this->getDB()->querySingle("select (blockedTime + %s) - unix_timestamp() as secsToGo from " . $this->blocksTable . " where IP=%s and (permanent=1 OR blockedTime + %s > unix_timestamp())", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
 			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP); 
 			$this->do503($secsToGo); 
 		}
@@ -500,10 +503,12 @@ class wfLog {
 			return;
 		}
 	}
-	private function do503($secsToGo){
+	private function do503($secsToGo = false){
 		header('HTTP/1.1 503 Service Temporarily Unavailable');
 		header('Status: 503 Service Temporarily Unavailable');
-		header('Retry-After: ' . $secsToGo);
+		if($secsToGo){
+			header('Retry-After: ' . $secsToGo);
+		}
 		require_once('wf503.php');
 		exit();
 	}
