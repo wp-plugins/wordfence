@@ -372,10 +372,8 @@ class wfConfig {
 		$dbh = self::getDB()->getDBH();
 		$exists = self::getDB()->querySingle("select name from " . self::table() . " where name='%s'", $key);
 		if($exists){
-			wordfence::status(4, 'info', "set_ser() updating key $key with value to be serialized that has type: " . gettype($val));
 			$res = mysql_query("update " . self::table() . " set val='" . mysql_real_escape_string(serialize($val)) . "' where name='" . mysql_real_escape_string($key) . "'", $dbh);
 		} else {
-			wordfence::status(4, 'info', "set_ser() inserting key $key with value to be serialized that has type: " . gettype($val));
 			$res = mysql_query("insert IGNORE into " . self::table() . " (name, val) values ('" . mysql_real_escape_string($key) . "', '" . mysql_real_escape_string(serialize($val)) . "')", $dbh);
 		}
 		$err = mysql_error();
@@ -422,7 +420,6 @@ class wfConfig {
 
 		if(mysql_num_rows($res) > 0){
 			$row = mysql_fetch_row($res);
-			wordfence::status(4, 'info', "get_ser() Unserializing key $key with data length " . strlen($row[0]));
 			return unserialize($row[0]);
 		}
 		return $default;

@@ -1,5 +1,6 @@
 <?php
 /* Don't remove this line. WFSOURCEVISIBLE */
+define('WORDFENCE_SCAN_MODE', true); //So that we can include wordfence.php and get the version constant
 ignore_user_abort(true);
 $wordfence_wp_version = false;
 if ( !defined('ABSPATH') ) {
@@ -16,6 +17,7 @@ if ( !defined('ABSPATH') ) {
 		require_once('../../../wp-includes/version.php');
 	}
 }
+require_once('wordfence.php');
 require_once('lib/wordfenceConstants.php');
 require_once('lib/wfScanEngine.php');
 

@@ -163,8 +163,8 @@ class wordfence {
 		}
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
-		wp_schedule_event(current_time('timestamp'), 'daily', 'wordfence_daily_cron');
-		wp_schedule_event(current_time('timestamp'), 'hourly', 'wordfence_hourly_cron');
+		wp_schedule_event(time(), 'daily', 'wordfence_daily_cron');
+		wp_schedule_event(time(), 'hourly', 'wordfence_hourly_cron');
 		$db = new wfDB();
 
 		//Upgrading from 1.5.6 or earlier needs:
@@ -1248,7 +1248,7 @@ class wordfence {
 	public static function scheduleNextScan($force = false){
 		if(wfConfig::get('scheduledScansEnabled')){
 			$nextScan = wp_next_scheduled('wordfence_scheduled_scan');
-			if((! $force) && $nextScan && $nextScan - current_time('timestamp') > 0){
+			if((! $force) && $nextScan && $nextScan - time() > 0){
 				//scan is already scheduled for the future
 				return;
 			}
@@ -1258,11 +1258,11 @@ class wordfence {
 				return $result['errorMsg'];
 			}
 			$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.
-			if(is_array($result) && $result['secsToGo'] > 1){
+			if(is_array($result) && $result['secsToGo'] > 1800){
 				$secsToGo = $result['secsToGo'];
 			}
 			wp_clear_scheduled_hook('wordfence_scheduled_scan');
-			wp_schedule_single_event(current_time('timestamp') + $secsToGo, 'wordfence_scheduled_scan');
+			wp_schedule_single_event(time() + $secsToGo, 'wordfence_scheduled_scan');
 		} else {
 			wp_clear_scheduled_hook('wordfence_scheduled_scan');
 		}
