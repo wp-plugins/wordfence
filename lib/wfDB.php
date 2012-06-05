@@ -35,6 +35,7 @@ class wfDB {
 			mysql_select_db($this->dbname, $dbh);
 			$this->dbh = $dbh;
 			$this->query("SET NAMES 'utf8'");
+
 			//Set big packets for set_ser when it serializes a scan in between forks
 			$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
 		} else {
@@ -51,6 +52,7 @@ class wfDB {
 				self::$dbhCache[$handleKey] = $dbh;
 				$this->dbh = self::$dbhCache[$handleKey];
 				$this->query("SET NAMES 'utf8'");
+
 				//Set big packets for set_ser when it serializes a scan in between forks
 				$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
 			}
