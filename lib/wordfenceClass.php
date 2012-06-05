@@ -186,6 +186,7 @@ class wordfence {
 		$prefix = $wpdb->base_prefix;
 		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
 		$db->queryIgnoreError("alter table $prefix"."wfBlocks add column permanent tinyint UNSIGNED default 0");
+		$db->queryIgnoreError("alter table $prefix"."wfStatus modify column msg varchar(1000) NOT NULL");
 		
 		//Must be the final line
 		update_option('wordfence_version', WORDFENCE_VERSION);

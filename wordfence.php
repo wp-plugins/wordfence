@@ -4,10 +4,10 @@ Plugin Name: Wordfence Security
 Plugin URI: http://wordfence.com/
 Description: Wordfence Security - Anti-virus and Firewall security plugin for WordPress 
 Author: Mark Maunder
-Version: 2.1.2
+Version: 2.1.3
 Author URI: http://wordfence.com/
 */
-define('WORDFENCE_VERSION', '2.1.2');
+define('WORDFENCE_VERSION', '2.1.3');
 
 if(! defined('WORDFENCE_SCAN_MODE')){
 	require_once('lib/wordfenceConstants.php');

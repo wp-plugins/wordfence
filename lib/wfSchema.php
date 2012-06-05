@@ -126,7 +126,7 @@ class wfSchema {
 	ctime DOUBLE(17,6) UNSIGNED NOT NULL,
 	level tinyint UNSIGNED NOT NULL,
 	type char(5) NOT NULL,
-	msg varchar(255) NOT NULL,
+	msg varchar(1000) NOT NULL,
 	KEY k1(ctime),
 	KEY k2(type)
 ) default charset=utf8",

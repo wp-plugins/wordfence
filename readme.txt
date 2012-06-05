@@ -152,6 +152,10 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.1.3: June 5, 2012 dev release =
+* Added fix for hosts that have max_allowed_packet set too small. We will write a temp file to disk instead if possible.
+* Increased size of status column to 1000 chars
+
 = 2.1.2 =
 * Fixed issue with scan scheduling that caused a loop
 * Fixed issue that caused version constant to not be included in scans

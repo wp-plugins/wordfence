@@ -89,7 +89,7 @@ class wfScanEngine {
 		}
 	}
 	public function fork(){
-		wfConfig::set_ser('wfsd_engine', $this);
+		wfConfig::set_ser('wfsd_engine', $this, true);
 		wfUtils::clearScanLock();
 		self::startScan(true);
 		exit(0);

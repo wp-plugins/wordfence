@@ -167,6 +167,10 @@ class wfDB {
 		}
 	}
 	public function getDBH(){ return $this->dbh; }
+	public function getMaxAllowedPacketBytes(){
+		$rec = $this->querySingleRec("show variables like 'max_allowed_packet'");
+		return $rec['Value'];
+	}
 }
 
 ?>
