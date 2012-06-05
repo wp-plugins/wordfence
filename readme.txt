@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,7 +152,7 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
-= 2.1.3: June 5, 2012 dev release =
+= 2.1.3 =
 * Added fix for hosts that have max_allowed_packet set too small. We will write a temp file to disk instead if possible.
 * Increased size of status column to 1000 chars
 
