@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.3.2
-Stable tag: 2.1.3
+Stable tag: 2.1.4
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,18 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.1.4 =
+* Fixed registered users not appearing in live traffic.
+* Fixed temp file deletion bug that caused warnings and loops.
+* Fixed issue that caused warning about WORDFENCE_VERSION
+* Fixed Wordfence admin area not working under SSL
+* Fixed bug that caused IP addresses of clients to be misinterpreted if there are multiple addresses from chained proxies. 
+* Now stripping port numbers from IP's which we weren't doing before.
+* Added check for validity of IP's and report fatal error if it fails because this could lock users out.
+* Improved error reporting including fixing an out of memory error when a specific error condition arose in wfConfig::set()
+* Changed order of tmp dirs to be wordfence/lib protected dir first and then system temp dir. Added uploads as tmp dir for last resort.
+* Malware URL's are now marked in red in alerts so it's obvious what the offending URL in a file is.
+
 = 2.1.3 =
 * Added fix for hosts that have max_allowed_packet set too small. We will write a temp file to disk instead if possible.
 * Increased size of status column to 1000 chars

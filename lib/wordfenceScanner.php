@@ -143,6 +143,7 @@ class wordfenceScanner {
 						'longMsg' => "This file contains a suspected malware URL listed on Google's list of malware sites. Wordfence decodes base64 when scanning files so the URL may not be visible if you view this file. The URL is: " . $result['URL'] . " - More info available at <a href=\"http://safebrowsing.clients.google.com/safebrowsing/diagnostic?site=" . urlencode($result['URL']) . "&client=googlechrome&hl=en-US\" target=\"_blank\">Google Safe Browsing diagnostic page</a>.",
 						'data' => array(
 							'file' => $file,
+							'badURL' => $result['URL'],
 							'canDiff' => false,
 							'canFix' => false,
 							'canDelete' => true,
@@ -159,6 +160,7 @@ class wordfenceScanner {
 						'longMsg' => "This file contains a URL that is a suspected phishing site that is currently listed on Google's list of known phishing sites. The URL is: " . $result['URL'],
 						'data' => array(
 							'file' => $file,
+							'badURL' => $result['URL'],
 							'canDiff' => false,
 							'canFix' => false,
 							'canDelete' => true,

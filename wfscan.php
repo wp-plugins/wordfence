@@ -1,6 +1,6 @@
 <?php
 /* Don't remove this line. WFSOURCEVISIBLE */
-define('WORDFENCE_SCAN_MODE', true); //So that we can include wordfence.php and get the version constant
+define('WORDFENCE_VERSIONONLY_MODE', true); //So that we can include wordfence.php and get the version constant
 ignore_user_abort(true);
 $wordfence_wp_version = false;
 if ( !defined('ABSPATH') ) {

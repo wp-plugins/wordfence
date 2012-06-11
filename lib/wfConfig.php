@@ -4,6 +4,7 @@ class wfConfig {
 	private static $cache = array();
 	private static $DB = false;
 	private static $tmpFileHeader = "<?php\n/* Wordfence temporary file security header */\necho \"Nothing to see here!\\n\"; exit(0);\n?>";
+	private static $tmpDirCache = false;
 	public static $securityLevels = array(
 		array( //level 0
 			"checkboxes" => array(
@@ -372,7 +373,10 @@ class wfConfig {
 	}
 	public static function set($key, $val){
 		if(is_array($val)){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("wfConfig::set() got array as second param. Please use set_ser(). " . $caller['file'] . " line " . $caller['line']);	
+			$msg = "wfConfig::set() got an array as second param with key: $key - Please report this bug. Exiting.";
+			wfstatus(1, 'error', $msg);
+			error_log($msg);
+			exit(0);
 		}
 
 		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
@@ -393,28 +397,22 @@ class wfConfig {
 		//If we can use disk, check if there are any values stored on disk first and read them instead of the DB if there are values
 		if($canUseDisk){
 			$filename = 'wordfence_tmpfile_' . $key . '.php';
-			$dirs = self::getTempDirs();
-			$obj = false;
-			$foundFiles = false;
-			foreach($dirs as $dir){ 
-				$dir = rtrim($dir, '/') . '/';
+			$dir = self::getTempDir();
+			if($dir){
+				$obj = false;
+				$foundFiles = false;
 				$fullFile = $dir . $filename;
 				if(file_exists($fullFile)){
-					$foundFiles = true;
 					wordfence::status(4, 'info', "Loading serialized data from file $fullFile");
 					$obj = unserialize(substr(file_get_contents($fullFile), strlen(self::$tmpFileHeader))); //Strip off security header and unserialize
-					if($obj){
-						break;
-					} else {
+					if(! $obj){
 						wordfence::status(2, 'error', "Could not unserialize file $fullFile");
 					}
+					self::deleteOldTempFile($fullFile);
 				}
-			}
-			if($foundFiles){
-				self::deleteOldTempFiles($filename);
-			}
-			if($obj){ //If we managed to deserialize something, clean ALL tmp dirs of this file and return obj
-				return $obj;
+				if($obj){ //If we managed to deserialize something, clean ALL tmp dirs of this file and return obj
+					return $obj;
+				}
 			}
 		}
 
@@ -442,33 +440,37 @@ class wfConfig {
 		$tempFilename = 'wordfence_tmpfile_' . $key . '.php';
 		if((strlen($serialized) * 1.1) > self::getDB()->getMaxAllowedPacketBytes()){ //If it's greater than max_allowed_packet + 10% for escaping and SQL
 			if($canUseDisk){
-				self::deleteOldTempFiles($tempFilename);
-				$dirs = self::getTempDirs();					
-				$fh = false;
-				foreach($dirs as $dir){
-					$dir = rtrim($dir, '/') . '/';
+				$dir = self::getTempDir();					
+				if($dir){
+					$fh = false;
 					$fullFile = $dir . $tempFilename;
+					self::deleteOldTempFile($fullFile);
 					$fh = fopen($fullFile, 'w');
 					if($fh){ 
 						wordfence::status(4, 'info', "Serialized data for $key is " . strlen($serialized) . " bytes and is greater than max_allowed packet so writing it to disk file: " . $fullFile);
-						break; 
+					} else {
+						wordfence::status(1, 'error', "Your database doesn't allow big packets so we have to use files to store temporary data and Wordfence can't find a place to write them. Either ask your admin to increase max_allowed_packet on your MySQL database, or make one of the following directories writable by your web server: " . implode(', ', $dirs));
+						exit();
 					}
+					fwrite($fh, self::$tmpFileHeader);
+					fwrite($fh, $serialized);
+					fclose($fh);
+					return true;
+				} else {
+					wordfence::status(1, 'error', "Wordfence tried to save a variable with name '$key' and your database max_allowed_packet is set to be too small. We then tried to save it to disk, but you don't have a temporary directory that is writable. You can fix this by making the /wp-content/plugins/wordfence/tmp/ directory writable by your web server. Or by increasing your max_allowed_packet configuration variable in your mysql database.");
+					exit(0);
 				}
-				if(! $fh){
-					wordfence::status(1, 'error', "Your database doesn't allow big packets so we have to use files to store temporary data and Wordfence can't find a place to write them. Either ask your admin to increase max_allowed_packet on your MySQL database, or make one of the following directories writable by your web server: " . implode(', ', $dirs));
-					exit();
-				}
-				fwrite($fh, self::$tmpFileHeader);
-				fwrite($fh, $serialized);
-				fclose($fh);
-				return true;
+					
 			} else {
 				wordfence::status(1, 'error', "Wordfence tried to save a variable with name '$key' and your database max_allowed_packet is set to be too small. This particular variable can't be saved to disk. Please ask your administrator to increase max_allowed_packet and also report this in the Wordfence forums because it may be a bug. Thanks.");
 				exit(0);
 			}
 		} else {
 			//Delete temp files on disk or else the DB will be written to but get_ser will see files on disk and read them instead
-			self::deleteOldTempFiles($tempFilename);
+			$tempDir = self::getTempDir();
+			if($tempDir){
+				self::deleteOldTempFile($tempDir . $tempFilename);
+			}
 			$exists = self::getDB()->querySingle("select name from " . self::table() . " where name='%s'", $key);
 			if($exists){
 				$res = mysql_query("update " . self::table() . " set val='" . mysql_real_escape_string($serialized) . "' where name='" . mysql_real_escape_string($key) . "'", $dbh);
@@ -485,18 +487,33 @@ class wfConfig {
 		}
 		return true;
 	}
-	private static function deleteOldTempFiles($filename){
-		$dirs = self::getTempDirs();
-		foreach($dirs as &$dir){ //clean out old files in all dirs
-			$dir = rtrim($dir, '/') . '/';
-			$fullFile = $dir . $filename;
-			if(file_exists($fullFile)){
-				unlink($fullFile);
-			}
+	private static function deleteOldTempFile($filename){
+		if(file_exists($filename)){
+			unlink($filename);
 		}
 	}
-	private static function getTempDirs(){
-		return array(sys_get_temp_dir(), wfUtils::getPluginBaseDir() . 'wordfence/tmp/');
+	private static function getTempDir(){
+		if(! self::$tmpDirCache){
+			$dirs = array(wfUtils::getPluginBaseDir() . 'wordfence/tmp/', sys_get_temp_dir(), ABSPATH . 'wp-content/uploads/');
+			$finalDir = 'notmp';
+			foreach($dirs as $dir){
+				$dir = rtrim($dir, '/') . '/';
+				$fh = fopen($dir . 'wftmptest.txt', 'w');
+				if(! $fh){ continue; }
+				$bytes = fwrite($fh, 'test');
+				if($bytes != 4){ fclose($fh); continue; }
+				fclose($fh);
+				if(! unlink($dir . 'wftmptest.txt')){ continue; }
+				$finalDir = $dir;
+				break;
+			}
+			self::$tmpDirCache = $finalDir;
+		}
+		if(self::$tmpDirCache == 'notmp'){
+			return false;
+		} else {
+			return self::$tmpDirCache;
+		}
 	}
 	public static function f($key){
 		echo esc_attr(self::get($key));

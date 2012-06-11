@@ -1,4 +1,5 @@
 <?php
+require_once('wfConfig.php');
 class wfUtils {
 	private static $isWindows = false;
 	public static $scanLockFH = false;
@@ -78,7 +79,34 @@ class wfUtils {
 		if((! $ip) && isset($_SERVER['REMOTE_ADDR'])){
 			$ip = $_SERVER['REMOTE_ADDR'];
 		}
-		return $ip;
+		if(preg_match('/,/', $ip)){
+			$parts = explode(',', $ip);
+			$ip = trim($parts[0]);
+		}
+		if(preg_match('/:\d+$/', $ip)){
+			$ip = preg_replace('/:\d+$/', '', $ip);
+		}
+		if(self::isValidIP($ip)){
+			return $ip;
+		} else {
+			$msg = "Wordfence is not able to determine the IP addresses of visitors to your site and can't operate. We received IP: $ip from header1: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " and header2: " . $_SERVER['REMOTE_ADDR'];
+			wordfence::status(1, 'error', $msg);
+			error_log($msg);
+			exit(0);
+		}
+	}
+	public static function isValidIP($IP){
+		if(preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/', $IP, $m)){
+			if(
+				$m[0] >= 0 && $m[0] <= 255 &&
+				$m[1] >= 0 && $m[1] <= 255 &&
+				$m[2] >= 0 && $m[2] <= 255 &&
+				$m[3] >= 0 && $m[3] <= 255
+			){
+				return true;
+			}
+		}
+		return false;
 	}
 	public static function getRequestedURL(){
 		return ($_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
