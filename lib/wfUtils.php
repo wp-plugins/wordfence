@@ -1,7 +1,8 @@
 <?php
+require_once('wfConfig.php');
 class wfUtils {
-	private static $reverseLookupCache = array();
-	private static $myVersion = false;
+	private static $isWindows = false;
+	public static $scanLockFH = false;
 	public static function makeTimeAgo($secs, $noSeconds = false) {
 		if($secs < 1){
 			return "a moment";
@@ -67,7 +68,8 @@ class wfUtils {
 		return plugins_url() . '/wordfence/';
 	}
 	public static function getPluginBaseDir(){
-		return ABSPATH . 'wp-content/plugins/';
+		return WP_CONTENT_DIR . '/plugins/';
+		//return ABSPATH . 'wp-content/plugins/';
 	}
 	public static function getIP(){
 		$ip = 0;
@@ -77,23 +79,39 @@ class wfUtils {
 		if((! $ip) && isset($_SERVER['REMOTE_ADDR'])){
 			$ip = $_SERVER['REMOTE_ADDR'];
 		}
-		return $ip;
+		if(preg_match('/,/', $ip)){
+			$parts = explode(',', $ip);
+			$ip = trim($parts[0]);
+		}
+		if(preg_match('/:\d+$/', $ip)){
+			$ip = preg_replace('/:\d+$/', '', $ip);
+		}
+		if(self::isValidIP($ip)){
+			return $ip;
+		} else {
+			$msg = "Wordfence is not able to determine the IP addresses of visitors to your site and can't operate. We received IP: $ip from header1: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " and header2: " . $_SERVER['REMOTE_ADDR'];
+			wordfence::status(1, 'error', $msg);
+			error_log($msg);
+			exit(0);
+		}
+	}
+	public static function isValidIP($IP){
+		if(preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/', $IP, $m)){
+			if(
+				$m[0] >= 0 && $m[0] <= 255 &&
+				$m[1] >= 0 && $m[1] <= 255 &&
+				$m[2] >= 0 && $m[2] <= 255 &&
+				$m[3] >= 0 && $m[3] <= 255
+			){
+				return true;
+			}
+		}
+		return false;
 	}
 	public static function getRequestedURL(){
 		return ($_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
 	}
-	public static function reverseLookup($IP){
-		if(! isset(self::$reverseLookupCache[$IP])){
-			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
-			$host = dns_get_record($ptr, DNS_PTR);
-			if($host == null){
-				self::$reverseLookupCache[$IP] = '';
-			} else {
-				self::$reverseLookupCache[$IP] = $host[0]['target'];
-			}
-		}
-		return self::$reverseLookupCache[$IP];
-	}
+
 	public static function editUserLink($userID){
 		return get_admin_url() . 'user-edit.php?user_id=' . $userID;
 	}
@@ -153,24 +171,6 @@ class wfUtils {
 	public static function getSiteBaseURL(){
 		return rtrim(site_url(), '/') . '/';
 	}
-	public static function myVersion(){
-		if(! self::$myVersion){
-			if(! function_exists( 'get_plugin_data')){
-				require_once ABSPATH . '/wp-admin/includes/plugin.php';
-			}
-			$file = dirname(__FILE__) . '/../wordfence.php';
-			if(is_file($file)){
-				$dat = get_plugin_data($file);
-				if(is_array($dat)){
-					self::$myVersion = $dat['Version'];
-				}
-			}
-			if(! self::$myVersion){
-				self::$myVersion = 'unknown';
-			}
-		}
-		return self::$myVersion;
-	}
 	public static function longestLine($data){
 		$lines = preg_split('/[\r\n]+/', $data);
 		$max = 0;
@@ -201,6 +201,165 @@ class wfUtils {
 		}
 		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < $maxMem ) ){
 			@ini_set('memory_limit', $maxMem . 'M');
+		}
+	}
+	public static function isAdmin(){
+		if(is_multisite()){
+			if(current_user_can('manage_network')){
+				return true;
+			}
+		} else {
+			if(current_user_can('manage_options')){
+				return true;
+			}
+		}
+		return false;
+	}
+	public static function isWindows(){
+		if(! self::$isWindows){
+			if(preg_match('/^win/', PHP_OS)){
+				self::$isWindows = 'yes';
+			} else {
+				self::$isWindows = 'no';
+			}
+		}
+		return self::$isWindows == 'yes' ? true : false;
+	}
+	public static function getScanLock(){
+		if(self::isWindows()){
+			//Windows does not support non-blocking flock, so we use time. 
+			$scanRunning = wfConfig::get('wf_scanRunning');
+			if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
+				return false;
+			}
+			wfConfig::set('wf_scanRunning', time());
+			return true;
+		} else {
+			self::$scanLockFH = fopen(__FILE__, 'r');
+			if(flock(self::$scanLockFH, LOCK_EX | LOCK_NB)){
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+	public static function clearScanLock(){
+		if(self::isWindows()){
+			wfConfig::set('wf_scanRunning', '');
+		} else {
+			if(self::$scanLockFH){
+				@fclose(self::$scanLockFH);
+				self::$scanLockFH = false;
+			}
+		}
+
+	}
+	public static function isScanRunning(){
+		$scanRunning = true;
+		if(self::getScanLock()){
+			$scanRunning = false;
+		}
+		self::clearScanLock();
+		return $scanRunning;
+	}
+	public static function getIPGeo($IP){ //Works with int or dotted
+		
+		$locs = self::getIPsGeo(array($IP));
+		if(isset($locs[$IP])){
+			return $locs[$IP];
+		} else {
+			return false;
+		}
+	}
+	public static function getIPsGeo($IPs){ //works with int or dotted. Outputs same format it receives.
+		$IPs = array_unique($IPs);
+		$isInt = false;
+		if(strpos($IPs[0], '.') === false){
+			$isInt = true;
+		}
+		$toResolve = array();
+		$db = new wfDB();
+		global $wp_version;
+		global $wpdb;
+		$locsTable = $wpdb->base_prefix . 'wfLocs';
+		$IPLocs = array();
+		foreach($IPs as $IP){
+			$r1 = $db->query("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", ($isInt ? $IP : self::inet_aton($IP)) );
+			if($r1){
+				if($row = mysql_fetch_assoc($r1)){
+					if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
+						$db->query("delete from " . $locsTable . " where IP=%s", $row['IP']);
+					} else {
+						if($row['failed'] == 1){
+							$IPLocs[$IP] = false;
+						} else {
+							if(! $isInt){
+								$row['IP'] = self::inet_ntoa($row['IP']);
+							}
+							$IPLocs[$IP] = $row;
+						}
+					}
+				}
+			}
+			if(! isset($IPLocs[$IP])){
+				$toResolve[] = $IP;
+			}
+		}
+		if(sizeof($toResolve) > 0){
+			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version); 
+			$freshIPs = $api->call('resolve_ips', array(), array(
+				'ips' => implode(',', $toResolve)
+				));
+			if(is_array($freshIPs)){
+				foreach($freshIPs as $IP => $value){
+					if($value == 'failed'){
+						$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
+						$IPLocs[$IP] = false;
+					} else {
+						$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
+							($isInt ? $IP : self::inet_aton($IP)),
+							$value[3], //city
+							$value[2], //region
+							$value[1], //countryName
+							$value[0],//countryCode
+							$value[4],//lat
+							$value[5]//lon
+							);
+						$IPLocs[$IP] = array(
+							'IP' => $IP,
+							'city' => $value[3],
+							'region' => $value[2],
+							'countryName' => $value[1],
+							'countryCode' => $value[0],
+							'lat' => $value[4],
+							'lon' => $value[5]
+							);
+					}
+				}
+			}
+		}
+		return $IPLocs;
+	}
+	public function reverseLookup($IP){
+		$db = new wfDB();
+		global $wpdb;
+		$reverseTable = $wpdb->base_prefix . 'wfReverseCache';
+		$IPn = wfUtils::inet_aton($IP);
+		$host = $db->querySingle("select host from " . $reverseTable . " where IP=%s and unix_timestamp() - lastUpdate < %d", $IPn, WORDFENCE_REVERSE_LOOKUP_CACHE_TIME);
+		if(! $host){
+			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
+			$host = dns_get_record($ptr, DNS_PTR);
+			if($host == null){
+				$host = 'NONE';
+			} else {
+				$host = $host[0]['target'];
+			}
+			$db->query("insert into " . $reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
+		}
+		if($host == 'NONE'){
+			return '';
+		} else {
+			return $host;
 		}
 	}
 }

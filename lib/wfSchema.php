@@ -20,11 +20,12 @@ class wfSchema {
 	lastAttempt int UNSIGNED default 0,
 	blockedHits int UNSIGNED default 0,
 	wfsn tinyint UNSIGNED default 0,
+	permanent tinyint UNSIGNED default 0,
 	KEY k1(wfsn)
 ) default charset=utf8",
 "wfConfig" => "(
 	name varchar(100) PRIMARY KEY NOT NULL,
-	val text
+	val longblob
 ) default charset=utf8",
 "wfCrawlers" => "(
 	IP INT UNSIGNED NOT NULL,
@@ -125,7 +126,7 @@ class wfSchema {
 	ctime DOUBLE(17,6) UNSIGNED NOT NULL,
 	level tinyint UNSIGNED NOT NULL,
 	type char(5) NOT NULL,
-	msg varchar(255) NOT NULL,
+	msg varchar(1000) NOT NULL,
 	KEY k1(ctime),
 	KEY k2(type)
 ) default charset=utf8",

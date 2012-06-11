@@ -2,13 +2,24 @@
 require_once('wfAPI.php');
 class wordfenceURLHoover {
 	private $debug = false;
-	private $URLsByID = array();
 	public $errorMsg = false;
-	private $hostKeyCache = array();
-	private $api = false;
+	//private $hostKeyCache = array();
 	private $table = '';
+	private $apiKey = false;
+	private $wordpressVersion = false;
 	private $dRegex = 'aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|ss|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|za|zm|zw|xn--lgbbat1ad8j|xn--fiqs8s|xn--fiqz9s|xn--wgbh1c|xn--j6w193g|xn--h2brj9c|xn--mgbbh1a71e|xn--fpcrj9c3d|xn--gecrj9c|xn--s9brj9c|xn--xkc2dl3a5ee0h|xn--45brj9c|xn--mgba3a4f16a|xn--mgbayh7gpa|xn--mgbc0a9azcg|xn--ygbi2ammx|xn--wgbl6a|xn--p1ai|xn--mgberp4a5d4ar|xn--90a3ac|xn--yfro4i67o|xn--clchc0ea0b2g2a9gcd|xn--3e0b707e|xn--fzc2c9e2c|xn--xkc2al3hye2a|xn--mgbtf8fl|xn--kprw13d|xn--kpry57d|xn--o3cw4h|xn--pgbs0dh|xn--mgbaam7a8h|xn--54b7fta0cc|xn--90ae|xn--node|xn--4dbrk0ce|xn--80ao21a|xn--mgb9awbf|xn--mgbai9azgqp6j|xn--j1amh|xn--mgb2ddes|xn--kgbechtv|xn--hgbk6aj7f53bba|xn--0zwm56d|xn--g6w251d|xn--80akhbyknj4f|xn--11b5bs3a9aj6g|xn--jxalpdlp|xn--9t4b11yi5a|xn--deba0ad|xn--zckzah|xn--hlcj6aya9esc7a';
+	private $api = false;
+	private $db = false;
+	public function __sleep(){
+		return array('debug', 'errorMsg', 'table', 'apiKey', 'wordpressVersion', 'dRegex');
+	}
+	public function __wakeup(){
+		$this->api = new wfAPI($this->apiKey, $this->wordpressVersion);
+		$this->db = new wfDB();
+	}	
 	public function __construct($apiKey, $wordpressVersion){
+		$this->apiKey = $apiKey;
+		$this->wordpressVersion = $wordpressVersion;
 		$this->api = new wfAPI($apiKey, $wordpressVersion);
 		$this->db = new wfDB();
 		global $wpdb;
@@ -65,9 +76,11 @@ class wordfenceURLHoover {
 		return true;
 	}
 	private function makeHostKey($host){
+		/*
 		if(isset($this->hostKeyCache[$host])){
 			return $this->hostKeyCache[$host];
 		}
+		*/
 		$hostParts = explode('.', $host);
 		$hostKey = '';
 		if(sizeof($hostParts) == 2){
@@ -75,7 +88,7 @@ class wordfenceURLHoover {
 		} else if(sizeof($hostParts) > 2){
 			$hostKey = substr(hash('sha256', $hostParts[sizeof($hostParts) - 3] . '.' . $hostParts[sizeof($hostParts) - 2] . '.' . $hostParts[sizeof($hostParts) - 1] . '/', true), 0, 4);
 		}
-		$this->hostKeyCache[$host] = $hostKey;
+		//$this->hostKeyCache[$host] = $hostKey;
 		return $hostKey;
 	}
 	public function getBaddies(){

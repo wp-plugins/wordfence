@@ -43,7 +43,11 @@
 						foreach($events as $e){
 							if(strpos($e['msg'], 'SUM_') !== 0){
 								if( $debugOn || $e['level'] < 4){
-									echo '<div class="wfActivityLine wf' . $e['type'] . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+									$typeClass = '';
+									if($debugOn){
+										$typeClass = ' wf' . $e['type'];
+									}
+									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
 								}
 							}
 							$newestItem = $e['ctime'];
@@ -389,6 +393,9 @@
 	<p>
 		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
 		<tr><th>Filename:</th><td>${data.file}</td></tr>
+		{{if ((typeof data.badURL !== 'undefined') && data.badURL)}}
+		<tr><th>Bad URL:</th><td><strong class="wfWarn">${data.badURL}</strong></td></tr>
+		{{/if}}
 		<tr><th>File type:</th><td>{{if data.cType}}${WFAD.ucfirst(data.cType)}{{else}}Not a core, theme or plugin file.{{/if}}</td></tr>
 		<tr><th>Issue first detected:</th><td>${timeAgo} ago.</td></tr>
 		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
