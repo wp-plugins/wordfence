@@ -55,7 +55,8 @@ class wfLog {
 		} else if($type == 'hit'){
 			$table = $this->leechTable;
 		} else {
-			wfUtils::wdie("Invalid type to logLeechAndBlock(): $type");
+			wordfence::status(1, 'error', "Invalid type to logLeechAndBlock(): $type");
+			return;
 		}
 		$IP = wfUtils::getIP();
 		$this->getDB()->query("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
@@ -254,7 +255,8 @@ class wfLog {
 		} else if($type == 'topLeechers'){
 			$table = $this->leechTable;
 		} else {
-			wfUtils::wdie("Invalid type to getLeechers(): $type");
+			wordfence::status(1, 'error', "Invalid type to getLeechers(): $type");
+			return false;
 		}
 		$res = $this->getDB()->query("select IP, sum(hits) as totalHits from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
 		$results = array();
@@ -313,7 +315,8 @@ class wfLog {
 			} else if($type == 'ruser'){
 				$typeSQL = " and userID > 0 ";
 			} else {
-				wfUtils::wdie("Invalid log type to wfLog: $type");
+				wordfence::status(1, 'error', "Invalid log type to wfLog: $type");
+				return false;
 			}
 
 			$r1 = $this->getDB()->query("select * from " . $this->hitsTable . " where ctime > %f $IPSQL $typeSQL order by ctime desc limit %s", 
@@ -328,7 +331,8 @@ class wfLog {
 				);
 
 		} else {
-			wfUtils::wdie("getHits got invalid hitType: $hitType");
+			wordfence::status(1, 'error', "getHits got invalid hitType: $hitType");
+			return false;
 		}
 		$results = array();
 		while($res = mysql_fetch_assoc($r1)){

@@ -3,6 +3,8 @@ require_once('wfConfig.php');
 class wfUtils {
 	private static $isWindows = false;
 	public static $scanLockFH = false;
+	private static $lastErrorReporting = false;
+	private static $lastDisplayErrors = false;
 	public static function makeTimeAgo($secs, $noSeconds = false) {
 		if($secs < 1){
 			return "a moment";
@@ -72,27 +74,41 @@ class wfUtils {
 		//return ABSPATH . 'wp-content/plugins/';
 	}
 	public static function getIP(){
-		$ip = 0;
+		$IP = 0;
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
-			$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
 		}
-		if((! $ip) && isset($_SERVER['REMOTE_ADDR'])){
-			$ip = $_SERVER['REMOTE_ADDR'];
+		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['REMOTE_ADDR'])){
+			$IP = $_SERVER['REMOTE_ADDR'];
 		}
-		if(preg_match('/,/', $ip)){
-			$parts = explode(',', $ip);
-			$ip = trim($parts[0]);
+		if(preg_match('/,/', $IP)){
+			$parts = explode(',', $IP);
+			$IP = trim($parts[0]);
 		}
-		if(preg_match('/:\d+$/', $ip)){
-			$ip = preg_replace('/:\d+$/', '', $ip);
+		if(preg_match('/:\d+$/', $IP)){
+			$IP = preg_replace('/:\d+$/', '', $IP);
 		}
-		if(self::isValidIP($ip)){
-			return $ip;
+		if(self::isValidIP($IP)){
+			return $IP;
 		} else {
-			$msg = "Wordfence is not able to determine the IP addresses of visitors to your site and can't operate. We received IP: $ip from header1: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " and header2: " . $_SERVER['REMOTE_ADDR'];
+			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
+			$possible = array();
+			foreach($_SERVER as $key => $val){
+				if(preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
+					if($val != '127.0.0.1'){
+						$possible[$key] = $val;
+					}
+				}
+			}
+			if(sizeof($possible) > 0){
+				$msg .= "  Report the following on the Wordfence forums and they may be able to help. Headers that may contain the client IP: ";
+				foreach($possible as $key => $val){
+					$msg .= "$key => $val   ";
+				}
+			}
 			wordfence::status(1, 'error', $msg);
 			error_log($msg);
-			exit(0);
+			return false;
 		}
 	}
 	public static function isValidIP($IP){
@@ -115,11 +131,6 @@ class wfUtils {
 	public static function editUserLink($userID){
 		return get_admin_url() . 'user-edit.php?user_id=' . $userID;
 	}
-	public static function wdie($err){
-		$trace=debug_backtrace(); $caller=array_shift($trace); 
-		error_log("Wordfence error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-		exit();
-	}
 	public static function tmpl($file, $data){
 		extract($data);
 		ob_start();
@@ -132,8 +143,8 @@ class wfUtils {
 	public static function encrypt($str){
 		$key = wfConfig::get('encKey');
 		if(! $key){
-			error_log("Wordfence error: No encryption key found!");
-			exit();
+			wordfence::status(1, 'error', "Wordfence error: No encryption key found!");
+			return false;
 		}
 		$db = new wfDB();
 		return $db->querySingle("select HEX(AES_ENCRYPT('%s', '%s')) as val", $str, $key);
@@ -141,8 +152,8 @@ class wfUtils {
 	public static function decrypt($str){
 		$key = wfConfig::get('encKey');
 		if(! $key){
-			error_log("Wordfence error: No encryption key found!");
-			exit();
+			wordfence::status(1, 'error', "Wordfence error: No encryption key found!");
+			return false;
 		}
 		$db = new wfDB();
 		return $db->querySingle("select AES_DECRYPT(UNHEX('%s'), '%s') as val", $str, $key);
@@ -361,6 +372,18 @@ class wfUtils {
 		} else {
 			return $host;
 		}
+	}
+	public static function errorsOff(){
+		self::$lastErrorReporting = @ini_get('error_reporting');
+		@error_reporting(0);
+		self::$lastDisplayErrors = @ini_get('display_errors');
+		@ini_set('display_errors', 0);
+		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = false; }
+	}
+	public static function errorsOn(){
+		@error_reporting(self::$lastErrorReporting);
+		@ini_set('display_errors', self::$lastDisplayErrors);
+		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
 }
 

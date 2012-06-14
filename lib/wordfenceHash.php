@@ -26,7 +26,7 @@ class wordfenceHash {
 			$path .= '/';
 		}
 		if(! is_readable($path)){
-			wordfence::status(1, 'error', "Could not read directory $path to do sacn.");
+			wordfence::status(1, 'error', "Could not read directory $path to do scan.");
 			exit();
 		}
 		$files = scandir($path);

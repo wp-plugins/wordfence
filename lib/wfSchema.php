@@ -157,9 +157,9 @@ class wfSchema {
 			$this->prefix = $wpdb->base_prefix;
 		}
 	}
-	public function dropAll($prefix){
+	public function dropAll(){
 		foreach($this->tables as $table => $def){
-			$this->db->query("drop table if exists " . $prefix . $table);
+			$this->db->query("drop table if exists " . $this->prefix . $table);
 		}
 	}
 	public function createAll(){

@@ -89,9 +89,10 @@ class wfScanEngine {
 		}
 	}
 	public function fork(){
-		wfConfig::set_ser('wfsd_engine', $this, true);
-		wfUtils::clearScanLock();
-		self::startScan(true);
+		if(wfConfig::set_ser('wfsd_engine', $this, true)){
+			wfUtils::clearScanLock();
+			self::startScan(true);
+		} //Otherwise there was an error so don't start another scan.
 		exit(0);
 	}
 	public function emailNewIssues(){
@@ -625,13 +626,15 @@ class wfScanEngine {
 	}
 	private function scan_diskSpace(){
 		$this->statusIDX['diskSpace'] = wordfence::statusStart("Scanning to check available disk space");
-		$total = disk_total_space('.');
-		$free = disk_free_space('.');
-		$this->status(2, 'info', "Total space: $total Free space: $free");
+		wfUtils::errorsOff();
+		$total = @disk_total_space('.');
+		$free = @disk_free_space('.');
+		wfUtils::errorsOn();
 		if( (! $total) || (! $free )){ //If we get zeros it's probably not reading right. If free is zero then we're out of space and already in trouble.
 			wordfence::statusEnd($this->statusIDX['diskSpace'], false);
 			return;
 		}
+		$this->status(2, 'info', "Total disk space: " . sprintf('%.4f', ($total / 1024 / 1024 / 1024)) . "GB -- Free disk space: " . sprintf('%.4f', ($free / 1024 / 1024 / 1024)) . "GB");
 		$level = false;
 		$spaceLeft = sprintf('%.2f', ($free / $total * 100));
 		$this->status(2, 'info', "The disk has $spaceLeft percent space available");

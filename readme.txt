@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
-Tested up to: 3.3.2
-Stable tag: 2.1.4
+Tested up to: 3.4
+Stable tag: 2.1.5
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,25 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.1.5 =
+* Fixed bug that caused WF to not work when certain DB caching plugins are used and override wpdb object.
+* Fixed Wordfence so activity log only shows our own errors unless in debug mode.
+* Wordfence now deletes all it's tables and deletes all saved options when you deactivate the plugin.
+* Removed all exit() on error statements. Critical errors are handled more gracefully by writing to the log instead.
+* Fixed a bug that would cause a database loop until running out of memory under certain error conditions.
+* Suppressed useless warnings that occur in environments with basedir set or where functions are disabled for security reasons.
+* Removed redundant check that executed on every request and put it in activation instead.
+* If serialization during scan breaks, exit gracefully instead of looping.
+* Disk space in log is now shown as Gigabytes and formatted nicely.
+* Removed wdie() function which is a little obnoxious. Writing to WF error log instead.
+* Fixed bug where a non-empty but useless HTTP header can break getIP() function.
+* Added useful data to error output if getIP() tells you it can't work on your system. 
+* Removed option to start scan in debug because it's no longer possible with a forked scan.
+* Removed option to test process running time on a system because it breaks on most systems and confuses customers.
+* Database connection errors no longer call die() but log an error instead in a way that removes the risk of a logging loop.
+* Removed dropAll.php script because we now clean up tables on deactivate and it's not needed.
+* Updated readme to show that we support 3.4. 
+
 = 2.1.4 =
 * Fixed registered users not appearing in live traffic.
 * Fixed temp file deletion bug that caused warnings and loops.

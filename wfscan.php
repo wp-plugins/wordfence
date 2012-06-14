@@ -23,6 +23,7 @@ require_once('lib/wfScanEngine.php');
 
 class wfScan {
 	public static $debugMode = false;
+	public static $errorHandlingOn = true;
 	public static function wfScanMain(){
 		$db = new wfDB();
 		if($db->errorMsg){
@@ -112,7 +113,14 @@ class wfScan {
 		}
 	}
 	public static function error_handler($errno, $errstr, $errfile, $errline){
-		wordfence::status(1, 'error', "$errstr ($errno) File: $errfile Line: $errline");
+		if(self::$errorHandlingOn){
+			if(preg_match('/wordfence\//', $errfile)){
+				$level = 1; //It's one of our files, so level 1
+			} else {
+				$level = 4; //It's someone elses plugin so only show if debug is enabled
+			}
+			wordfence::status($level, 'error', "$errstr ($errno) File: $errfile Line: $errline");
+		}
 	}
 	public static function shutdown(){
 		wfUtils::clearScanLock();

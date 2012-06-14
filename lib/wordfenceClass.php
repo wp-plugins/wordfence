@@ -34,6 +34,11 @@ class wordfence {
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
+		$schema = new wfSchema();
+		$schema->dropAll();
+		foreach(array('wordfence_version', 'wordfenceActivated') as $opt){
+			delete_option($opt);
+		}
 	}
 	public static function hourlyCron(){
 		global $wpdb; $p = $wpdb->base_prefix;
@@ -187,7 +192,7 @@ class wordfence {
 		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
 		$db->queryIgnoreError("alter table $prefix"."wfBlocks add column permanent tinyint UNSIGNED default 0");
 		$db->queryIgnoreError("alter table $prefix"."wfStatus modify column msg varchar(1000) NOT NULL");
-		
+
 		//Must be the final line
 		update_option('wordfence_version', WORDFENCE_VERSION);
 	}
@@ -201,12 +206,6 @@ class wordfence {
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
 		}
-
-		//Upgrading from 2.0.3 we changed isPaid from 'free' or 'paid' to true and false
-		if(wfConfig::get('isPaid') == 'free'){
-			wfConfig::set('isPaid', '');
-		}
-		//end
 
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');

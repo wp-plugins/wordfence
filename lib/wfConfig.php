@@ -376,7 +376,7 @@ class wfConfig {
 			$msg = "wfConfig::set() got an array as second param with key: $key - Please report this bug. Exiting.";
 			wfstatus(1, 'error', $msg);
 			error_log($msg);
-			exit(0);
+			return;
 		}
 
 		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
@@ -450,7 +450,7 @@ class wfConfig {
 						wordfence::status(4, 'info', "Serialized data for $key is " . strlen($serialized) . " bytes and is greater than max_allowed packet so writing it to disk file: " . $fullFile);
 					} else {
 						wordfence::status(1, 'error', "Your database doesn't allow big packets so we have to use files to store temporary data and Wordfence can't find a place to write them. Either ask your admin to increase max_allowed_packet on your MySQL database, or make one of the following directories writable by your web server: " . implode(', ', $dirs));
-						exit();
+						return false;
 					}
 					fwrite($fh, self::$tmpFileHeader);
 					fwrite($fh, $serialized);
@@ -458,12 +458,12 @@ class wfConfig {
 					return true;
 				} else {
 					wordfence::status(1, 'error', "Wordfence tried to save a variable with name '$key' and your database max_allowed_packet is set to be too small. We then tried to save it to disk, but you don't have a temporary directory that is writable. You can fix this by making the /wp-content/plugins/wordfence/tmp/ directory writable by your web server. Or by increasing your max_allowed_packet configuration variable in your mysql database.");
-					exit(0);
+					return false;
 				}
 					
 			} else {
 				wordfence::status(1, 'error', "Wordfence tried to save a variable with name '$key' and your database max_allowed_packet is set to be too small. This particular variable can't be saved to disk. Please ask your administrator to increase max_allowed_packet and also report this in the Wordfence forums because it may be a bug. Thanks.");
-				exit(0);
+				return false;
 			}
 		} else {
 			//Delete temp files on disk or else the DB will be written to but get_ser will see files on disk and read them instead
@@ -496,17 +496,19 @@ class wfConfig {
 		if(! self::$tmpDirCache){
 			$dirs = array(wfUtils::getPluginBaseDir() . 'wordfence/tmp/', sys_get_temp_dir(), ABSPATH . 'wp-content/uploads/');
 			$finalDir = 'notmp';
+			wfUtils::errorsOff();
 			foreach($dirs as $dir){
 				$dir = rtrim($dir, '/') . '/';
-				$fh = fopen($dir . 'wftmptest.txt', 'w');
+				$fh = @fopen($dir . 'wftmptest.txt', 'w');
 				if(! $fh){ continue; }
-				$bytes = fwrite($fh, 'test');
-				if($bytes != 4){ fclose($fh); continue; }
-				fclose($fh);
-				if(! unlink($dir . 'wftmptest.txt')){ continue; }
+				$bytes = @fwrite($fh, 'test');
+				if($bytes != 4){ @fclose($fh); continue; }
+				@fclose($fh);
+				if(! @unlink($dir . 'wftmptest.txt')){ continue; }
 				$finalDir = $dir;
 				break;
 			}
+			wfUtils::errorsOn();
 			self::$tmpDirCache = $finalDir;
 		}
 		if(self::$tmpDirCache == 'notmp'){

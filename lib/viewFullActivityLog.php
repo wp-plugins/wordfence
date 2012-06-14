@@ -11,10 +11,13 @@
 <?php
 $db = new wfDB();
 global $wpdb;
+$debugOn = wfConfig::get('debugOn', 0);
 $table = $wpdb->base_prefix . 'wfStatus';
 $q = $db->query("select ctime, level, type, msg from $table order by ctime desc");
 while($r = mysql_fetch_assoc($q)){
-	echo '<div' . ($r['type'] == 'error' ? ' class="error"' : '') . '>[' . date('M d H:i:s', $r['ctime']) . ':' . $r['ctime'] . ':' . $r['level'] . ':' . $r['type'] . ']&nbsp;' . htmlspecialchars($r['msg']) . "</div>\n";
+	if($r['level'] < 4 || $debugOn){
+		echo '<div' . ($r['type'] == 'error' ? ' class="error"' : '') . '>[' . date('M d H:i:s', $r['ctime']) . ':' . $r['ctime'] . ':' . $r['level'] . ':' . $r['type'] . ']&nbsp;' . htmlspecialchars($r['msg']) . "</div>\n";
+	}
 }
 ?>
 </body>

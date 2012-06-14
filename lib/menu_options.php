@@ -208,9 +208,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
 	<tr><th>Enable debugging mode</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
-	<tr><th colspan="2"><a href="<?php echo wfUtils::getBaseURL(); ?>wfscan.php?debugMode=1&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Start a scan in debug mode (advanced users only)</a></th></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=testmem&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's available memory</a></th></tr>
-	<tr><th colspan="2"><a href="/?_wfsf=testtime&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's process running time (you may see a blank screen for up to 3 minutes)</a></th></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	</div>
