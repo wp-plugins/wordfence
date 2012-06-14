@@ -5,28 +5,30 @@ require_once('wordfenceURLHoover.php');
 class wordfenceScanner {
 	protected $path = '';
 	protected $fileList = array();
-	protected $hostFileList = array();
-	protected $urlFileList = array();
 	protected $results = array(); 
 	public $errorMsg = false;
 	private $apiKey = false;
 	private $wordpressVersion = '';
-	public function __construct($apiKey, $wordpressVersion){
+	public function __sleep(){
+		return array('path', 'fileList', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover');
+	}
+	public function __wakeup(){
+	}
+	public function __construct($apiKey, $wordpressVersion, $fileList, $path){
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
-	}
-	public function scan($path, $fileList){
-		$this->errorMsg = false;
+		$this->fileList = $fileList;
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
-		$this->hostFileList = array();
 		$this->path = $path;
-		$this->fileList = $fileList;
 		$this->results = array();
+		$this->errorMsg = false;
 		//First extract hosts or IP's and their URL's into $this->hostsFound and URL's into $this->urlsFound
-		$urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
-		foreach($this->fileList as $file){
+		$this->urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
+	}
+	public function scan($forkObj){
+		while($file = array_shift($this->fileList)){
 			if(! file_exists($this->path . $file)){
 				continue;
 			}
@@ -107,9 +109,9 @@ class wordfenceScanner {
 						break;
 					}
 					
-					$urlHoover->hoover($file, $data);
+					$this->urlHoover->hoover($file, $data);
 				} else {
-					$urlHoover->hoover($file, $data);
+					$this->urlHoover->hoover($file, $data);
 				}
 
 				if($totalRead > 2 * 1024 * 1024){
@@ -118,14 +120,15 @@ class wordfenceScanner {
 			}
 			fclose($fh);
 			$mtime = sprintf("%.5f", microtime(true) - $stime);
+			$forkObj->forkIfNeeded();
 		}
 		if(function_exists('memory_get_usage')){
 			wordfence::status(3, 'info', "Total memory being used: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "MB");
 		}
 		wordfence::status(2, 'info', "Asking Wordfence to check URL's against malware list.");
-		$hooverResults = $urlHoover->getBaddies();
-		if($urlHoover->errorMsg){
-			$this->errorMsg = $urlHoover->errorMsg;
+		$hooverResults = $this->urlHoover->getBaddies();
+		if($this->urlHoover->errorMsg){
+			$this->errorMsg = $this->urlHoover->errorMsg;
 			return false;
 		}
 		foreach($hooverResults as $file => $hresults){
@@ -136,10 +139,11 @@ class wordfenceScanner {
 						'severity' => 1,
 						'ignoreP' => $this->path . $file,
 						'ignoreC' => md5_file($this->path . $file),
-						'shortMsg' => "File contains suspected malware URL.",
+						'shortMsg' => "File contains suspected malware URL: " . $this->path . $file,
 						'longMsg' => "This file contains a suspected malware URL listed on Google's list of malware sites. Wordfence decodes base64 when scanning files so the URL may not be visible if you view this file. The URL is: " . $result['URL'] . " - More info available at <a href=\"http://safebrowsing.clients.google.com/safebrowsing/diagnostic?site=" . urlencode($result['URL']) . "&client=googlechrome&hl=en-US\" target=\"_blank\">Google Safe Browsing diagnostic page</a>.",
 						'data' => array(
 							'file' => $file,
+							'badURL' => $result['URL'],
 							'canDiff' => false,
 							'canFix' => false,
 							'canDelete' => true,
@@ -152,10 +156,11 @@ class wordfenceScanner {
 						'severity' => 1,
 						'ignoreP' => $this->path . $file,
 						'ignoreC' => md5_file($this->path . $file),
-						'shortMsg' => "File contains suspected phishing URL.",
+						'shortMsg' => "File contains suspected phishing URL: " . $this->path . $file,
 						'longMsg' => "This file contains a URL that is a suspected phishing site that is currently listed on Google's list of known phishing sites. The URL is: " . $result['URL'],
 						'data' => array(
 							'file' => $file,
+							'badURL' => $result['URL'],
 							'canDiff' => false,
 							'canFix' => false,
 							'canDelete' => true,
@@ -174,7 +179,7 @@ class wordfenceScanner {
 			'severity' => 1,
 			'ignoreP' => $ignoreP,
 			'ignoreC' => $ignoreC,
-			'shortMsg' => "File contains $encoding encoded programming language.",
+			'shortMsg' => "File contains $encoding encoded programming language: " . $file,
 			'longMsg' => "This file contains programming language code that has been encoded using $encoding. This is often used by hackers to hide their tracks.",
 			'data' => array(
 				'file' => $file,

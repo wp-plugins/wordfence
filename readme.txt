@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
-Tested up to: 3.3.2
-Stable tag: 2.0.5
+Tested up to: 3.4
+Stable tag: 2.1.5
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -53,7 +53,7 @@ To install Wordfence Security and start protecting your WordPress website:
 1. Wordfence is now activated. Go to the scan menu and start your first security scan. Scheduled security scanning will also be enabled.
 1. Once your first scan has completed a list of security threats will appear. Go through them one by one to secure your site.
 1. Visit the Wordfence options page to enter your email address so that you can receive email security alerts.
-1. Optionally change your security level or click the advanced options link to see individual security scanning and protection options.
+1. Optionally change your security level or adjust the advanced options to set individual security scanning and protection options for your site.
 1. Click the "Live Traffic" menu option to watch your site activity in real-time. Situational awareness is an important part of website security.
 
 To install Wordfence on WordPress Multi-Site installations (support is currently in Beta):
@@ -72,7 +72,7 @@ To install Wordfence on WordPress Multi-Site installations (support is currently
 
 = What does Wordfence Security do that other WordPress security plugins don't do? =
 
-* Wordfence security scans including checking all your files, comments and posts for URL's in Google's Safe Browsing list.
+* Wordfence security scans check all your files, comments and posts for URL's in Google's Safe Browsing list.
 * All Wordfence security scans happen hourly instead of daily or even less frequently.
 * Wordfence scans do not consume large amounts of your precious bandwidth because all scans happen on your web server which makes them very fast.
 * Wordfence fully supports WordPress Multi-Site which means you can security scan every blog in your Multi-Site installation with one click.
@@ -130,7 +130,7 @@ and as long as it does that, it may become face a security vulnerability at some
 
 = Will Wordfence protect me against the Timthumb security problem? =
 
-The timthumb security exploit occured in 2011 and all good plugins and themes now use an updated 
+The timthumb security exploit occurred in 2011 and all good plugins and themes now use an updated 
 version of timthumb (which the creator of Wordfence wrote and donated to the timthumb author) which closes the security hole that
 caused the problem. However we do scan for old version of timthumb for good measure to make sure they don't 
 cause a security hole on your site. 
@@ -152,6 +152,99 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 2.1.5 =
+* Fixed bug that caused WF to not work when certain DB caching plugins are used and override wpdb object.
+* Fixed Wordfence so activity log only shows our own errors unless in debug mode.
+* Wordfence now deletes all it's tables and deletes all saved options when you deactivate the plugin.
+* Removed all exit() on error statements. Critical errors are handled more gracefully by writing to the log instead.
+* Fixed a bug that would cause a database loop until running out of memory under certain error conditions.
+* Suppressed useless warnings that occur in environments with basedir set or where functions are disabled for security reasons.
+* Removed redundant check that executed on every request and put it in activation instead.
+* If serialization during scan breaks, exit gracefully instead of looping.
+* Disk space in log is now shown as Gigabytes and formatted nicely.
+* Removed wdie() function which is a little obnoxious. Writing to WF error log instead.
+* Fixed bug where a non-empty but useless HTTP header can break getIP() function.
+* Added useful data to error output if getIP() tells you it can't work on your system. 
+* Removed option to start scan in debug because it's no longer possible with a forked scan.
+* Removed option to test process running time on a system because it breaks on most systems and confuses customers.
+* Database connection errors no longer call die() but log an error instead in a way that removes the risk of a logging loop.
+* Removed dropAll.php script because we now clean up tables on deactivate and it's not needed.
+* Updated readme to show that we support 3.4. 
+
+= 2.1.4 =
+* Fixed registered users not appearing in live traffic.
+* Fixed temp file deletion bug that caused warnings and loops.
+* Fixed issue that caused warning about WORDFENCE_VERSION
+* Fixed Wordfence admin area not working under SSL
+* Fixed bug that caused IP addresses of clients to be misinterpreted if there are multiple addresses from chained proxies. 
+* Now stripping port numbers from IP's which we weren't doing before.
+* Added check for validity of IP's and report fatal error if it fails because this could lock users out.
+* Improved error reporting including fixing an out of memory error when a specific error condition arose in wfConfig::set()
+* Changed order of tmp dirs to be wordfence/lib protected dir first and then system temp dir. Added uploads as tmp dir for last resort.
+* Malware URL's are now marked in red in alerts so it's obvious what the offending URL in a file is.
+
+= 2.1.3 =
+* Added fix for hosts that have max_allowed_packet set too small. We will write a temp file to disk instead if possible.
+* Increased size of status column to 1000 chars
+
+= 2.1.2 =
+* Fixed issue with scan scheduling that caused a loop
+* Fixed issue that caused version constant to not be included in scans
+
+= 2.1.1 =
+* Added ability to permanently block IP's
+* Added ability to manually block IP's
+* Made Wordfence more memory efficient, particularly the forking process.
+* Fixed issue that caused WF to not work on databases with blank passwords.
+* Wordfence now stops execution of a DB connection error is encountered.
+* Clear cron jobs if Wordfence is uninstalled.
+* Enabled hourly cron for Wordfence security network.
+* Wordfence now works if your server doesn't have openssl installed
+* Wordfence now works even if you don't have CURL
+* Fixed visitor logging so it works with HTTPS websites.
+* Alert emails now contain filenames in each alert description.
+* Users with weak passwords alerts now contain the username in the email.
+* Upgraded API to 1.7.
+* Fixed issue that caused DISALLOW_FILE_MODS to make WF menu disappear.
+* Modified wfDB to deal with very large queries without exceeding max_allowed_packet
+* Fixed issue that broke ability to see file changes and repair files.
+
+= 2.1.0 =
+* Fixed scans hanging on Dreamhost and other hosts.
+* Made Wordfence more memory efficient.
+* Wordfence scans are now broken into steps so we can scan a huge number of files, posts and comments.
+* Alert emails now include IP address, hostname lookup and geographic location (city if available).
+* Improved scan locking. No longer time based but uses flock() if on unix or time on Windows.
+* Suppressed warnings that WF was generating.
+* Improve handling of non-standard wp-content directories.
+* Fix restored files were still showing as changed if they contained international characters.
+* Improve permission denied message if attempting to repair a file.
+* Fixed problem that caused scans to not start because some hosts take too long to look up their own name.
+* Fixed issue with Wordfence menu that caused it to not appear or conflict with other menus under certain conditions.
+* Upgraded to API version 1.6
+* Improved geo lookup code for IP's. 
+* Fixed debug mode output in live status box - coloring was wrong.
+* Added ajax status message to WF admin pages.
+* Fixed colorbox popup so that it doesn't jump around on refresh.
+
+= 2.0.7 =
+* Fixed CSS bug that changed plugins page layout in admin area
+* Added memory benchmark utility.
+* Added process runtime benchmark utility.
+* Added ability to scan in debug mode which accesses the scan app directly.
+
+= 2.0.6 =
+* Added IP whitelisting including ability to whitelist ranges that are excluded from firewall and login security measures.
+* RFC1918 private networks and loopback address is automatically whitelisted to prevent firewall or login security blocking internal routers and proxy servers, internal firewalls and internal users.
+* Added WORDFENCE_VERSION constant to improve version lookup performance.
+* Fixed issue that caused security scans to not start and humans to not be logged in live traffic. Wordfence makes security scan script and visitors script executable on install or upgrade now.
+* Fixed bug that caused disk space scanning to still show an issue found in security scan summary even when user chooses to ignore the security issue.
+* Made disk space thresholds 1 and 1.5% space remaining because many hosts have very large disks where 1% is gigabytes.
+* Made wordfence database handle cache deal with concurrent connections to different databases.
+* Improved Wordfence database library's error reporting.
+* Improved performance when Wordfence looks up it's own version during security scans and other operations.
+* Removed three rules in base wordfence htaccess that could cause 500 errors on servers that don't allow these options to be overridden. Does not affect htaccess security because we inherit the base htaccess and still protect our lib/ directory with our own htaccess.
+
 = 2.0.5 =
 * If your plugin PHP files are viewable by the world, we now give you a detailed warning on the seriousness of this security threat with ability to view the offending .htaccess files.
 * Added a debug mode in options for very verbose logging and marking errors in red.

@@ -1,7 +1,10 @@
 <?php
 require_once('wordfenceClass.php');
 class wordfenceHash {
+
+	//Begin serialized vars
 	private $whitespace = array("\n","\r","\t"," ");
+	private $fileQ = array();
 	public $totalData = 0; //To do a sanity check, don't use 'du' because it gets sparse files wrong and reports blocks used on disk. Use : find . -type f -ls | awk '{total += $7} END {print total}'
 	public $totalFiles = 0;
 	public $totalDirs = 0;
@@ -9,15 +12,21 @@ class wordfenceHash {
 	public $linesOfJCH = 0; //lines of HTML, CSS and javascript
 	public $striplen = 0;
 	private $hashes = array();
+	public function __sleep(){ //same order as above
+		return array('whitespace', 'fileQ', 'totalData', 'totalFiles', 'totalDirs', 'linesOfPHP', 'linesOfJCH', 'striplen', 'hashes');
+	}
 	public function __construct($striplen){
 		$this->striplen = $striplen;
 	}
-	public function hashPaths($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
+	public function __wakeup(){
+		
+	}
+	public function buildFileQueue($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
 		if(! is_readable($path)){
-			wordfence::status(1, 'error', "Could not read directory $path to do sacn.");
+			wordfence::status(1, 'error', "Could not read directory $path to do scan.");
 			exit();
 		}
 		$files = scandir($path);
@@ -29,6 +38,13 @@ class wordfenceHash {
 			wordfence::status(2, 'info', "Hashing item in base dir: $file");
 			$this->_dirHash($file);
 		}	
+
+	}
+	public function genHashes($forkObj){
+		while($file = array_shift($this->fileQ)){
+			$this->processFile($file);
+			$forkObj->forkIfNeeded();	
+		}
 		return $this->hashes;
 	}
 	private function _dirHash($path){
@@ -46,16 +62,19 @@ class wordfenceHash {
 				if($cont[$i] == '.' || $cont[$i] == '..'){ continue; }
 				$file = $path . $cont[$i];
 				if(is_file($file)){
-					$this->processFile($file);
+					$this->qFile($file);
 				} else if(is_dir($file)) {
 					$this->_dirHash($file);
 				}
 			}
 		} else {
 			if(is_file($path)){
-				$this->processFile($path);
+				$this->qFile($path);
 			}
 		}
+	}
+	private function qFile($file){
+		$this->fileQ[] = $file;
 	}
 	private function processFile($file){
 		if(@filesize($file) > WORDFENCE_MAX_FILE_SIZE_TO_PROCESS){
