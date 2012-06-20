@@ -1,9 +1,10 @@
 <?php
 require_once('wfAPI.php');
+require_once('wfArray.php');
 class wordfenceURLHoover {
 	private $debug = false;
 	public $errorMsg = false;
-	//private $hostKeyCache = array();
+	private $hostsToAdd = false;
 	private $table = '';
 	private $apiKey = false;
 	private $wordpressVersion = false;
@@ -11,13 +12,16 @@ class wordfenceURLHoover {
 	private $api = false;
 	private $db = false;
 	public function __sleep(){
+		$this->writeHosts();	
 		return array('debug', 'errorMsg', 'table', 'apiKey', 'wordpressVersion', 'dRegex');
 	}
 	public function __wakeup(){
+		$this->hostsToAdd = new wfArray(array('owner', 'host', 'path', 'hostKey'));
 		$this->api = new wfAPI($this->apiKey, $this->wordpressVersion);
 		$this->db = new wfDB();
 	}	
 	public function __construct($apiKey, $wordpressVersion){
+		$this->hostsToAdd = new wfArray(array('owner', 'host', 'path', 'hostKey'));
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 		$this->api = new wfAPI($apiKey, $wordpressVersion);
@@ -37,6 +41,7 @@ class wordfenceURLHoover {
 			@preg_replace("/(?<=^|[^a-zA-Z0-9\-])((?:[a-zA-Z0-9\-]+\.)+)(" . $this->dRegex . ")((?:$|[^a-zA-Z0-9\-\.\'\"])[^\r\n\s\t\"\'\$\{\}<>]*)/ie", "\$this->" . "addHost(\$id, '$1$2', '$3')", $data);
 		} catch(Exception $e){ error_log("Regex error 1: $e"); }
 		preg_replace("/(?<=[^\d]|^)(\d{8,10}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})([^\d\'\"][^\r\n\s\t\"\'\$\{\}<>]*)/e", "\$this->" . "addIP(\$id, \"$1\",\"$2\")", $data);
+		$this->writeHosts();
 	}
 	private function dbg($msg){ if($this->debug){ error_log("DEBUG: $msg\n"); } }
 	public function addHost($id, $host, $path){
@@ -72,15 +77,25 @@ class wordfenceURLHoover {
 		if(strpos($path, '/') !== 0){
 			$path = '/';
 		}
-		$this->db->query("insert into $this->table (owner, host, path, hostKey) values ('%s', '%s', '%s', '%s')", $id, $host, $path, $this->makeHostKey($host));
+		$this->hostsToAdd->push(array('owner' => $id, 'host' => $host, 'path' => $path, 'hostKey' => $this->makeHostKey($host)));
+		if($this->hostsToAdd->size() > 1000){ $this->writeHosts(); }	
 		return true;
 	}
-	private function makeHostKey($host){
-		/*
-		if(isset($this->hostKeyCache[$host])){
-			return $this->hostKeyCache[$host];
+	private function writeHosts(){
+		if($this->hostsToAdd->size() < 1){ return; }
+		$sql = "insert into " . $this->table . " (owner, host, path, hostKey) values ";
+		while($elem = $this->hostsToAdd->shift()){
+			$sql .= sprintf("('%s', '%s', '%s', '%s'),", 
+				mysql_real_escape_string($elem['owner']), 
+				mysql_real_escape_string($elem['host']), 
+				mysql_real_escape_string($elem['path']), 
+				mysql_real_escape_string($elem['hostKey'])
+				);
 		}
-		*/
+		$sql = rtrim($sql, ',');
+		$this->db->query($sql);
+	}
+	private function makeHostKey($host){
 		$hostParts = explode('.', $host);
 		$hostKey = '';
 		if(sizeof($hostParts) == 2){
@@ -88,7 +103,6 @@ class wordfenceURLHoover {
 		} else if(sizeof($hostParts) > 2){
 			$hostKey = substr(hash('sha256', $hostParts[sizeof($hostParts) - 3] . '.' . $hostParts[sizeof($hostParts) - 2] . '.' . $hostParts[sizeof($hostParts) - 1] . '/', true), 0, 4);
 		}
-		//$this->hostKeyCache[$host] = $hostKey;
 		return $hostKey;
 	}
 	public function getBaddies(){

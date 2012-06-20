@@ -206,7 +206,8 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
-	<tr><th>Enable debugging mode</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
+	<tr><th>Enable debugging mode (increases database load)</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
+	<tr><th>Delete Wordfence tables and data on deactivation?</th><td><input type="checkbox" id="deleteTablesOnDeact" class="wfConfigElem" name="deleteTablesOnDeact" value="1" <?php $w->cb('deleteTablesOnDeact'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
 	<tr><th colspan="2"><a href="/?_wfsf=testmem&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's available memory</a></th></tr>
 	</table>

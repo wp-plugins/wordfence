@@ -42,6 +42,7 @@ class wfConfig {
 				"other_pwStrengthOnUpdate" => false,
 				"other_WFNet" => true,
 				"other_scanOutside" => false,
+				"deleteTablesOnDeact" => false,
 				"debugOn" => false
 			),
 			"otherParams" => array(
@@ -104,6 +105,7 @@ class wfConfig {
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
 				"other_scanOutside" => false,
+				"deleteTablesOnDeact" => false,
 				"debugOn" => false
 			),
 			"otherParams" => array(
@@ -166,6 +168,7 @@ class wfConfig {
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
 				"other_scanOutside" => false,
+				"deleteTablesOnDeact" => false,
 				"debugOn" => false
 			),
 			"otherParams" => array(
@@ -228,6 +231,7 @@ class wfConfig {
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
 				"other_scanOutside" => false,
+				"deleteTablesOnDeact" => false,
 				"debugOn" => false
 			),
 			"otherParams" => array(
@@ -290,6 +294,7 @@ class wfConfig {
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
 				"other_scanOutside" => false,
+				"deleteTablesOnDeact" => false,
 				"debugOn" => false
 			),
 			"otherParams" => array(

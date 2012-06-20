@@ -158,6 +158,13 @@ class wfUtils {
 		$db = new wfDB();
 		return $db->querySingle("select AES_DECRYPT(UNHEX('%s'), '%s') as val", $str, $key);
 	}
+	public static function lcmem(){
+		$trace=debug_backtrace(); 
+		$caller=array_shift($trace); 
+		$c2 = array_shift($trace);
+		$mem = memory_get_usage(true);
+		error_log("$mem at " . $caller['file'] . " line " . $caller['line']);
+	}
 	public static function logCaller(){
 		$trace=debug_backtrace(); 
 		$caller=array_shift($trace); 
@@ -237,41 +244,24 @@ class wfUtils {
 		return self::$isWindows == 'yes' ? true : false;
 	}
 	public static function getScanLock(){
-		if(self::isWindows()){
-			//Windows does not support non-blocking flock, so we use time. 
-			$scanRunning = wfConfig::get('wf_scanRunning');
-			if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
-				return false;
-			}
-			wfConfig::set('wf_scanRunning', time());
-			return true;
-		} else {
-			self::$scanLockFH = fopen(__FILE__, 'r');
-			if(flock(self::$scanLockFH, LOCK_EX | LOCK_NB)){
-				return true;
-			} else {
-				return false;
-			}
+		//Windows does not support non-blocking flock, so we use time. 
+		$scanRunning = wfConfig::get('wf_scanRunning');
+		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
+			return false;
 		}
+		wfConfig::set('wf_scanRunning', time());
+		return true;
 	}
 	public static function clearScanLock(){
-		if(self::isWindows()){
-			wfConfig::set('wf_scanRunning', '');
-		} else {
-			if(self::$scanLockFH){
-				@fclose(self::$scanLockFH);
-				self::$scanLockFH = false;
-			}
-		}
-
+		wfConfig::set('wf_scanRunning', '');
 	}
 	public static function isScanRunning(){
-		$scanRunning = true;
-		if(self::getScanLock()){
-			$scanRunning = false;
+		$scanRunning = wfConfig::get('wf_scanRunning');
+		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
+			return true;
+		} else {
+			return false;
 		}
-		self::clearScanLock();
-		return $scanRunning;
 	}
 	public static function getIPGeo($IP){ //Works with int or dotted
 		

@@ -193,6 +193,9 @@ window['wordfenceAdmin'] = {
 		} else if(item.msg.indexOf('SUM_PREP:') != -1){
 			var msg = item.msg.replace('SUM_PREP:', '');
 			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult" id="wfStartingScan"><div class="wfSummaryLoading"></div></div><div class="wfClear"></div>');
+		} else if(item.msg.indexOf('SUM_KILLED:') != -1){
+			var msg = item.msg.replace('SUM_KILLED:', '');
+			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult wfSummaryOK">Scan Complete.</div><div class="wfClear"></div>');
 		}
 	},
 	processActQueueItem: function(){
@@ -341,6 +344,16 @@ window['wordfenceAdmin'] = {
 						});
 				} 
 
+			});
+	},
+	killScan: function(){
+		var self = this;
+		this.ajax('wordfence_killScan', {}, function(res){
+			if(res.ok){
+				self.colorbox('400px', "Kill requested", "A termination request has been sent to any running scans.");
+			} else {
+				self.colorbox('400px', "Kill failed", "We failed to send a termination request.");
+			}
 			});
 	},
 	startScan: function(){

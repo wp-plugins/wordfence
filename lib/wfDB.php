@@ -54,18 +54,22 @@ class wfDB {
 			if(isset(self::$dbhCache[$handleKey])){
 				$this->dbh = self::$dbhCache[$handleKey];
 			} else {
-				$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
-				if($dbh === false){
-					self::criticalError("Wordfence could not connect to your database. The error was: " . mysql_error());
-					return;
+				global $wpdb;
+				if(isset($wpdb) && isset($wpdb->dbh) && is_resource($wpdb->dbh)){
+					$dbh = $wpdb->dbh;
+					self::$dbhCache[$handleKey] = $dbh;
+					$this->dbh = self::$dbhCache[$handleKey];
+				} else {
+					$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+					if($dbh === false){
+						self::criticalError("Wordfence could not connect to your database. The error was: " . mysql_error());
+						return;
+					}
+					mysql_select_db($this->dbname, $dbh);
+					self::$dbhCache[$handleKey] = $dbh;
+					$this->dbh = self::$dbhCache[$handleKey];
+					$this->query("SET NAMES 'utf8'");
 				}
-
-				mysql_select_db($this->dbname, $dbh);
-				self::$dbhCache[$handleKey] = $dbh;
-				$this->dbh = self::$dbhCache[$handleKey];
-				$this->query("SET NAMES 'utf8'");
-
-				//Set big packets for set_ser when it serializes a scan in between forks
 				$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
 			}
 		}
@@ -193,6 +197,10 @@ class wfDB {
 	public function getMaxAllowedPacketBytes(){
 		$rec = $this->querySingleRec("show variables like 'max_allowed_packet'");
 		return $rec['Value'];
+	}
+	public function prefix(){
+		global $wpdb;
+		return $wpdb->base_prefix;
 	}
 }
 

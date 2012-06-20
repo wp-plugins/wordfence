@@ -3,21 +3,25 @@ require_once('wordfenceConstants.php');
 require_once('wordfenceClass.php');
 require_once('wordfenceURLHoover.php');
 class wordfenceScanner {
+	//serialized:
 	protected $path = '';
 	protected $fileList = array();
 	protected $results = array(); 
 	public $errorMsg = false;
 	private $apiKey = false;
 	private $wordpressVersion = '';
+	private $totalFilesScanned = 0;
+	private $startTime = false;
+	private $lastStatusTime = false;
 	public function __sleep(){
-		return array('path', 'fileList', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover');
+		return array('path', 'fileList', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover', 'totalFilesScanned', 'startTime', 'lastStatusTime');
 	}
 	public function __wakeup(){
 	}
 	public function __construct($apiKey, $wordpressVersion, $fileList, $path){
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
-		$this->fileList = $fileList;
+		$this->fileList = $fileList; //A long string of <2 byte network order short showing filename length><filename>
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
@@ -28,7 +32,23 @@ class wordfenceScanner {
 		$this->urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
 	}
 	public function scan($forkObj){
-		while($file = array_shift($this->fileList)){
+		if(! $this->startTime){
+			$this->startTime = microtime(true);
+		}
+		if(! $this->lastStatusTime){
+			$this->lastStatusTime = microtime(true);
+		}
+		while(strlen($this->fileList) > 0){
+			$filenameLen = unpack('n', substr($this->fileList, 0, 2));
+			$filenameLen = $filenameLen[1];
+			if($filenameLen > 1000 || $filenameLen < 1){
+				wordfence::status(1, 'error', "wordfenceScanner got bad data from the Wordfence API with a filename length of: " . $filenameLen);
+				exit();
+			}
+				
+			$file = substr($this->fileList, 2, $filenameLen);
+			$this->fileList = substr($this->fileList, 2 + $filenameLen);
+
 			if(! file_exists($this->path . $file)){
 				continue;
 			}
@@ -50,11 +70,12 @@ class wordfenceScanner {
 			} else {
 				$fsize = $fsize . "B";
 			}
-			if(function_exists('memory_get_usage')){
-				wordfence::status(2, 'info', "Scanning contents: $file (Size:$fsize Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
-			} else {
-				wordfence::status(2, 'info', "Scanning contents: $file (Size: $fsize)");
-			}
+                       if(function_exists('memory_get_usage')){
+                               wordfence::status(4, 'info', "Scanning contents: $file (Size:$fsize Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+                       } else {
+                               wordfence::status(4, 'info', "Scanning contents: $file (Size: $fsize)");
+                       }
+
 			$stime = microtime(true);
 			$fileSum = @md5_file($this->path . $file);
 			if(! $fileSum){
@@ -120,11 +141,14 @@ class wordfenceScanner {
 			}
 			fclose($fh);
 			$mtime = sprintf("%.5f", microtime(true) - $stime);
+			$this->totalFilesScanned++;
+			if(microtime(true) - $this->lastStatusTime > 1){
+				$this->lastStatusTime = microtime(true);
+				$this->writeScanningStatus();
+			}
 			$forkObj->forkIfNeeded();
 		}
-		if(function_exists('memory_get_usage')){
-			wordfence::status(3, 'info', "Total memory being used: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "MB");
-		}
+		$this->writeScanningStatus();
 		wordfence::status(2, 'info', "Asking Wordfence to check URL's against malware list.");
 		$hooverResults = $this->urlHoover->getBaddies();
 		if($this->urlHoover->errorMsg){
@@ -172,6 +196,9 @@ class wordfenceScanner {
 		}
 
 		return $this->results;
+	}
+	private function writeScanningStatus(){
+		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " files at a rate of " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " files per second");
 	}
 	private function addEncIssue($ignoreP, $ignoreC, $encoding, $file){
 		$this->addResult(array(

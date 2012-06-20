@@ -143,6 +143,10 @@ class wfSchema {
 	path text,
 	hostKey binary(4),
 	KEY k2(hostKey)
+) default charset=utf8",
+'wfFileQueue' => "(
+	id int UNSIGNED NOT NULL auto_increment PRIMARY KEY,
+	filename text
 ) default charset=utf8"
 );
 	private $db = false;

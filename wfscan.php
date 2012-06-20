@@ -24,7 +24,9 @@ require_once('lib/wfScanEngine.php');
 class wfScan {
 	public static $debugMode = false;
 	public static $errorHandlingOn = true;
+	private static $peakMemAtStart = 0;
 	public static function wfScanMain(){
+		self::$peakMemAtStart = memory_get_peak_usage();
 		$db = new wfDB();
 		if($db->errorMsg){
 			self::errorExit("Could not connect to database to start scan: " . $db->errorMsg);
@@ -70,9 +72,13 @@ class wfScan {
 		wordfence::status(4, 'info', "Becoming admin for scan");
 		self::becomeAdmin();
 
-		wordfence::status(4, 'info', "Checking if scan is already running");
-		if(! wfUtils::getScanLock()){
-			self::errorExit("There is already a scan running.");
+		$isFork = ($_GET['isFork'] == '1' ? true : false);
+
+		if(! $isFork){
+			wordfence::status(4, 'info', "Checking if scan is already running");
+			if(! wfUtils::getScanLock()){
+				self::errorExit("There is already a scan running.");
+			}
 		}
 		wordfence::status(4, 'info', "Requesting max memory");
 		wfUtils::requestMaxMemory();
@@ -85,24 +91,32 @@ class wfScan {
 		@error_reporting(E_ALL);
 		@ini_set('display_errors','On');
 		wordfence::status(4, 'info', "Setting up scanRunning and starting scan");
-		$isFork = ($_GET['isFork'] == '1' ? true : false);
-		$scan = wfConfig::get_ser('wfsd_engine', false, true);
-		if($scan){
-			//Set false so that we don't get stuck in a loop where we're repeating scan stages.
-			wordfence::status(4, 'info', "Got a true deserialized value back from 'wfsd_engine' with type: " . gettype($scan));
-			wfConfig::set('wfsd_engine', '', true);
-		} else {
-			if($isFork){ //We encountered an error so blank scan and exit
+		$scan = false;
+		if($isFork){
+			$scan = wfConfig::get_ser('wfsd_engine', false, true);
+			if($scan){
+				wordfence::status(4, 'info', "Got a true deserialized value back from 'wfsd_engine' with type: " . gettype($scan));
+				wfConfig::set('wfsd_engine', '', true);
+			} else {
 				wordfence::status(2, 'error', "Scan can't continue - stored data not found after a fork. Got type: " . gettype($scan));
 				wfConfig::set('wfsd_engine', '', true);
 				exit();
-			} else {
-				wordfence::statusPrep(); //Re-initializes all status counters
-				$scan = new wfScanEngine();
 			}
+		} else {
+			wordfence::statusPrep(); //Re-initializes all status counters
+			$scan = new wfScanEngine();
 		}
 		$scan->go();
 		wfUtils::clearScanLock();
+		self::logPeakMemory();
+		wordfence::status(2, 'info', "Wordfence used " . sprintf('%.2f', (wfConfig::get('wfPeakMemory') - self::$peakMemAtStart) / 1024 / 1024) . "MB of memory for scan. Server peak memory usage was: " . sprintf('%.2f', wfConfig::get('wfPeakMemory') / 1024 / 1024) . "MB");
+	}
+	private static function logPeakMemory(){
+		$oldPeak = wfConfig::get('wfPeakMemory', 0);
+		$peak = memory_get_peak_usage();
+		if($peak > $oldPeak){
+			wfConfig::set('wfPeakMemory', $peak);
+		}
 	}
 	public static function obHandler($buf){
 		if(strlen($buf) > 1000){
@@ -123,7 +137,7 @@ class wfScan {
 		}
 	}
 	public static function shutdown(){
-		wfUtils::clearScanLock();
+		self::logPeakMemory();
 	}
 	private static function errorExit($msg){
 		echo json_encode(array('errorMsg' => $msg)); 

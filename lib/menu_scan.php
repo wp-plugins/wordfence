@@ -4,6 +4,8 @@
 	<div class="wordfenceWrap">
 		<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" id="wfStartScanButton1" class="wfStartScanButton button-primary" onclick="wordfenceAdmin.startScan();" />
 		<a target="_blank" href="http://www.wordfence.com/forums/">You can always get help on our support forum.</a>
+		<br />
+		&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.killScan(); return false;" style="font-size: 10px; color: #AAA;">Click here to kill a running scan.</a>
 		</div>
 		<div>
 			<div class="consoleHead">

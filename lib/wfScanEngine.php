@@ -25,7 +25,7 @@ class wfScanEngine {
 	private $pluginScanEnabled = false;
 	private $coreScanEnabled = false;
 	private $themeScanEnabled = false;
-	private $unknownFiles = array();
+	private $unknownFiles = "";
 	private $fileContentsResults = false;
 	private $scanner = false;
 	private $scanQueue = array();
@@ -69,7 +69,9 @@ class wfScanEngine {
 	}
 	public function go(){
 		try {
+			self::checkForKill();
 			$this->doScan();
+			self::checkForKill();
 			if(! $this->errorStopped){
 				wfConfig::set('lastScanCompleted', 'ok');
 			}
@@ -83,14 +85,14 @@ class wfScanEngine {
 		wordfence::scheduleNextScan(true);
 	}
 	public function forkIfNeeded(){
+		self::checkForKill();
 		if(time() - $this->cycleStartTime > $this->maxExecTime){
-			wordfence::status(2, 'info', "Forking during hash scan to ensure continuity.");
+			wordfence::status(4, 'info', "Forking during hash scan to ensure continuity.");
 			$this->fork();
 		}
 	}
 	public function fork(){
 		if(wfConfig::set_ser('wfsd_engine', $this, true)){
-			wfUtils::clearScanLock();
 			self::startScan(true);
 		} //Otherwise there was an error so don't start another scan.
 		exit(0);
@@ -100,15 +102,18 @@ class wfScanEngine {
 	}
 	private function doScan(){
 		while(sizeof($this->jobList) > 0){
+			self::checkForKill();
 			$jobName = $this->jobList[0];
 			call_user_func(array($this, 'scan_' . $jobName));
 			array_shift($this->jobList); //only shift once we're done because we may pause halfway through a job and need to pick up where we left off
 			if($this->errorStopped){
 				return;
 			}
+			self::checkForKill();
 			$this->fork();
 		}
 		$summary = $this->i->getSummaryItems();
+		$this->status(1, 'info', '-------------------');
 		$this->status(1, 'info', "Scan Complete. Scanned " . $summary['totalFiles'] . " files, " . $summary['totalPlugins'] . " plugins, " . $summary['totalThemes'] . " themes, " . ($summary['totalPages'] + $summary['totalPosts']) . " pages, " . $summary['totalComments'] . " comments and " . $summary['totalRows'] . " records in " . (time() - $this->startTime) . " seconds.");
 		if($this->i->totalIssues  > 0){
 			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below for details.");
@@ -165,7 +170,6 @@ class wfScanEngine {
 			$this->status(2, 'info', "Finishing this stage because we don't have to do a summary update and we don't need to do a core, plugin, theme or malware scan.");
 			return array();
 		}
-			
 		//CORE SCAN
 		$this->hasher = new wordfenceHash(strlen(ABSPATH));
 		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
@@ -186,7 +190,7 @@ class wfScanEngine {
 		$this->hasher->buildFileQueue(ABSPATH, $includeInScan);
 	}
 	private function scan_knownFiles_main(){
-		$this->hashes = $this->hasher->genHashes($this);
+		$this->hasher->genHashes($this);
 	}
 	private function scan_knownFiles_finish(){
 		$this->status(2, 'info', "Done hash. Updating summary items.");
@@ -226,6 +230,7 @@ class wfScanEngine {
 			}
 		}
 		$this->status(2, 'info', "Sending request to Wordfence servers to do main scan.");
+
 		$scanData = array(
 			'pluginScanEnabled' => $this->pluginScanEnabled,
 			'themeScanEnabled' => $this->themeScanEnabled,
@@ -233,26 +238,31 @@ class wfScanEngine {
 			'malwareScanEnabled' => $this->malwareScanEnabled,
 			'plugins' => $plugins,
 			'themes' => $themes,
-			'hashes' => wordfenceHash::bin2hex($this->hashes) 
+			'hashStorageID' => $this->hasher->getHashStorageID()
 			);
-		$result1 = $this->api->call('main_scan', array(), array(
-			'data' => json_encode($scanData)
-			));
+		$content = json_encode($scanData);
+		$dataArr = $this->api->binCall('main_scan', $content);
 		if($this->api->errorMsg){
 			$this->errorStop($this->api->errorMsg);
 			wordfence::statusEndErr();
 			return;
 		}
-		if(empty($result1['errorMsg']) === false){
-			$this->errorStop($result['errorMsg']);
-			wordfence::statusEndErr();
-			return;
-		}
-		if(! $result1){
+		if(! is_array($dataArr)){
 			$this->errorStop("We received an empty response from the Wordfence server when scanning core, plugin and theme files.");
 			wordfence::statusEndErr();
 			return;
 		}
+		//Data is an encoded string of <4 bytes of total length including these 4 bytes><2 bytes of filename length><filename>
+		$totalUStrLen = unpack('N', substr($dataArr['data'], 0, 4));
+		$totalUStrLen = $totalUStrLen[1];
+		$this->unknownFiles = substr($dataArr['data'], 4, ($totalUStrLen - 4)); //subtruct the first 4 bytes which is an INT that is the total length of unknown string including the 4 bytes
+		$resultArr = json_decode(substr($dataArr['data'], $totalUStrLen), true);
+		if(! (is_array($resultArr) && isset($resultArr['results'])) ){
+			$this->errorStop("We received an incorrect response from the Wordfence server when scanning core, plugin and theme files.");
+			wordfence::statusEndErr();
+			return;
+		}
+		
 		$this->status(2, 'info', "Processing scan results");
 		$haveIssues = array(
 			'core' => false,
@@ -260,7 +270,7 @@ class wfScanEngine {
 			'theme' => false,
 			'unknown' => false
 			);
-		foreach($result1['results'] as $issue){
+		foreach($resultArr['results'] as $issue){
 			$this->status(2, 'info', "Adding issue: " . $issue['shortMsg']);
 			if($this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data'])){
 				$haveIssues[$issue['data']['cType']] = true;
@@ -272,14 +282,10 @@ class wfScanEngine {
 			}
 		}
 
-		$this->unknownFiles = $result1['unknownFiles'];
 	}
 	private function scan_fileContents_init(){
 		$this->statusIDX['infect'] = wordfence::statusStart('Scanning file contents for infections and vulnerabilities');
 		$this->statusIDX['GSB'] = wordfence::statusStart('Scanning files for URLs in Google\'s Safe Browsing List');
-		if(! is_array($this->unknownFiles)){
-			$this->unknownFiles = array();
-		}
 		$this->scanner = new wordfenceScanner($this->apiKey, $this->wp_version, $this->unknownFiles, ABSPATH);
 		$this->unknownFiles = false;
 		$this->status(2, 'info', "Starting scan of file contents");
@@ -822,10 +828,25 @@ class wfScanEngine {
 	private function addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData){
 		return $this->i->addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData);
 	}
+	public static function requestKill(){
+		wfConfig::set('wfKillRequested', time());
+	}
+	public static function checkForKill(){
+		$kill = wfConfig::get('wfKillRequested', 0);
+		if($kill && time() - $kill < 600){ //Kill lasts for 10 minutes
+			$wfdb = new wfDB();
+			wordfence::status(2, 'info', "Killing current scan");
+			wordfence::status(10, 'info', "SUM_KILLED:Previous scan was killed successfully.");
+			exit(0);
+		}
+	}
 	public static function startScan($isFork = false){
-		wordfence::status(4, 'info', "Entering start scan routine");
-		if(wfUtils::isScanRunning()){
-			return "A scan is already running.";
+		if(! $isFork){ //beginning of scan
+			wfConfig::set('wfKillRequested', 0);
+			wordfence::status(4, 'info', "Entering start scan routine");
+			if(wfUtils::isScanRunning()){
+				return "A scan is already running. Use the kill link if you would like to terminate the current scan.";
+			}
 		}
 
 		$cron_url = plugins_url('wordfence/wfscan.php?isFork=' . ($isFork ? '1' : '0'));

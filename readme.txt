@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4
-Stable tag: 2.1.5
+Stable tag: 3.0.2
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,27 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.0.2 =
+* Overall this release is a very important upgrade. It drastically reduces memory usage on systems with large files from hundreds of megs to around 8 megs max memory used per scan.
+* Moved queue of files that get processed to a new DB table to save memory.
+* Reduced max size of tables before we truncate to avoid long DB queries.
+* Reduced max size of wfStatus table from 100,000 rows to 1,000 rows.
+* Introduced feature to kill hung or crashed scans reliably. 
+* Made scan locking much more reliable to avoid multiple concurrent scans hogging resources.
+* Debug status messages are no longer written to the DB in non-debug mode.
+* Modified the list of unknown files we receive back from the WF scanning servers to be a packed string rather than an array which is more memory efficient.
+* Added summary at the end of scans to show the peak memory that Wordfence used along with server peak memory.
+* Hashes are now progressively sent to Wordfence servers during scan to drastically reduce memory usage.
+* Upgraded to Wordfence server API version 1.8 
+* List of hosts that Wordfence URL scanner compiles now uses wfArray which is a very memory efficient packed binary structure.
+* Writes that WF URL scanner makes to the DB are now batched into bulk inserts to reduce load on DB.
+* Fixed bug in wfscan.php (scanning script) that could have caused scans to loop or pick up old data.
+* Massively reduced the number of status messages we log, but kept very verbose logging for debug mode with a warning about DB load.
+* Added summary messages instead of individual file scanning status messages which show files scanned and scan rate.
+* Removed bin2hex and hex2bin conversions for scanning data which were slow, memory heavy and unneeded.
+* Wordfence database class will now reuse the WordPress database handle from $wpdb if it can to reduce DB connections.
+
 = 2.1.5 =
 * Fixed bug that caused WF to not work when certain DB caching plugins are used and override wpdb object.
 * Fixed Wordfence so activity log only shows our own errors unless in debug mode.
@@ -389,4 +410,11 @@ or a theme, because often these have been updated to fix a security hole.
 = 1.1 =
 * Initial public release of Wordfence.
 
+== Upgrade Notice ==
 
+= 3.0.2 =
+Upgrade immediately. This release drastically reduces memory, reduces new DB connections created by 
+Wordfence to zero (we simply reuse the WordPress DB handle), reduces the number of DB queries to 
+about 1% of the previous version by removing unneeded status messages and fixes a bug that 
+could cause Wordfence to launch multiple concurrent scans that can put high load on your system.
+This is a critical release. Upgrade immediately.

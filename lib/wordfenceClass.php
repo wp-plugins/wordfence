@@ -23,6 +23,7 @@ class wordfence {
 	private static $wfLog = false;
 	private static $hitID = 0;
 	private static $statusStartMsgs = array();
+	private static $debugOn = null;
 	public static function installPlugin(){
 		self::runInstall();
 		//Used by MU code below
@@ -34,10 +35,12 @@ class wordfence {
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
-		$schema = new wfSchema();
-		$schema->dropAll();
-		foreach(array('wordfence_version', 'wordfenceActivated') as $opt){
-			delete_option($opt);
+		if(wfConfig::get('deleteTablesOnDeact')){
+			$schema = new wfSchema();
+			$schema->dropAll();
+			foreach(array('wordfence_version', 'wordfenceActivated') as $opt){
+				delete_option($opt);
+			}
 		}
 	}
 	public static function hourlyCron(){
@@ -126,21 +129,23 @@ class wordfence {
 		}
 		$wfdb->query("delete from $p"."wfLockedOut where blockedTime + %s < unix_timestamp()", wfConfig::get('loginSec_lockoutMins') * 60);
 		$count2 = $wfdb->querySingle("select count(*) as cnt from $p"."wfLogins");
-		if($count2 > 100000){
+		if($count2 > 20000){
 			$wfdb->query("truncate table $p"."wfLogins"); //in case of Dos
 		} else if($count2 > $maxRows){
 			$wfdb->query("delete from $p"."wfLogins order by ctime asc limit %d", ($count2 - $maxRows));
 		}
 		$wfdb->query("delete from $p"."wfReverseCache where unix_timestamp() - lastUpdate > 86400");
 		$count3 = $wfdb->querySingle("select count(*) as cnt from $p"."wfThrottleLog");
-		if($count3 > 100000){
+		if($count3 > 20000){
 			$wfdb->query("truncate table $p"."wfThrottleLog"); //in case of DoS
 		} else if($count3 > $maxRows){
 			$wfdb->query("delete from $p"."wfThrottleLog order by endTime asc limit %d", ($count3 - $maxRows));
 		}
 		$count4 = $wfdb->querySingle("select count(*) as cnt from $p"."wfStatus");
-		if($count4 > 100000){ //max status events we keep. This determines how much gets emailed to us when users sends us a debug report. 
-			$wfdb->query("delete from $p"."wfStatus where level != 10 order by ctime asc limit %d", ($count4 - 100000));
+		if($count4 > 100000){
+			$wfdb->query("truncate table $p"."wfStatus");
+		} else if($count4 > 1000){ //max status events we keep. This determines how much gets emailed to us when users sends us a debug report. 
+			$wfdb->query("delete from $p"."wfStatus where level != 10 order by ctime asc limit %d", ($count4 - 1000));
 			$count5 = $wfdb->querySingle("select count(*) as cnt from $p"."wfStatus where level=10");
 			if($count5 > 100){
 				$wfdb->query("delete from $p"."wfStatus where level = 10 order by ctime asc limit %d", ($count5 - 100) );
@@ -731,6 +736,15 @@ class wordfence {
 		$wfIssues->updateIssue($issueID, $status);
 		return array('ok' => 1);
 	}
+	public static function ajax_killScan_callback(){
+		wordfence::status(1, 'info', "Scan kill request received.");
+		wordfence::status(10, 'info', "SUM_KILLED:A request was received to kill the previous scan.");
+		wfUtils::clearScanLock(); //Clear the lock now because there may not be a scan running to pick up the kill request and clear the lock
+		wfScanEngine::requestKill();
+		return array(
+			'ok' => 1,
+			);
+	}
 	public static function ajax_loadIssues_callback(){
 		$i = new wfIssues();
 		$iss = $i->getIssues();
@@ -1098,7 +1112,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked') as $func){
+		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -1166,6 +1180,9 @@ class wordfence {
 		require 'menu_scan.php';
 	}
 	public static function status($level /* 1 has highest visibility */, $type /* info|error */, $msg){
+		if($level > 3 && $level < 10 && (! self::isDebugOn())){ //level 10 and higher is for summary messages
+			return false;
+		}
 		if($type != 'info' && $type != 'error'){ error_log("Invalid status type: $type"); return; }
 		if(self::$printStatus){
 			echo "STATUS: $level : $type : $msg\n";
@@ -1316,6 +1333,16 @@ class wordfence {
 		global $wpdb; $prefix = $wpdb->base_prefix;
 		$exists = $db->querySingle("show tables like '$prefix"."wfConfig'");
 		return $exists ? true : false;
+	}
+	public static function isDebugOn(){
+		if(is_null(self::$debugOn)){
+			if(wfConfig::get('debugOn')){
+				self::$debugOn = true;
+			} else {
+				self::$debugOn = false;
+			}
+		}
+		return self::$debugOn;
 	}
 }
 ?>
