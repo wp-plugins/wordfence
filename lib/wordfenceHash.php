@@ -1,6 +1,14 @@
 <?php
 require_once('wordfenceClass.php');
 class wordfenceHash {
+	private $apiKey = false;
+	private $wp_version = false;
+	private $api = false;
+	private $db = false;
+	private $table = false;
+	private $fileQ = array();
+
+	//Begin serialized vars
 	private $whitespace = array("\n","\r","\t"," ");
 	public $totalData = 0; //To do a sanity check, don't use 'du' because it gets sparse files wrong and reports blocks used on disk. Use : find . -type f -ls | awk '{total += $7} END {print total}'
 	public $totalFiles = 0;
@@ -8,16 +16,38 @@ class wordfenceHash {
 	public $linesOfPHP = 0;
 	public $linesOfJCH = 0; //lines of HTML, CSS and javascript
 	public $striplen = 0;
-	private $hashes = array();
+	private $hashPacket = "";
+	public $hashStorageID = false;
+	private $hashingStartTime = false;
+	private $lastStatusTime = false;
+	public function __sleep(){ //same order as above
+		if(sizeof($this->fileQ) > 0){
+			wordfence::status(1, 'error', "Sanity fail. fileQ is not empty. Has: " . sizeof($this->fileQ));
+		}
+		return array('whitespace', 'totalData', 'totalFiles', 'totalDirs', 'linesOfPHP', 'linesOfJCH', 'striplen', 'hashPacket', 'hashStorageID', 'hashingStartTime', 'lastStatusTime');
+	}
 	public function __construct($striplen){
 		$this->striplen = $striplen;
+		$this->db = new wfDB();
+		$this->table = $this->db->prefix() . 'wfFileQueue';
+		$this->apiKey = wfConfig::get('apiKey');
+		$this->wp_version = wfUtils::getWPVersion();
+		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 	}
-	public function hashPaths($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
+	public function __wakeup(){
+		$this->db = new wfDB();
+		$this->table = $this->db->prefix() . 'wfFileQueue';
+		$this->apiKey = wfConfig::get('apiKey');
+		$this->wp_version = wfUtils::getWPVersion();
+		$this->api = new wfAPI($this->apiKey, $this->wp_version);
+	}
+	public function buildFileQueue($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
+		$this->db->query("truncate table " . $this->table);
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
 		if(! is_readable($path)){
-			wordfence::status(1, 'error', "Could not read directory $path to do sacn.");
+			wordfence::status(1, 'error', "Could not read directory $path to do scan.");
 			exit();
 		}
 		$files = scandir($path);
@@ -26,10 +56,42 @@ class wordfenceHash {
 				continue;
 			}
 			$file = $path . $file;
-			wordfence::status(2, 'info', "Hashing item in base dir: $file");
+			wordfence::status(4, 'info', "Hashing item in base dir: $file");
 			$this->_dirHash($file);
 		}	
-		return $this->hashes;
+		$this->writeFileQueue(); //Final write to DB
+
+	}
+	public function genHashes($forkObj){
+		if(! $this->hashingStartTime){
+			$this->hashingStartTime = microtime(true);
+		}
+		if(! $this->lastStatusTime){
+			$this->lastStatusTime = microtime(true);
+		}
+		$haveMoreInDB = true;
+		while($haveMoreInDB){
+			$haveMoreInDB = false;
+			$res = $this->db->query("select id, filename from " . $this->table . " limit 1000");
+			$ids = array();
+			while($rec = mysql_fetch_row($res)){
+				$this->processFile($rec[1]);
+				array_push($ids, $rec[0]);
+				$haveMoreInDB = true;
+			}
+			if(sizeof($ids) > 0){
+				$this->db->query("delete from " . $this->table . " where id IN (" . implode(',', $ids) . ")");
+			}
+			$forkObj->forkIfNeeded();	
+		}
+		//Will only reach here if we empty file queue. fork may cause exit
+		$this->sendHashPacket();
+		$this->db->query("truncate table " . $this->table); //Also resets id autoincrement to 1
+		$this->writeHashingStatus();
+	}
+	private function writeHashingStatus(){
+		$this->lastStatusTime = microtime(true);
+		wordfence::status(2, 'info', "Scanned " . $this->totalFiles . " files at a rate of " . sprintf('%.2f', ($this->totalFiles / (microtime(true) - $this->hashingStartTime))) . " files per second.");
 	}
 	private function _dirHash($path){
 		if(substr($path, -3, 3) == '/..' || substr($path, -2, 2) == '/.'){
@@ -46,30 +108,52 @@ class wordfenceHash {
 				if($cont[$i] == '.' || $cont[$i] == '..'){ continue; }
 				$file = $path . $cont[$i];
 				if(is_file($file)){
-					$this->processFile($file);
+					$this->qFile($file);
 				} else if(is_dir($file)) {
 					$this->_dirHash($file);
 				}
 			}
 		} else {
 			if(is_file($path)){
-				$this->processFile($path);
+				$this->qFile($path);
 			}
 		}
+	}
+	private function qFile($file){
+		$this->fileQ[] = $file;
+		if(sizeof($this->fileQ) > 1000){
+			$this->writeFileQueue();
+		}
+	}
+	private function writeFileQueue(){
+		$sql = "insert into " . $this->table . " (filename) values ";
+		foreach($this->fileQ as $val){
+			$sql .= "('" . mysql_real_escape_string($val) . "'),";
+		}
+		$sql = rtrim($sql, ',');
+		$this->db->query($sql);
+		$this->fileQ = array();
 	}
 	private function processFile($file){
 		if(@filesize($file) > WORDFENCE_MAX_FILE_SIZE_TO_PROCESS){
 			wordfence::status(2, 'info', "Skipping file larger than 50 megs: $file");
 			return;
 		}
+
 		if(function_exists('memory_get_usage')){
-			wordfence::status(2, 'info', "Scanning: $file (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
-		} else {
-			wordfence::status(2, 'info', "Scanning: $file");
-		}
-		$wfHash = $this->wfHash($file, true); 
+                       wordfence::status(4, 'info', "Scanning: $file (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+               } else {
+                       wordfence::status(4, 'info', "Scanning: $file");
+               }
+		$wfHash = $this->wfHash($file); 
 		if($wfHash){
-			$this->hashes[substr($file, $this->striplen)] = $wfHash;
+			$packetFile = substr($file, $this->striplen);
+			$this->hashPacket .= $wfHash[0] . $wfHash[1] . pack('n', strlen($packetFile)) . $packetFile;  
+			if(strlen($this->hashPacket) > 500000){ //roughly 2 megs in string mem space
+				$this->writeHashingStatus();
+				$this->sendHashPacket();
+			}
+
 			//Now that we know we can open the file, lets update stats
 			if(preg_match('/\.(?:js|html|htm|css)$/i', $file)){
 				$this->linesOfJCH += sizeof(file($file));
@@ -78,15 +162,46 @@ class wordfenceHash {
 			}
 			$this->totalFiles++;
 			$this->totalData += filesize($file);
+			if(microtime(true) - $this->lastStatusTime > 1){
+				$this->writeHashingStatus();
+			}
 		} else {
 			wordfence::status(2, 'error', "Could not gen hash for file: $file");
 		}
 	}
-	public function wfHash($file, $binary = true){
-		$md5 = @md5_file($file, $binary);
+	private function sendHashPacket(){
+		wordfence::status(4, 'info', "Sending packet of hash data to Wordfence scanning servers");
+		if(strlen($this->hashPacket) < 1){
+			return;
+		}
+		if($this->hashStorageID){
+			$dataArr = $this->api->binCall('add_hash_chunk', "WFID:" . pack('N', $this->hashStorageID) . $this->hashPacket);
+			if($this->api->errorMsg){ wordfence::status(1, 'error', $this->api->errorMsg); exit(); }
+			$this->hashPacket = "";
+			if(is_array($dataArr) && isset($dataArr['data']) && $dataArr['data'] == $this->hashStorageID){
+				//keep going
+			} else {
+				wordfence::status(1, 'error', "Could not store an additional chunk of hash data on Wordfence servers with ID: " . $this->hashStorageID);
+				return false;
+			}
+		} else {
+			$dataArr = $this->api->binCall('add_hash_chunk', "WFST:" . $this->hashPacket);
+			if($this->api->errorMsg){ wordfence::status(1, 'error', $this->api->errorMsg); exit(); }
+			$this->hashPacket = "";
+			if(is_array($dataArr) && isset($dataArr['data']) && preg_match('/^\d+$/', $dataArr['data'])){
+				$this->hashStorageID = $dataArr['data'];
+			} else {
+				wordfence::status(1, 'error', "Could not store hash data on Wordfence servers. Got response: " . var_export($dataArr, true));
+				return false;
+			}
+		}
+	}
+	public function getHashStorageID(){
+		return $this->hashStorageID;
+	}
+	public function wfHash($file){
+		$md5 = @md5_file($file, false);
 		if(! $md5){ return false; }
-		//$sha = @hash_file('sha256', $file, $binary);
-		//if(! $sha){ return false; }
 		$fp = @fopen($file, "rb");
 		if(! $fp){
 			return false;
@@ -95,29 +210,8 @@ class wordfenceHash {
 		while (!feof($fp)) {
 			hash_update($ctx, str_replace($this->whitespace,"",fread($fp, 65536)));
 		}
-		$shac = hash_final($ctx, $binary);
-		//Taking out $sha for now because we don't use it on the scanning server side
-		return array($md5, '', $shac, filesize($file) );
-	}
-	public static function bin2hex($hashes){
-		function wf_func1($elem){ 
-				return array(  
-					bin2hex($elem[0]), 
-					bin2hex($elem[1]),
-					bin2hex($elem[2])
-					); 
-		}
-		return array_map('wf_func1', $hashes);
-	}
-	public static function hex2bin($hashes){
-		function wf_func2($elem){ 
-			return array( 
-				pack('H*', $elem[0]), 
-				pack('H*', $elem[1]), 
-				pack('H*', $elem[2]) 
-				); 
-		} 
-		return array_map('wf_func2', $hashes); 
+		$shac = hash_final($ctx, false);
+		return array($md5, $shac);
 	}
 }
 ?>

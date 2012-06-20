@@ -1,7 +1,7 @@
 <?php
 class wfDB {
 	private $dbh = false;
-	private static $dbhCache = false;
+	private static $dbhCache = array();
 	private $dbhost = false;
 	private $dbpassword = false;
 	private $dbname = false;
@@ -16,60 +16,100 @@ class wfDB {
 		} else {
 			global $wpdb;
 			if(! $wpdb){ 
-				$this->errorMsg = "The WordPress variable wpdb is not defined.";
+				self::criticalError("The WordPress variable wpdb is not defined. Wordfence can't function without this being defined as it is in all standard WordPress installs.");
 				return;
 			}
-			if(! $wpdb->dbhost ){ $this->errorMsg = "The WordPress variable from wpdb dbhost is not defined."; }
-			if(! $wpdb->dbuser ){ $this->errorMsg = "The WordPress variable from wpdb dbuser is not defined."; }
-			if(! $wpdb->dbpassword ){ $this->errorMsg = "The WordPress variable from wpdb dbpassword is not defined."; }
-			if(! $wpdb->dbname ){ $this->errorMsg = "The WordPress variable from wpdb dbname is not defined."; }
-			if($this->errorMsg){ return; }	
-			$this->dbhost = $wpdb->dbhost;
-			$this->dbuser = $wpdb->dbuser;
-			$this->dbpassword = $wpdb->dbpassword;
-			$this->dbname = $wpdb->dbname;
+			$sources = array(
+				array('dbhost', 'DB_HOST'),
+				array('dbuser', 'DB_USER'),
+				array('dbpassword', 'DB_PASSWORD'),
+				array('dbname', 'DB_NAME')
+				);
+			foreach($sources as $src){
+				$prop = $src[0];
+				if(isset($wpdb->$prop)){ 
+					$this->$prop = $wpdb->$prop; 
+				} else if(defined($src[1])){ 
+					$this->$prop = constant($src[1]); 
+				} else { 
+					self::criticalError("Wordfence DB connect error. wpdb.$prop is not set and " . $src[1] . " is not defined."); 
+					return;
+				}
+			}
 		}
 		if($createNewHandle){
 			$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
 			if($dbh === false){
-				$this->errorMsg = "Could not connect to database on " . $this->dbhost . " with user " . $this->dbuser;
+				self::criticalError("Wordfence could not connect to your database. Error was: " . mysql_error());
 				return;
 			}
 			mysql_select_db($this->dbname, $dbh);
 			$this->dbh = $dbh;
-		} else {
-			if(self::$dbhCache){
-				$this->dbh = self::$dbhCache;
-			} else {
-				$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
-				if($dbh === false){
-					$this->errorMsg = "Could not connect to database on " . $this->dbhost . " with user " . $this->dbuser;
-					return;
-				}
+			$this->query("SET NAMES 'utf8'");
 
-				mysql_select_db($this->dbname, $dbh);
-				self::$dbhCache = $dbh;
-				$this->dbh = self::$dbhCache;
+			//Set big packets for set_ser when it serializes a scan in between forks
+			$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
+		} else {
+			$handleKey = md5($dbhost . $dbuser . $dbpassword . $dbname);
+			if(isset(self::$dbhCache[$handleKey])){
+				$this->dbh = self::$dbhCache[$handleKey];
+			} else {
+				global $wpdb;
+				if(isset($wpdb) && isset($wpdb->dbh) && is_resource($wpdb->dbh)){
+					$dbh = $wpdb->dbh;
+					self::$dbhCache[$handleKey] = $dbh;
+					$this->dbh = self::$dbhCache[$handleKey];
+				} else {
+					$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+					if($dbh === false){
+						self::criticalError("Wordfence could not connect to your database. The error was: " . mysql_error());
+						return;
+					}
+					mysql_select_db($this->dbname, $dbh);
+					self::$dbhCache[$handleKey] = $dbh;
+					$this->dbh = self::$dbhCache[$handleKey];
+					$this->query("SET NAMES 'utf8'");
+				}
+				$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
 			}
 		}
 	}
 	public function querySingleRec(){
+		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
 			$query = $args[0];
 		} else if(sizeof($args) > 1){
 			$query = call_user_func_array('sprintf', $args);
 		} else {
-			wfdie("No arguments passed to querySingle()");
+			$this->handleError("No arguments passed to querySingle()");
 		}
 		$res = mysql_query($query, $this->dbh);
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-		}
+		$this->handleError();
 		return mysql_fetch_assoc($res); //returns false if no rows found
 	}
+	public function handleError($err = false){
+		if(! $err){
+			$err = mysql_error();
+		}
+		if($err){ 
+			$trace=debug_backtrace(); 
+			$first=array_shift($trace); 
+			$caller=array_shift($trace); 
+			$msg = "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err";
+			global $wpdb;
+			$statusTable = $wpdb->base_prefix . 'wfStatus';
+			mysql_query(sprintf("insert into " . $statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", 
+				mysql_real_escape_string(sprintf('%.6f', microtime(true))), 
+				mysql_real_escape_string(1), 
+				mysql_real_escape_string('error'), 
+				mysql_real_escape_string($msg)), $this->dbh);
+			error_log($msg);
+			return;
+		}
+	}
 	public function querySingle(){
+		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
 			$query = $args[0];
@@ -79,13 +119,10 @@ class wfDB {
 			}
 			$query = call_user_func_array('sprintf', $args);
 		} else {
-			wfdie("No arguments passed to querySingle()");
+			$this->handleError("No arguments passed to querySingle()");
 		}
 		$res = mysql_query($query, $this->dbh);
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-		}
+		$this->handleError();
 		if(! $res){
 			return false;
 		}
@@ -94,27 +131,48 @@ class wfDB {
 		return $row[0];
 	}
 	public function query(){ //sprintfString, arguments
+		$this->errorMsg = false;
+		$args = func_get_args();
+		$isStatusQuery = false;
+		if(sizeof($args) == 1){
+			if(preg_match('/Wordfence DB error/i', $args[0])){
+				$isStatusQuery = true;
+			}
+			$res = mysql_query($args[0], $this->dbh);
+		} else if(sizeof($args) > 1){
+			for($i = 1; $i < sizeof($args); $i++){
+				if(preg_match('/Wordfence DB error/i', $args[$i])){
+					$isStatusQuery = true;
+				}
+				$args[$i] = mysql_real_escape_string($args[$i]);
+			}
+			$res = mysql_query(call_user_func_array('sprintf', $args), $this->dbh);
+		} else {
+			$this->handleError("No arguments passed to query()");
+		}
+		$this->handleError();
+		return $res;
+	}
+	public function queryIgnoreError(){ //sprintfString, arguments
+		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
-			$query = $args[0];
+			$res = mysql_query($args[0], $this->dbh);
 		} else if(sizeof($args) > 1){
 			for($i = 1; $i < sizeof($args); $i++){
 				$args[$i] = mysql_real_escape_string($args[$i]);
 			}
-			$query = call_user_func_array('sprintf', $args);
+			$res = mysql_query(call_user_func_array('sprintf', $args), $this->dbh);
 		} else {
-			wfdie("No arguments passed to query()");
-		}
-		$res = mysql_query($query, $this->dbh);
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); $caller=array_shift($trace); error_log("Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
+			$this->handleError("No arguments passed to query()");
 		}
 		return $res;
 	}
-	private function wfdie($msg){
+
+	private static function criticalError($msg){
+		$msg = "Wordfence critical database error: $msg";
 		error_log($msg);
-		exit(1);
+		return;
 	}
 	public function createKeyIfNotExists($table, $col, $keyName){
 		global $wpdb; $prefix = $wpdb->base_prefix;
@@ -134,6 +192,15 @@ class wfDB {
 		if(! $keyFound){
 			$this->query("alter table $table add KEY $keyName($col)");
 		}
+	}
+	public function getDBH(){ return $this->dbh; }
+	public function getMaxAllowedPacketBytes(){
+		$rec = $this->querySingleRec("show variables like 'max_allowed_packet'");
+		return $rec['Value'];
+	}
+	public function prefix(){
+		global $wpdb;
+		return $wpdb->base_prefix;
 	}
 }
 
