@@ -7,7 +7,8 @@
 		</table>
 	</div>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
-		<a href="#" onclick="WFAD.clearAllBlocked('blocked'); return false;">Clear all blocked IP addresses</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="#" onclick="WFAD.clearAllBlocked('locked'); return false;">Clear all locked out IP addresses</a>
+		<a href="#" onclick="WFAD.clearAllBlocked('blocked'); return false;">Clear all blocked IP addresses</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="#" onclick="WFAD.clearAllBlocked('locked'); return false;">Clear all locked out IP addresses</a><br />
+		You can manually block an IP by entering the address here: <input type="text" id="wfManualBlock" size="20" maxlength="40" value="" />&nbsp;<input type="button" name="but1" value="Manually block IP" onclick="WFAD.blockIPTwo(jQuery('#wfManualBlock').val(), 'Manual block by administrator'); return false;" />
 	</div>
 	<div class="wordfenceWrap">
 		<div>
@@ -118,6 +119,9 @@
 	</div>
 	<div>
 		<strong>IP:</strong>&nbsp;<a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a> [<a href="#" onclick="WFAD.unblockIP('${IP}'); return false;">unblock</a>]
+		{{if permanent == '1'}}
+			[<span style="color: #F00;">permanently blocked</span>]
+		{{else}}&nbsp;&nbsp;[<a href="#" onclick="WFAD.permBlockIP('${IP}'); return false;">make permanent</a>]{{/if}}
 	</div>
 	<div>
 		<strong>Reason:</strong>&nbsp;${reason}
@@ -142,7 +146,10 @@
 	<ul>
 	<li>${totalHits} hits before blocked</li>
 	<li>${blockedHits} blocked hits</li>
-	<li>Will be unblocked in ${blockedForAgo}</li>
+	<li>
+		{{if permanent == '1'}}Permanently blocked{{else}}
+		Will be unblocked in ${blockedForAgo}{{/if}}
+	</li>
 	</ul>
 </td></tr>
 {{/each}}
