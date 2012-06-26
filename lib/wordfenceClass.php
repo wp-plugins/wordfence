@@ -46,12 +46,17 @@ class wordfence {
 	public static function hourlyCron(){
 		global $wpdb; $p = $wpdb->base_prefix;
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-		$patData = $api->call('get_known_vuln_pattern');
-		if(is_array($patData) && $patData['pat']){
-			if(@preg_match($patData['pat'], 'wordfence_test_vuln_match')){
-				wfConfig::set('vulnRegex', $pat);
+		try {
+			$patData = $api->call('get_known_vuln_pattern');
+			if(is_array($patData) && $patData['pat']){
+				if(@preg_match($patData['pat'], 'wordfence_test_vuln_match')){
+					wfConfig::set('vulnRegex', $pat);
+				}
 			}
+		} catch(Exception $e){
+			wordfence::status(2, 'error', "Could not fetch vulnerability patterns in hourly scheduled job: " . $e->getMessage());
 		}
+			
 		
 		if(wfConfig::get('other_WFNet')){
 			$wfdb = new wfDB();
@@ -62,7 +67,11 @@ class wordfence {
 			}
 			$wfdb->query("truncate table $p"."wfNet404s");
 			if(sizeof($URIs) > 0){
-				$api->call('send_net_404s', array(), array( 'URIs' => json_encode($URIs) ));
+				try {
+					$api->call('send_net_404s', array(), array( 'URIs' => json_encode($URIs) ));
+				} catch(Exception $e){
+					//Ignore
+				}
 			}
 
 			$q2 = $wfdb->query("select INET_NTOA(IP) as IP from $p"."wfVulnScanners where ctime > unix_timestamp() - 3600");
@@ -79,18 +88,22 @@ class wordfence {
 			}
 			if(strlen($lockCont) > 0 || strlen($scanCont) > 0){
 				$cont = pack('N', strlen($lockCont) / 4) . $lockCont . pack('N', strlen($scanCont) / 4) . $scanCont;
-				$resp = $api->binCall('get_net_bad_ips', $cont);
-				if($resp['code'] == 200){
-					$len = strlen($resp['data']);
-					$reason = "WFSN: Blocked by Wordfence Security Network";
-					$wfdb->query("delete from $p"."wfBlocks where wfsn=1");
-					if($len > 0 && $len % 4 == 0){
-						for($i = 0; $i < $len; $i += 4){
-							list($ipLong) = array_values(unpack('N', substr($resp['data'], $i, 4)));
-							$IPStr = long2ip($ipLong);
-							self::getLog()->blockIP($IPStr, $reason, true);
+				try {
+					$resp = $api->binCall('get_net_bad_ips', $cont);
+					if($resp['code'] == 200){
+						$len = strlen($resp['data']);
+						$reason = "WFSN: Blocked by Wordfence Security Network";
+						$wfdb->query("delete from $p"."wfBlocks where wfsn=1");
+						if($len > 0 && $len % 4 == 0){
+							for($i = 0; $i < $len; $i += 4){
+								list($ipLong) = array_values(unpack('N', substr($resp['data'], $i, 4)));
+								$IPStr = long2ip($ipLong);
+								self::getLog()->blockIP($IPStr, $reason, true);
+							}
 						}
 					}
+				} catch(Exception $e){
+					//Ignore
 				}
 			}
 		}
@@ -161,14 +174,16 @@ class wordfence {
 	
 		if(! wfConfig::get('apiKey')){
 			$api = new wfAPI('', wfUtils::getWPVersion());
-			$keyData = $api->call('get_anon_api_key');
-			if($api->errorMsg){
-				die("Error fetching free API key from Wordfence: " . $api->errorMsg);
-			}
-			if($keyData['ok'] && $keyData['apiKey']){
-				wfConfig::set('apiKey', $keyData['apiKey']);
-			} else {
-				die("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
+			try {
+				$keyData = $api->call('get_anon_api_key');
+				if($keyData['ok'] && $keyData['apiKey']){
+					wfConfig::set('apiKey', $keyData['apiKey']);
+				} else {
+					throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
+				}
+			} catch(Exception $e){
+				error_log("Could not fetch free API key from Wordfence: " . $e->getMessage());
+				return;
 			}
 		}
 		wp_clear_scheduled_hook('wordfence_daily_cron');
@@ -225,6 +240,9 @@ class wordfence {
 		add_action('wp_logout','wordfence::logoutAction');
 		add_action('profile_update', 'wordfence::profileUpdateAction', '99', 2);
 		add_action('lostpassword_post', 'wordfence::lostPasswordPost', '1');
+		/* For testing cron jobs
+			add_filter('cron_schedules', 'wordfence::moreCronReccurences'); 
+		*/
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
 		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
@@ -475,20 +493,21 @@ class wordfence {
 			return array('errorMsg' => "An invalid type was specified to get file.");
 		}
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-		$contResult = $api->binCall('get_wp_file_content', array(
-			'v' => wfUtils::getWPVersion(),
-			'file' => $file,
-			'cType' => $cType,
-			'cName' => $cName,
-			'cVersion' => $cVersion
-			));
-		if($api->errorMsg){
-			return array('errorMsg' => $api->errorMsg);
-		}
-		if($contResult['data']){
-			return array('fileContent' => $contResult['data']);
-		} else {
-			return array('errorMsg' => "We could not fetch a core WordPress file from the Wordfence API.");
+		try {
+			$contResult = $api->binCall('get_wp_file_content', array(
+				'v' => wfUtils::getWPVersion(),
+				'file' => $file,
+				'cType' => $cType,
+				'cName' => $cName,
+				'cVersion' => $cVersion
+				));
+			if($contResult['data']){
+				return array('fileContent' => $contResult['data']);
+			} else {
+				throw new Exception("We could not fetch a core WordPress file from the Wordfence API.");
+			}
+		} catch (Exception $e){
+			return array('errorMsg' => $e->getMessage());
 		}
 	}
 	public static function ajax_sendActivityLog_callback(){
@@ -602,18 +621,20 @@ class wordfence {
 		$paidKeyMsg = false;
 		if($opts['apiKey'] != wfConfig::get('apiKey')){
 			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
-			$res = $api->call('check_api_key', array(), array());
-			if($res['ok'] && isset($res['isPaid'])){
-				wfConfig::set('apiKey', $opts['apiKey']);
-				$reload = 'reload';
-				wfConfig::set('isPaid', $res['isPaid']);
-				if($res['isPaid']){
-					$paidKeyMsg = true;
+			try {
+				$res = $api->call('check_api_key', array(), array());
+				if($res['ok'] && isset($res['isPaid'])){
+					wfConfig::set('apiKey', $opts['apiKey']);
+					$reload = 'reload';
+					wfConfig::set('isPaid', $res['isPaid']);
+					if($res['isPaid']){
+						$paidKeyMsg = true;
+					}
+				} else {
+					throw new Exception("We could not understand the Wordfence API server reply when updating your API key.");
 				}
-			} else if($res['errorMsg']){
-				return array('errorMsg' => $res['errorMsg']);
-			} else {
-				return array('errorMsg' => "We could not change your API key. Please try again in a few minutes.");
+			} catch (Exception $e){
+				return array('errorMsg' => $e->getMessage());
 			}
 		}
 			
@@ -860,37 +881,6 @@ class wordfence {
 			'ok' => 1,
 			'file' => $localFile
 			);
-	}
-	public static function ajax_activate_callback(){
-		$key = trim($_POST['key']);
-		$email = trim($_POST['email']);
-		$key = preg_replace('/[^a-fA-F0-9]+/', '', $key);
-		if(strlen($key) < 10){
-			return array("errorAlert" => "You entered an invalid API key." );
-		}
-		if(! preg_match('/.+\@.+/', $email)){
-			return array("errorAlert" => "Please enter a valid email address where Wordfence can send alerts.");
-		}
-
-		wfConfig::set('apiKey', $key);
-		wfConfig::set('alertEmails', $email);
-		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-		$result = $api->call('activate', array(), array());
-		if($api->errorMsg){
-			wfConfig::set('apiKey', '');
-			return array("errorMsg" => $api->errorMsg );
-		}
-		if($result['ok'] && isset($result['isPaid'])){
-			wfConfig::set('isPaid', $result['isPaid']);
-			$err = wfScanEngine::startScan();
-			if($err){
-				return array('errorMsg' => $err);
-			} else {
-				return array("ok" => 1);
-			}
-		} else {
-			return array('errorAlert' => "An unknown error occurred trying to activate Wordfence. Please try again in a few minutes." );
-		}
 	}
 	public static function ajax_scan_callback(){
 		self::status(4, 'info', "Ajax request received to start scan.");
@@ -1147,6 +1137,10 @@ class wordfence {
 
 		}
 	}
+	public static function noKeyError(){
+		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence is not configured correctly.</strong> Go to your plugins menu and disable and re-enable Wordfence and this should fix the problem.</p></div>';
+	}
+
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
 		if(! wfConfig::get('alertEmails')){
@@ -1154,6 +1148,13 @@ class wordfence {
 				add_action('network_admin_notices', 'wordfence::configure_warning');
 			} else {
 				add_action('admin_notices', 'wordfence::configure_warning');
+			}
+		}
+		if(! wfConfig::get('apiKey')){
+			if(wfUtils::isAdminPageMU()){
+				add_action('network_admin_notices', 'wordfence::noKeyError');
+			} else {
+				add_action('admin_notices', 'wordfence::noKeyError');
 			}
 		}
 		add_submenu_page("Wordfence", "Scan", "Scan", "activate_plugins", "Wordfence", 'wordfence::menu_scan');
@@ -1169,9 +1170,6 @@ class wordfence {
 	}
 	public static function menu_blockedIPs(){
 		require 'menu_blockedIPs.php';
-	}
-	public static function menu_config(){
-		require 'menu_config.php';
 	}
 	public static function menu_activity(){
 		require 'menu_activity.php';
@@ -1201,7 +1199,7 @@ class wordfence {
 		}
 	}
 	public static function genFilter($gen, $type){
-		if(wfConfig::get('other_hidegetWPVersion')){
+		if(wfConfig::get('other_hideWPVersion')){
 			return '';
 		} else {
 			return $gen;
@@ -1270,16 +1268,17 @@ class wordfence {
 				return;
 			}
 			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-			$result = $api->call('get_next_scan_time', array(), array());
-			if(empty($result['errorMsg']) === false){
-				return $result['errorMsg'];
+			try {
+				$result = $api->call('get_next_scan_time', array(), array());
+				$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.
+				if(is_array($result) && $result['secsToGo'] > 1800){
+					$secsToGo = $result['secsToGo'];
+				}
+				wp_clear_scheduled_hook('wordfence_scheduled_scan');
+				wp_schedule_single_event(time() + $secsToGo, 'wordfence_scheduled_scan');
+			} catch (Exception $e){
+				return $e->getMessage();
 			}
-			$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.
-			if(is_array($result) && $result['secsToGo'] > 1800){
-				$secsToGo = $result['secsToGo'];
-			}
-			wp_clear_scheduled_hook('wordfence_scheduled_scan');
-			wp_schedule_single_event(time() + $secsToGo, 'wordfence_scheduled_scan');
 		} else {
 			wp_clear_scheduled_hook('wordfence_scheduled_scan');
 		}
@@ -1344,5 +1343,12 @@ class wordfence {
 		}
 		return self::$debugOn;
 	}
+	/* For testing cron jobs
+	public static function moreCronReccurences(){
+		return array(
+			Feveryminute' => array('interval' => 60, 'display' => 'Once Every Minute'),
+		);
+	}
+	*/
 }
 ?>

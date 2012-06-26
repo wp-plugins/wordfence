@@ -327,25 +327,6 @@ window['wordfenceAdmin'] = {
 					}
 				}, false, false);
 	},
-	activateWF: function(key){
-		jQuery('.wfAjax24').show();
-		this.ajax('wordfence_activate', {
-			key: jQuery('#wordfenceKey').val(),
-			email: jQuery('#email').val()
-			},
-			function(res){
-				jQuery('.wfAjax24').hide();
-				if(res.ok){
-					window.location = "admin.php?page=Wordfence&wfAct=" + Math.floor(Math.random()*999999999);
-					return;
-				} else if(res.errorAlert){ 
-					jQuery.colorbox({ width: '400px', html:  
-						"<h3>An error occurred:</h3><p>" + res.errorAlert + "</p>"
-						});
-				} 
-
-			});
-	},
 	killScan: function(){
 		var self = this;
 		this.ajax('wordfence_killScan', {}, function(res){

@@ -475,9 +475,11 @@ class wfLog {
 	}
 	public function firewallBadIPs(){
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
-		if($secsToGo = $this->getDB()->querySingle("select (blockedTime + %s) - unix_timestamp() as secsToGo from " . $this->blocksTable . " where IP=%s and (permanent=1 OR blockedTime + %s > unix_timestamp())", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
+		if($rec = $this->getDB()->querySingleRec("select (blockedTime + %s) - unix_timestamp() as secsToGo, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR blockedTime + %s > unix_timestamp())", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
+			$secsToGo = $rec['secsToGo'];
+			$reason = $rec[1];
 			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP); 
-			$this->do503($secsToGo); 
+			$this->do503($secsToGo, $rec['reason']); 
 		}
 	}
 	private function takeBlockingAction($configVar, $reason){
@@ -502,12 +504,12 @@ class wfLog {
 				wordfence::status(2, 'info', "Throttling IP $IP. $reason");
 				$secsToGo = 60;
 			}
-			$this->do503($secsToGo);
+			$this->do503($secsToGo, $reason);
 		} else {
 			return;
 		}
 	}
-	private function do503($secsToGo = false){
+	private function do503($secsToGo, $reason){
 		header('HTTP/1.1 503 Service Temporarily Unavailable');
 		header('Status: 503 Service Temporarily Unavailable');
 		if($secsToGo){

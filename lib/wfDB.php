@@ -37,41 +37,22 @@ class wfDB {
 				}
 			}
 		}
-		if($createNewHandle){
-			$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
-			if($dbh === false){
-				self::criticalError("Wordfence could not connect to your database. Error was: " . mysql_error());
-				return;
-			}
-			mysql_select_db($this->dbname, $dbh);
-			$this->dbh = $dbh;
-			$this->query("SET NAMES 'utf8'");
-
-			//Set big packets for set_ser when it serializes a scan in between forks
-			$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
+		//We tried reusing wpdb but got disconnection errors from many users.
+		$handleKey = md5($dbhost . $dbuser . $dbpassword . $dbname);
+		if( (! $createNewHandle) && isset(self::$dbhCache[$handleKey]) && mysql_ping(self::$dbhCache[$handleKey]) ){
+			$this->dbh = self::$dbhCache[$handleKey];
 		} else {
-			$handleKey = md5($dbhost . $dbuser . $dbpassword . $dbname);
-			if(isset(self::$dbhCache[$handleKey])){
-				$this->dbh = self::$dbhCache[$handleKey];
+			$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+			mysql_select_db($this->dbname, $dbh);
+			if($createNewHandle){
+				$this->dbh = $dbh;
 			} else {
-				global $wpdb;
-				if(isset($wpdb) && isset($wpdb->dbh) && is_resource($wpdb->dbh)){
-					$dbh = $wpdb->dbh;
-					self::$dbhCache[$handleKey] = $dbh;
-					$this->dbh = self::$dbhCache[$handleKey];
-				} else {
-					$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
-					if($dbh === false){
-						self::criticalError("Wordfence could not connect to your database. The error was: " . mysql_error());
-						return;
-					}
-					mysql_select_db($this->dbname, $dbh);
-					self::$dbhCache[$handleKey] = $dbh;
-					$this->dbh = self::$dbhCache[$handleKey];
-					$this->query("SET NAMES 'utf8'");
-				}
-				$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
+				self::$dbhCache[$handleKey] = $dbh;
+				$this->dbh = self::$dbhCache[$handleKey];
 			}
+			$this->query("SET NAMES 'utf8'");
+			$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
+			$this->queryIgnoreError("SET GLOBAL wait_timeout=28800");
 		}
 	}
 	public function querySingleRec(){
@@ -201,6 +182,9 @@ class wfDB {
 	public function prefix(){
 		global $wpdb;
 		return $wpdb->base_prefix;
+	}
+	public function getAffectedRows(){
+		return mysql_affected_rows($this->dbh);
 	}
 }
 

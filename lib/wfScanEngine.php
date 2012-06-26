@@ -17,7 +17,6 @@ class wfScanEngine {
 	private $i = false;
 	private $wp_version = false;
 	private $apiKey = false;
-	private $errorStopped = false;
 	private $startTime = 0;
 	private $scanStep = 0;
 	private $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
@@ -38,7 +37,7 @@ class wfScanEngine {
 			'unknown' => false
 			);
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
-		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'errorStopped', 'startTime', 'scanStep', 'maxExecTime', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX');
+		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX');
 	}
 	public function __construct(){
 		$this->startTime = time();
@@ -71,18 +70,18 @@ class wfScanEngine {
 		try {
 			self::checkForKill();
 			$this->doScan();
+			wfConfig::set('lastScanCompleted', 'ok');
 			self::checkForKill();
-			if(! $this->errorStopped){
-				wfConfig::set('lastScanCompleted', 'ok');
-			}
 			//updating this scan ID will trigger the scan page to load/reload the results.
 			$this->i->setScanTimeNow();
 			//scan ID only incremented at end of scan to make UI load new results
 			$this->emailNewIssues();
+			wordfence::scheduleNextScan(true);
 		} catch(Exception $e){
-			$this->errorStop($e->getMessage());
+			wfConfig::set('lastScanCompleted', $e->getMessage());
+			wordfence::scheduleNextScan(true);
+			throw $e;
 		}
-		wordfence::scheduleNextScan(true);
 	}
 	public function forkIfNeeded(){
 		self::checkForKill();
@@ -106,9 +105,6 @@ class wfScanEngine {
 			$jobName = $this->jobList[0];
 			call_user_func(array($this, 'scan_' . $jobName));
 			array_shift($this->jobList); //only shift once we're done because we may pause halfway through a job and need to pick up where we left off
-			if($this->errorStopped){
-				return;
-			}
 			self::checkForKill();
 			$this->fork();
 		}
@@ -128,10 +124,6 @@ class wfScanEngine {
 	private function scan_knownFiles_init(){
 		$this->status(1, 'info', "Contacting Wordfence to initiate scan");
 		$this->api->call('log_scan', array(), array());
-		if($this->api->errorMsg){
-			$this->errorStop($this->api->errorMsg);
-			return;
-		}
 		if(wfConfig::get('scansEnabled_core')){
 			$this->coreScanEnabled = true;
 			$this->statusIDX['core'] = wordfence::statusStart("Comparing core WordPress files against originals in repository");
@@ -241,16 +233,15 @@ class wfScanEngine {
 			'hashStorageID' => $this->hasher->getHashStorageID()
 			);
 		$content = json_encode($scanData);
-		$dataArr = $this->api->binCall('main_scan', $content);
-		if($this->api->errorMsg){
-			$this->errorStop($this->api->errorMsg);
+		try {
+			$dataArr = $this->api->binCall('main_scan', $content);
+		} catch(Exception $e){
 			wordfence::statusEndErr();
-			return;
+			throw $e;
 		}
 		if(! is_array($dataArr)){
-			$this->errorStop("We received an empty response from the Wordfence server when scanning core, plugin and theme files.");
 			wordfence::statusEndErr();
-			return;
+			throw new Exception("We received an empty response from the Wordfence server when scanning core, plugin and theme files.");
 		}
 		//Data is an encoded string of <4 bytes of total length including these 4 bytes><2 bytes of filename length><filename>
 		$totalUStrLen = unpack('N', substr($dataArr['data'], 0, 4));
@@ -258,9 +249,8 @@ class wfScanEngine {
 		$this->unknownFiles = substr($dataArr['data'], 4, ($totalUStrLen - 4)); //subtruct the first 4 bytes which is an INT that is the total length of unknown string including the 4 bytes
 		$resultArr = json_decode(substr($dataArr['data'], $totalUStrLen), true);
 		if(! (is_array($resultArr) && isset($resultArr['results'])) ){
-			$this->errorStop("We received an incorrect response from the Wordfence server when scanning core, plugin and theme files.");
 			wordfence::statusEndErr();
-			return;
+			throw new Exception("We received an incorrect response from the Wordfence server when scanning core, plugin and theme files.");
 		}
 		
 		$this->status(2, 'info', "Processing scan results");
@@ -296,7 +286,7 @@ class wfScanEngine {
 	private function scan_fileContents_finish(){
 		$this->status(2, 'info', "Done file contents scan");
 		if($this->scanner->errorMsg){
-			$this->errorStop($this->scanner->errorMsg);
+			throw new Exception($this->scanner->errorMsg);
 		}
 		$this->scanner = null;
 		$haveIssues = false;
@@ -352,9 +342,8 @@ class wfScanEngine {
 		$hooverResults = $this->hoover->getBaddies();
 		$this->status(2, 'info', "Done examining URls");
 		if($this->hoover->errorMsg){
-			$this->errorStop($this->hoover->errorMsg);
 			wordfence::statusEndErr();
-			return;
+			throw new Exception($this->hoover->errorMsg);
 		
 		}
 		$haveIssues = false;
@@ -450,9 +439,8 @@ class wfScanEngine {
 	private function scan_comments_finish(){
 		$hooverResults = $this->hoover->getBaddies();
 		if($this->hoover->errorMsg){
-			$this->errorStop($this->hoover->errorMsg);
 			wordfence::statusEndErr();
-			return;
+			throw new Exception($this->hoover->errorMsg);
 		}
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
@@ -817,11 +805,6 @@ class wfScanEngine {
 		}
 		wordfence::statusEnd($this->statusIDX['oldVersions'], $haveIssues);
 	}
-	private function errorStop($msg){
-		$this->errorStopped = true;
-		$this->status(1, 'error', $msg);
-		wfConfig::set('lastScanCompleted', $msg);
-	}
 	public function status($level, $type, $msg){
 		wordfence::status($level, $type, $msg);
 	}
@@ -835,9 +818,8 @@ class wfScanEngine {
 		$kill = wfConfig::get('wfKillRequested', 0);
 		if($kill && time() - $kill < 600){ //Kill lasts for 10 minutes
 			$wfdb = new wfDB();
-			wordfence::status(2, 'info', "Killing current scan");
 			wordfence::status(10, 'info', "SUM_KILLED:Previous scan was killed successfully.");
-			exit(0);
+			throw new Exception("Scan was killed on administrator request.");
 		}
 	}
 	public static function startScan($isFork = false){

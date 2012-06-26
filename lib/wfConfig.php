@@ -117,19 +117,19 @@ class wfConfig {
 				"loginSec_lockoutMins" => "5",
 				'loginSec_maxFailures' => "50",
 				'loginSec_maxForgotPasswd' => "50",
-				'maxGlobalRequests' => "960",
+				'maxGlobalRequests' => "DISABLED",
 				'maxGlobalRequests_action' => "throttle",
-				'maxRequestsCrawlers' => "960",
+				'maxRequestsCrawlers' => "DISABLED",
 				'maxRequestsCrawlers_action' => "throttle",
-				'maxRequestsHumans' => "60",
+				'maxRequestsHumans' => "DISABLED",
 				'maxRequestsHumans_action' => "throttle",
-				'max404Crawlers' => "240",
+				'max404Crawlers' => "DISABLED",
 				'max404Crawlers_action' => "throttle",
-				'max404Humans' => "60",
+				'max404Humans' => "DISABLED",
 				'max404Humans_action' => "throttle",
-				'maxScanHits' => "60",
+				'maxScanHits' => "DISABLED",
 				'maxScanHits_action' => "throttle",
-				'blockedTime' => "3600"
+				'blockedTime' => "300"
 			)
 		),
 		array( //level 2
@@ -180,19 +180,19 @@ class wfConfig {
 				"loginSec_lockoutMins" => "240",
 				'loginSec_maxFailures' => "20",
 				'loginSec_maxForgotPasswd' => "20",
-				'maxGlobalRequests' => "960",
+				'maxGlobalRequests' => "DISABLED",
 				'maxGlobalRequests_action' => "throttle",
-				'maxRequestsCrawlers' => "960",
+				'maxRequestsCrawlers' => "DISABLED",
 				'maxRequestsCrawlers_action' => "throttle",
-				'maxRequestsHumans' => "120",
+				'maxRequestsHumans' => "DISABLED",
 				'maxRequestsHumans_action' => "throttle",
-				'max404Crawlers' => "240",
+				'max404Crawlers' => "DISABLED",
 				'max404Crawlers_action' => "throttle",
-				'max404Humans' => "30",
+				'max404Humans' => "DISABLED",
 				'max404Humans_action' => "throttle",
-				'maxScanHits' => "15",
+				'maxScanHits' => "DISABLED",
 				'maxScanHits_action' => "throttle",
-				'blockedTime' => "7200"
+				'blockedTime' => "300"
 			)
 		),
 		array( //level 3
@@ -248,14 +248,14 @@ class wfConfig {
 				'maxRequestsCrawlers' => "960",
 				'maxRequestsCrawlers_action' => "throttle",
 				'maxRequestsHumans' => "60",
-				'maxRequestsHumans_action' => "block",
+				'maxRequestsHumans_action' => "throttle",
 				'max404Crawlers' => "60",
-				'max404Crawlers_action' => "block",
-				'max404Humans' => "30",
-				'max404Humans_action' => "block",
-				'maxScanHits' => "10",
-				'maxScanHits_action' => "block",
-				'blockedTime' => "86400"
+				'max404Crawlers_action' => "throttle",
+				'max404Humans' => "60",
+				'max404Humans_action' => "throttle",
+				'maxScanHits' => "30",
+				'maxScanHits_action' => "throttle",
+				'blockedTime' => "1800"
 			)
 		),
 		array( //level 4
@@ -312,13 +312,13 @@ class wfConfig {
 				'maxRequestsCrawlers_action' => "throttle",
 				'maxRequestsHumans' => "30",
 				'maxRequestsHumans_action' => "block",
-				'max404Crawlers' => "10",
+				'max404Crawlers' => "30",
 				'max404Crawlers_action' => "block",
-				'max404Humans' => "5",
+				'max404Humans' => "60",
 				'max404Humans_action' => "block",
-				'maxScanHits' => "2",
+				'maxScanHits' => "10",
 				'maxScanHits_action' => "block",
-				'blockedTime' => "86400"
+				'blockedTime' => "7200"
 			)
 		)
 	);

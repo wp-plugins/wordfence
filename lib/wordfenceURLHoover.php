@@ -121,10 +121,6 @@ class wordfenceURLHoover {
 			$this->dbg("Checking " . sizeof($allHostKeys) . " hostkeys");
 			$resp = $this->api->binCall('check_host_keys', implode('', $allHostKeys));
 			$this->dbg("Done hostkey check");
-			if($this->api->errorMsg){
-				$this->errorMsg = $this->api->errorMsg;
-				return false;
-			}
 
 			$badHostKeys = array();
 			if($resp['code'] == 200){
@@ -170,10 +166,6 @@ class wordfenceURLHoover {
 					$this->dbg("Checking " . sizeof($urlsToCheck) . " URLs");
 					$badURLs = $this->api->call('check_bad_urls', array(), array( 'toCheck' => json_encode($urlsToCheck)) );
 					$this->dbg("Done URL check");
-					if($this->api->errorMsg){
-						$this->errorMsg = $this->api->errorMsg;
-						return false;
-					}
 					if(is_array($badURLs) && sizeof($badURLs) > 0){
 						$finalResults = array();
 						foreach($badURLs as $file => $badSiteList){

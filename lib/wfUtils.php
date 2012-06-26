@@ -308,35 +308,40 @@ class wfUtils {
 		}
 		if(sizeof($toResolve) > 0){
 			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version); 
-			$freshIPs = $api->call('resolve_ips', array(), array(
-				'ips' => implode(',', $toResolve)
-				));
-			if(is_array($freshIPs)){
-				foreach($freshIPs as $IP => $value){
-					if($value == 'failed'){
-						$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
-						$IPLocs[$IP] = false;
-					} else {
-						$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
-							($isInt ? $IP : self::inet_aton($IP)),
-							$value[3], //city
-							$value[2], //region
-							$value[1], //countryName
-							$value[0],//countryCode
-							$value[4],//lat
-							$value[5]//lon
-							);
-						$IPLocs[$IP] = array(
-							'IP' => $IP,
-							'city' => $value[3],
-							'region' => $value[2],
-							'countryName' => $value[1],
-							'countryCode' => $value[0],
-							'lat' => $value[4],
-							'lon' => $value[5]
-							);
+			try {
+				$freshIPs = $api->call('resolve_ips', array(), array(
+					'ips' => implode(',', $toResolve)
+					));
+				if(is_array($freshIPs)){
+					foreach($freshIPs as $IP => $value){
+						if($value == 'failed'){
+							$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
+							$IPLocs[$IP] = false;
+						} else {
+							$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
+								($isInt ? $IP : self::inet_aton($IP)),
+								$value[3], //city
+								$value[2], //region
+								$value[1], //countryName
+								$value[0],//countryCode
+								$value[4],//lat
+								$value[5]//lon
+								);
+							$IPLocs[$IP] = array(
+								'IP' => $IP,
+								'city' => $value[3],
+								'region' => $value[2],
+								'countryName' => $value[1],
+								'countryCode' => $value[0],
+								'lat' => $value[4],
+								'lon' => $value[5]
+								);
+						}
 					}
 				}
+			} catch(Exception $e){
+				wordfence::status(2, 'error', "Call to Wordfence API to resolve IPs failed: " . $e->getMessage());
+				return array();
 			}
 		}
 		return $IPLocs;

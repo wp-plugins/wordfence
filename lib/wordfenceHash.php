@@ -22,7 +22,7 @@ class wordfenceHash {
 	private $lastStatusTime = false;
 	public function __sleep(){ //same order as above
 		if(sizeof($this->fileQ) > 0){
-			wordfence::status(1, 'error', "Sanity fail. fileQ is not empty. Has: " . sizeof($this->fileQ));
+			throw new Exception("Sanity fail. fileQ is not empty. Has: " . sizeof($this->fileQ));
 		}
 		return array('whitespace', 'totalData', 'totalFiles', 'totalDirs', 'linesOfPHP', 'linesOfJCH', 'striplen', 'hashPacket', 'hashStorageID', 'hashingStartTime', 'lastStatusTime');
 	}
@@ -47,7 +47,7 @@ class wordfenceHash {
 			$path .= '/';
 		}
 		if(! is_readable($path)){
-			wordfence::status(1, 'error', "Could not read directory $path to do scan.");
+			throw new Exception("Could not read directory $path to do scan.");
 			exit();
 		}
 		$files = scandir($path);
@@ -127,11 +127,15 @@ class wordfenceHash {
 	}
 	private function writeFileQueue(){
 		$sql = "insert into " . $this->table . " (filename) values ";
+		$added = false;
 		foreach($this->fileQ as $val){
+			$added = true;
 			$sql .= "('" . mysql_real_escape_string($val) . "'),";
 		}
-		$sql = rtrim($sql, ',');
-		$this->db->query($sql);
+		if($added){
+			$sql = rtrim($sql, ',');
+			$this->db->query($sql);
+		}
 		$this->fileQ = array();
 	}
 	private function processFile($file){
@@ -176,23 +180,19 @@ class wordfenceHash {
 		}
 		if($this->hashStorageID){
 			$dataArr = $this->api->binCall('add_hash_chunk', "WFID:" . pack('N', $this->hashStorageID) . $this->hashPacket);
-			if($this->api->errorMsg){ wordfence::status(1, 'error', $this->api->errorMsg); exit(); }
 			$this->hashPacket = "";
 			if(is_array($dataArr) && isset($dataArr['data']) && $dataArr['data'] == $this->hashStorageID){
 				//keep going
 			} else {
-				wordfence::status(1, 'error', "Could not store an additional chunk of hash data on Wordfence servers with ID: " . $this->hashStorageID);
-				return false;
+				throw new Exception("Could not store an additional chunk of hash data on Wordfence servers with ID: " . $this->hashStorageID);
 			}
 		} else {
 			$dataArr = $this->api->binCall('add_hash_chunk', "WFST:" . $this->hashPacket);
-			if($this->api->errorMsg){ wordfence::status(1, 'error', $this->api->errorMsg); exit(); }
 			$this->hashPacket = "";
 			if(is_array($dataArr) && isset($dataArr['data']) && preg_match('/^\d+$/', $dataArr['data'])){
 				$this->hashStorageID = $dataArr['data'];
 			} else {
-				wordfence::status(1, 'error', "Could not store hash data on Wordfence servers. Got response: " . var_export($dataArr, true));
-				return false;
+				throw new Exception("Could not store hash data on Wordfence servers. Got response: " . var_export($dataArr, true));
 			}
 		}
 	}
