@@ -1140,7 +1140,6 @@ class wordfence {
 	public static function noKeyError(){
 		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence is not configured correctly.</strong> Go to your plugins menu and disable and re-enable Wordfence and this should fix the problem.</p></div>';
 	}
-
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
 		if(! wfConfig::get('alertEmails')){

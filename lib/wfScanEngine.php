@@ -160,6 +160,9 @@ class wfScanEngine {
 		}
 		if((! $this->i->summaryUpdateRequired()) && (! ($this->coreScanEnabled || $this->pluginScanEnabled || $this->themeScanEnabled || $this->malwareScanEnabled))){
 			$this->status(2, 'info', "Finishing this stage because we don't have to do a summary update and we don't need to do a core, plugin, theme or malware scan.");
+			//Remove main and finish routines because they rely on $this->hasher being created
+			array_shift($this->jobList);
+			array_shift($this->jobList);
 			return array();
 		}
 		//CORE SCAN
