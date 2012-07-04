@@ -1,4 +1,5 @@
 <?php 
+define('WORDFENCE_VERSIONONLY_MODE', true); //So that we can include wordfence.php and get the version constant
 ignore_user_abort(true);
 if ( !defined('ABSPATH') ) {
 	/** Set up WordPress environment */
@@ -15,6 +16,7 @@ if ( !defined('ABSPATH') ) {
 	}
 
 }
+require_once('wordfence.php');
 require_once('lib/wfUtils.php');
 require_once('lib/wfDB.php');
 function wfVisitor(){
