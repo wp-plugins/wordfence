@@ -62,7 +62,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>List of comma separated usernames to ignore:</th><td><input type="text" name="liveTraf_ignoreUsers" id="liveTraf_ignoreUsers" value="<?php echo $w->getHTML('liveTraf_ignoreUsers'); ?>" /></td></tr>
 	<tr><th>List of comma separated IP addresses to ignore:</th><td><input type="text" name="liveTraf_ignoreIPs" id="liveTraf_ignoreIPs" value="<?php echo $w->getHTML('liveTraf_ignoreIPs'); ?>" /></td></tr>
 	<tr><th>Browser user-agent to ignore:</th><td><input type="text" name="liveTraf_ignoreUA" id="liveTraf_ignoreUA" value="<?php echo $w->getHTML('liveTraf_ignoreUA'); ?>" /></td></tr>
-	<tr><th>Limit size of hits table to</th><td><input type="text" name="liveTraf_hitsMaxSize" class="wfConfigElem" name="liveTraf_hitsMaxSize" value="<?php $w->f('liveTraf_hitsMaxSize'); ?>" size="6" />Megabytes</td></tr>
 	<tr><td colspan="2"><h3 class="wfConfigHeading">Scans to include</h3></td></tr>
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> /></td></tr>
 	<tr><th>Scan core files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_core" class="wfConfigElem" name="scansEnabled_core" value="1" <?php $w->cb('scansEnabled_core'); ?>/></td></tr>

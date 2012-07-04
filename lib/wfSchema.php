@@ -52,7 +52,6 @@ class wfSchema {
 	URL text,
 	referer text,
 	UA text,
-	HTTPHeaders text,
 	KEY k1(ctime),
 	KEY k2(IP, ctime)
 ) default charset=latin1",

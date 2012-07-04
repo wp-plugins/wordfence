@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.1
-Stable tag: 3.0.4
+Stable tag: 3.0.5
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,15 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.0.5 =
+* Fixed "The key used to start a scan has expired." error and added data to help diagnose future issues like this.
+* Removed HTTPHeaders from wfHits table which was using a lot of disk space and not used much.
+* Removed limiting wfHits table size because it was unreliable.
+* We're now limiting wfHits to 20,000 rows and the rows are much smaller. About 2 to 8 megs.
+* Fixed bug that could have caused install routine to run repeatedly.
+* Fixed typo bug in blocking code that didn't have any impact but was sloppy.
+* Changed wfscan.php message when accessed directly to be more helpful.
+
 = 3.0.4 =
 * Detects if the Wordfence app (not scanner) is short on memory and requests more
 * Fixes an issue where scan breaks if all scanning options are disabled

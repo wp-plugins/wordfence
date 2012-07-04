@@ -155,6 +155,22 @@ class wfDB {
 		error_log($msg);
 		return;
 	}
+	public function columnExists($table, $col){
+		global $wpdb; $prefix = $wpdb->base_prefix;
+		$table = $prefix . $table;
+		$q = $this->query("desc $table");
+		while($row = mysql_fetch_assoc($q)){
+			if($row['Field'] == $col){
+				return true;
+			}
+		}
+		return false;
+	}
+	public function dropColumn($table, $col){
+		global $wpdb; $prefix = $wpdb->base_prefix;
+		$table = $prefix . $table;
+		$this->query("alter table $table drop column $col");
+	}
 	public function createKeyIfNotExists($table, $col, $keyName){
 		global $wpdb; $prefix = $wpdb->base_prefix;
 		$table = $prefix . $table;

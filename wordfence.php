@@ -4,10 +4,10 @@ Plugin Name: Wordfence Security
 Plugin URI: http://wordfence.com/
 Description: Wordfence Security - Anti-virus and Firewall security plugin for WordPress 
 Author: Mark Maunder
-Version: 3.0.4
+Version: 3.0.5
 Author URI: http://wordfence.com/
 */
-define('WORDFENCE_VERSION', '3.0.4');
+define('WORDFENCE_VERSION', '3.0.5');
 if(! defined('WORDFENCE_VERSIONONLY_MODE')){
 	if((int) @ini_get('memory_limit') < 64){
 		@ini_set('memory_limit', '64M'); //Some hosts have ini set at as little as 32 megs. 64 is the min sane amount of memory.

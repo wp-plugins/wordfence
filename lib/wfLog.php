@@ -280,7 +280,7 @@ class wfLog {
 				$headers[$matches[1]] = $v;
 			}
 		}
-		$this->getDB()->query("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA, HTTPHeaders) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s', '%s')", 
+		$this->getDB()->query("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s')", 
 			sprintf('%.6f', microtime(true)),
 			(is_404() ? 1 : 0),
 			(wfCrawl::isGoogleCrawler() ? 1 : 0),
@@ -289,8 +289,7 @@ class wfLog {
 			(wordfence::$newVisit ? 1 : 0),
 			wfUtils::getRequestedURL(),
 			(isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : ''),
-			(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''),
-			serialize($headers)
+			(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '')
 			);
 		return $this->getDB()->querySingle("select last_insert_id()");
 	}
@@ -345,9 +344,6 @@ class wfLog {
 		$browscap = new wfBrowscap();
 		foreach($results as &$res){ 
 			$res['type'] = $type;
-			if(isset($res['HTTPHeaders'])){
-				$res['HTTPHeaders'] = unserialize($res['HTTPHeaders']);
-			}
 			$res['timeAgo'] = wfUtils::makeTimeAgo($serverTime - $res['ctime']);
 			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", $res['IP'], wfConfig::get('blockedTime'));
 			$res['IP'] = wfUtils::inet_ntoa($res['IP']); 
@@ -476,10 +472,8 @@ class wfLog {
 	public function firewallBadIPs(){
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
 		if($rec = $this->getDB()->querySingleRec("select (blockedTime + %s) - unix_timestamp() as secsToGo, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR blockedTime + %s > unix_timestamp())", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
-			$secsToGo = $rec['secsToGo'];
-			$reason = $rec[1];
 			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP); 
-			$this->do503($secsToGo, $rec['reason']); 
+			$this->do503($rec['secsToGo'], $rec['reason']); 
 		}
 	}
 	private function takeBlockingAction($configVar, $reason){

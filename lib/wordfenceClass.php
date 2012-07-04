@@ -116,25 +116,10 @@ class wordfence {
 		$wfdb->query("delete from $p"."wfBlocks where blockedTime + %s < unix_timestamp() and permanent=0", wfConfig::get('blockedTime'));
 		$wfdb->query("delete from $p"."wfCrawlers where lastUpdate < unix_timestamp() - (86400 * 7)");
 
-		if(wfConfig::get('liveTraf_hitsMaxSize') && wfConfig::get('liveTraf_hitsMaxSize') > 0){
-			$gotTableSize = false;
-			$tableSizeQ = $wfdb->query("show table status like '$p"."wfHits'");
-			if($tableSizeQ){
-				$tableSizeRec = mysql_fetch_assoc($tableSizeQ);
-				if($tableSizeRec && isset($tableSizeRec['Data_length']) && $tableSizeRec['Data_length'] > 0){
-					$gotTableSize = true;
-					if($tableSizeRec['Data_length'] > (wfConfig::get('liveTraf_hitsMaxSize') * 1024 * 1024) ){ //convert to bytes
-						$count = $wfdb->querySingle("select count(*) as cnt from $p"."wfHits");
-						$wfdb->query("delete from $p"."wfHits order by id asc limit %d", floor($count / 10)); //Delete 10% of rows. If we're still bigger than max, then next delete will reduce by further 10% and so on.
-					}
-				}
-			} else {
-				error_log("Wordfence could not get wfHits table data size for cleanup. Query returned false.");
-			}
+		$count = $wfdb->querySingle("select count(*) as cnt from $p"."wfHits");
+		if($count > 20000){
+			$wfdb->query("delete from $p"."wfHits order by id asc limit " . ($count - 20000));
 		}
-				
-
-
 		$maxRows = 1000; //affects stuff further down too
 		foreach(array('wfLeechers', 'wfScanners') as $table){
 			//This is time based per IP so shouldn't get too big
@@ -167,6 +152,7 @@ class wordfence {
 
 	}
 	public static function runInstall(){
+		update_option('wordfence_version', WORDFENCE_VERSION); //In case we have a fatal error we don't want to keep running install.
 		//EVERYTHING HERE MUST BE IDEMPOTENT
 		$schema = new wfSchema();
 		$schema->createAll(); //if not exists
@@ -192,6 +178,16 @@ class wordfence {
 		wp_schedule_event(time(), 'hourly', 'wordfence_hourly_cron');
 		$db = new wfDB();
 
+		if($db->columnExists('wfHits', 'HTTPHeaders')){ //Upgrade from 3.0.4
+			global $wpdb;
+			$prefix = $wpdb->base_prefix;
+			$count = $db->querySingle("select count(*) as cnt from $prefix"."wfHits");
+			if($count > 20000){
+				$db->query("delete from $prefix"."wfHits order by id asc limit " . ($count - 20000));
+			}
+			$db->dropColumn('wfHits', 'HTTPHeaders');
+		}
+
 		//Upgrading from 1.5.6 or earlier needs:
 		$db->createKeyIfNotExists('wfStatus', 'level', 'k2');
 		if(wfConfig::get('isPaid') == 'free'){
@@ -214,7 +210,6 @@ class wordfence {
 		$db->queryIgnoreError("alter table $prefix"."wfStatus modify column msg varchar(1000) NOT NULL");
 
 		//Must be the final line
-		update_option('wordfence_version', WORDFENCE_VERSION);
 	}
 	public static function install_actions(){
 		$versionInOptions = get_option('wordfence_version', false);
@@ -240,9 +235,7 @@ class wordfence {
 		add_action('wp_logout','wordfence::logoutAction');
 		add_action('profile_update', 'wordfence::profileUpdateAction', '99', 2);
 		add_action('lostpassword_post', 'wordfence::lostPasswordPost', '1');
-		/* For testing cron jobs
-			add_filter('cron_schedules', 'wordfence::moreCronReccurences'); 
-		*/
+		//add_filter('cron_schedules', 'wordfence::moreCronReccurences'); 
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
 		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
@@ -1342,10 +1335,10 @@ class wordfence {
 		}
 		return self::$debugOn;
 	}
-	/* For testing cron jobs
+	/*
 	public static function moreCronReccurences(){
 		return array(
-			Feveryminute' => array('interval' => 60, 'display' => 'Once Every Minute'),
+			'everyminute' => array('interval' => 60, 'display' => 'Once Every Minute'),
 		);
 	}
 	*/

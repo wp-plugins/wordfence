@@ -47,7 +47,9 @@ class wfScan {
 			wordfence::status(4, 'info', "Scan engine received request.");
 			wordfence::status(4, 'info', "Checking cronkey header");
 			if(! $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 
-				self::errorExit("The Wordfence scanner did not receive the x_wordfence_cronkey secure header.");
+				wordfence::status(2, 'error', "Wordfence wfscan.php accessed directly, or WF did not receive the secure HTTP header.");
+				echo "If you see this message it means Wordfence is working correctly. You should not access this URL directly. It is part of the Wordfence security plugin and is designed for internal use only.";
+				exit();
 			}
 			wordfence::status(4, 'info', "Fetching stored cronkey for comparison.");
 			$currentCronKey = wfConfig::get('currentCronKey', false);
@@ -57,8 +59,8 @@ class wfScan {
 
 			wordfence::status(4, 'info', "Exploding stored cronkey"); 
 			$savedKey = explode(',',$currentCronKey);
-			if(time() - $savedKey[0] > 60){ 
-				self::errorExit("The key used to start a scan has expired.");
+			if(time() - $savedKey[0] > 86400){ 
+				self::errorExit("The key used to start a scan expired. The value is: " . $savedKey[0] . " and split is: " . $currentCronKey . " and time is: " . time());
 			} //keys only last 60 seconds and are used within milliseconds of creation
 			wordfence::status(4, 'info', "Checking saved cronkey against cronkey header");
 			if($savedKey[1] != $_SERVER['HTTP_X_WORDFENCE_CRONKEY']){ 

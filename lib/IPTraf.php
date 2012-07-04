@@ -22,14 +22,6 @@
 	<?php echo $v['loc']['countryName']; ?>
 	</td></tr>
 <?php } ?>
-<tr><th>HTTP Headers:</th><td>
-	<table border="0" class="HTTP">
-	<?php foreach($v['HTTPHeaders'] as $key => $val){
-		echo "<tr><th class=\"HTTP\">$key</th><td class=\"HTTP\">"."$val</td></tr>";
-	}
-	?>
-	</table>
-	</td></tr>
 <tr><td colspan="2"><hr></td></tr>
 <?php } ?>
 
