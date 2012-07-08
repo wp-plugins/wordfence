@@ -139,16 +139,15 @@ class wordfenceHash {
 		$this->fileQ = array();
 	}
 	private function processFile($file){
-		if(@filesize($file) > WORDFENCE_MAX_FILE_SIZE_TO_PROCESS){
-			wordfence::status(2, 'info', "Skipping file larger than 50 megs: $file");
+		if(wfUtils::fileTooBig($file)){
+			wordfence::status(4, 'info', "Skipping file larger than max size: $file");
 			return;
 		}
-
 		if(function_exists('memory_get_usage')){
                        wordfence::status(4, 'info', "Scanning: $file (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
-               } else {
+		} else {
                        wordfence::status(4, 'info', "Scanning: $file");
-               }
+		}
 		$wfHash = $this->wfHash($file); 
 		if($wfHash){
 			$packetFile = substr($file, $this->striplen);
@@ -165,7 +164,7 @@ class wordfenceHash {
 				$this->linesOfPHP += sizeof(file($file));
 			}
 			$this->totalFiles++;
-			$this->totalData += filesize($file);
+			$this->totalData += filesize($file); //We already checked if file overflows int in the fileTooBig routine above
 			if(microtime(true) - $this->lastStatusTime > 1){
 				$this->writeHashingStatus();
 			}

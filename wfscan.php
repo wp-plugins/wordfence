@@ -73,6 +73,7 @@ class wfScan {
 		ini_set('max_execution_time', 1800); //30 mins
 		wordfence::status(4, 'info', "Becoming admin for scan");
 		self::becomeAdmin();
+		wordfence::status(4, 'info', "Done become admin");
 
 		$isFork = ($_GET['isFork'] == '1' ? true : false);
 
@@ -153,10 +154,14 @@ class wfScan {
 		exit();	
 	}
 	public static function becomeAdmin(){
+		wordfence::status('4', 'info', "Starting become admin");
 		global $wpdb;
+		wordfence::status('4', 'info', "About to query");
 		$ws = $wpdb->get_results("SELECT ID, user_login FROM $wpdb->users");
+		wordfence::status('4', 'info', "Done query");
 		$users = array();
 		foreach($ws as $user){
+			wordfence::status('4', 'info', "Processing user");
 			$userDat = get_userdata($user->ID);
 			array_push($users, array(
 				'id' => $user->ID,
@@ -164,8 +169,11 @@ class wfScan {
 				'level' => $userDat->user_level
 				));
 		}
+		wordfence::status('4', 'info', "Done users and about to sort");
 		usort($users, 'wfScan::usort');
+		wordfence::status('4', 'info', "Done sort and setting user");
 		wp_set_current_user($users[0]['id'], $users[0]['user_login']);
+		wordfence::status('4', 'info', "Done setting user");
 	}
 	public static function usort($b, $a){
 		if($a['level'] == $b['level']){ return 0; }

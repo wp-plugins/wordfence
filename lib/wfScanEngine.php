@@ -177,7 +177,7 @@ class wfScanEngine {
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
 			if($scanOutside){
 				$includeInScan[] = $file;
-			} else if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && filesize($fullFile) < 1000000) ){
+			} else if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && (! wfUtils::fileTooBig($fullFile)) ) ){
 				$includeInScan[] = $file;
 			}
 		}
@@ -621,6 +621,33 @@ class wfScanEngine {
 		$this->status(2, 'info', "Completed checking password strength of user '" . $userDat->user_login . "'");
 		return $haveIssue;
 	}
+	/*
+	private function scan_sitePages(){
+		if(is_multisite()){ return; } //Multisite not supported by this function yet
+		$this->statusIDX['sitePages'] = wordfence::statusStart("Scanning externally for malware");
+		$resp = wp_remote_get(site_url());
+		if(is_array($resp) && isset($resp['body']) && strlen($rep['body']) > 0){
+			$this->hoover = new wordfenceURLHoover($this->apiKey, $this->wp_version);
+			$this->hoover->hoover(1, $rep['body']);
+			$hooverResults = $this->hoover->getBaddies();
+			if($this->hoover->errorMsg){
+				wordfence::statusEndErr();
+				throw new Exception($this->hoover->errorMsg);
+			}
+			$badURLs = array();
+			foreach($hooverResults as $idString => $hresults){
+				foreach($hresults as $result){
+					if(! in_array($result['URL'], $badURLs)){
+						$badURLs[] = $result['URL'];
+					}
+				}
+			}
+			if(sizeof($badURLs) > 0){
+				$this->addIssue('badSitePage', 1, 'badSitePage1', 'badSitePage1', "Your home page contains a malware URL");
+			}
+		}
+	}
+	*/
 	private function scan_diskSpace(){
 		$this->statusIDX['diskSpace'] = wordfence::statusStart("Scanning to check available disk space");
 		wfUtils::errorsOff();

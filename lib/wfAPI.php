@@ -46,7 +46,7 @@ class wfAPI {
 			$this->curlContent = "";
 			$curl = curl_init($url);
 			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
-			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . WORDFENCE_VERSION);
+			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt ($curl, CURLOPT_HEADER, 0);
 			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);

@@ -354,7 +354,7 @@ class wfUtils {
 		$host = $db->querySingle("select host from " . $reverseTable . " where IP=%s and unix_timestamp() - lastUpdate < %d", $IPn, WORDFENCE_REVERSE_LOOKUP_CACHE_TIME);
 		if(! $host){
 			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
-			$host = dns_get_record($ptr, DNS_PTR);
+			$host = @dns_get_record($ptr, DNS_PTR);
 			if($host == null){
 				$host = 'NONE';
 			} else {
@@ -379,6 +379,32 @@ class wfUtils {
 		@error_reporting(self::$lastErrorReporting);
 		@ini_set('display_errors', self::$lastDisplayErrors);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
+	}
+	public static function fileTooBig($file){
+		$fh = @fopen($file, 'r');
+		if(! $fh){ return false; }
+		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1; 
+		$tooBig = false;
+		if(fseek($fh, $offset, SEEK_SET) === 0){
+			if(strlen(fread($fh, 1)) === 1){
+				$tooBig = true;
+			}
+		} //Otherwise we couldn't seek there so it must be smaller
+		fclose($fh);
+		return $tooBig;
+	}
+	public static function fileOver2Gigs($file){
+		$fh = @fopen($file, 'r');
+		if(! $fh){ return false; }
+		$offset = 2147483647; 
+		$tooBig = false;
+		if(fseek($fh, $offset, SEEK_SET) === 0){
+			if(strlen(fread($fh, 1)) === 1){
+				$tooBig = true;
+			}
+		} //Otherwise we couldn't seek there so it must be smaller
+		fclose($fh);
+		return $tooBig;
 	}
 }
 

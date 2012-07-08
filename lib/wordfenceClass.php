@@ -818,14 +818,12 @@ class wordfence {
 		if(strpos($localFile, ABSPATH) !== 0){
 			return array('errorMsg' => "An invalid file was requested for deletion.");
 		}
-		$filesize = filesize($localFile);
 		if(@unlink($localFile)){
 			$wfIssues->updateIssue($issueID, 'delete');
 			return array(
 				'ok' => 1,
 				'localFile' => $localFile,
-				'file' => $file,
-				'filesize' => $filesize
+				'file' => $file
 				);
 		} else {
 			$err = error_get_last();
@@ -1037,7 +1035,7 @@ class wordfence {
 		$cont = @file_get_contents($localFile);
 		$isEmpty = false;
 		if(! $cont){
-			if(file_exists($localFile) && filesize($localFile) === 0){
+			if(file_exists($localFile) && filesize($localFile) === 0){ //There's a remote possibility that very large files on 32 bit systems will return 0 here, but it's about 1 in 2 billion
 				$isEmpty = true;
 			} else {
 				$err = error_get_last();
@@ -1047,8 +1045,12 @@ class wordfence {
 		}
 		$fileMTime = @filemtime($localFile);
 		$fileMTime = date('l jS \of F Y h:i:s A', $fileMTime);
-		$fileSize = @filesize($localFile);
-		$fileSize = number_format($fileSize, 0, '', ',') . ' bytes';
+		if(wfUtils::fileOver2Gigs($localFile)){ 
+			$fileSize = "Greater than 2 Gigs";
+		} else {
+			$fileSize = @filesize($localFile); //Checked if over 2 gigs above
+			$fileSize = number_format($fileSize, 0, '', ',') . ' bytes';
+		}
 
 		require 'wfViewResult.php';
 		exit(0);

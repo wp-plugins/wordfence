@@ -503,7 +503,7 @@ window['wordfenceAdmin'] = {
 		var cb = false;
 		var self = this;
 		if(res.ok){
-			this.loadIssues(function(){ self.colorbox('400px', "Success deleting file", "The file " + res.file + " containing " + res.filesize + " bytes was successfully deleted."); });
+			this.loadIssues(function(){ self.colorbox('400px', "Success deleting file", "The file " + res.file + " was successfully deleted."); });
 		} else if(res.cerrorMsg){
 			this.loadIssues(function(){ self.colorbox('400px', 'An error occurred', res.cerrorMsg); });
 		}
