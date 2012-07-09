@@ -373,9 +373,8 @@ class wfConfig {
 	}
 	public static function set($key, $val){
 		if(is_array($val)){
-			$msg = "wfConfig::set() got an array as second param with key: $key - Please report this bug. Exiting.";
-			wfstatus(1, 'error', $msg);
-			error_log($msg);
+			$msg = "wfConfig::set() got an array as second param with key: $key and value: " . var_export($val, true);
+			wordfence::status(1, 'error', $msg);
 			return;
 		}
 

@@ -351,7 +351,7 @@ window['wordfenceAdmin'] = {
 		setTimeout(function(res){ 
 			clearInterval(scanReqAnimation); 
 			jQuery('#wfStartScanButton1,#wfStartScanButton2').prop('value', "Start a Wordfence Scan");
-			}, 2000);
+			}, 3000);
 		this.ajax('wordfence_scan', {}, function(res){ } );
 	},
 	loadIssues: function(callback){

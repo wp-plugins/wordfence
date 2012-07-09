@@ -9,6 +9,7 @@ require_once('wfUtils.php');
 class wfScanEngine {
 	private $api = false;
 	private $dictWords = array();
+	private $forkRequested = false;
 
 	//Beginning of serialized properties on sleep
 	private $hasher = false;
@@ -36,8 +37,10 @@ class wfScanEngine {
 			'theme' => false,
 			'unknown' => false
 			);
+	private $userPasswdQueue = "";
+	private $passwdHasIssues = false;
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
-		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX');
+		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
 	}
 	public function __construct(){
 		$this->startTime = time();
@@ -106,7 +109,11 @@ class wfScanEngine {
 			call_user_func(array($this, 'scan_' . $jobName));
 			array_shift($this->jobList); //only shift once we're done because we may pause halfway through a job and need to pick up where we left off
 			self::checkForKill();
-			$this->fork();
+			if($this->forkRequested){
+				$this->fork();
+			} else {
+				$this->forkIfNeeded();  
+			}
 		}
 		$summary = $this->i->getSummaryItems();
 		$this->status(1, 'info', '-------------------');
@@ -569,23 +576,50 @@ class wfScanEngine {
 		}
 		return false;
 	}
-	private function scan_passwds(){
+	private function scan_passwds_init(){
 		$this->statusIDX['passwds'] = wordfence::statusStart('Scanning for weak passwords');
 		global $wpdb;
-		$ws = $wpdb->get_results("SELECT ID, user_login FROM $wpdb->users");
-		$haveIssues = false;
-		foreach($ws as $user){
-			$this->status(2, 'info', "Checking password strength for: " . $user->user_login);
-			$isWeak = $this->scanUserPassword($user->ID);
-			if($isWeak){ $haveIssues = true; }
+		$wfdb = new wfDB();
+		$res1 = $wfdb->query("select ID from " . $wpdb->users);
+		$counter = 0;
+		while($rec = mysql_fetch_row($res1)){
+			$this->userPasswdQueue .= pack('N', $rec[0]);
+			$counter++;
 		}
-		wordfence::statusEnd($this->statusIDX['passwds'], $haveIssues);
+		wordfence::status(2, 'info', "Starting password strength check on $counter users.");
+	}
+	private function scan_passwds_main(){
+		global $wpdb;
+		$wfdb = new wfDB();
+		$haveIssues = false;
+		while(strlen($this->userPasswdQueue) > 3){
+			$usersLeft = strlen($this->userPasswdQueue) / 4; //4 byte ints
+			if($usersLeft % 100 == 0){
+				wordfence::status(2, 'info', "Total of $usersLeft users left to process in password strength check.");
+			}
+			$userID = unpack('N', substr($this->userPasswdQueue, 0, 4));
+			$userID = $userID[1];
+			$this->userPasswdQueue = substr($this->userPasswdQueue, 4);
+			$userLogin = $wfdb->querySingle("select user_login from $wpdb->users where ID=%s", $userID);
+			if(! $userLogin){
+				wordfence::status(2, 'error', "Could not get username for user with ID $userID when checking password strenght.");
+				continue;
+			}
+			wordfence::status(4, 'info', "Checking password strength for user $userLogin with ID $userID");
+			if($this->scanUserPassword($userID)){
+				$this->passwdHasIssues = true;
+			}
+			$this->forkIfNeeded();
+		}
+	}
+	private function scan_passwds_finish(){
+		wordfence::statusEnd($this->statusIDX['passwds'], $this->passwdHasIssues);
 	}
 	public function scanUserPassword($userID){
 		require_once( ABSPATH . 'wp-includes/class-phpass.php');
 		$passwdHasher = new PasswordHash(8, TRUE);
 		$userDat = get_userdata($userID);
-		$this->status(2, 'info', "Checking password strength of user '" . $userDat->user_login . "'");
+		$this->status(4, 'info', "Checking password strength of user '" . $userDat->user_login . "'");
 		$shortMsg = "";
 		$longMsg = "";
 		$level = 1;
@@ -618,7 +652,7 @@ class wfScanEngine {
 				break;
 			}
 		}
-		$this->status(2, 'info', "Completed checking password strength of user '" . $userDat->user_login . "'");
+		$this->status(4, 'info', "Completed checking password strength of user '" . $userDat->user_login . "'");
 		return $haveIssue;
 	}
 	/*
@@ -852,6 +886,68 @@ class wfScanEngine {
 			throw new Exception("Scan was killed on administrator request.");
 		}
 	}
+	private static function getOwnHostname(){
+		if(preg_match('/https?:\/\/([^\/]+)/i', site_url(), $matches)){
+			$host = $matches[1];
+		} else {
+			wordfence::status(2, 'error', "Warning: Could not extract hostname from site URL: " . site_url());
+			$host = site_url();
+		}
+		return $host;
+	}
+	private static function tryCronURL(){
+		if(! wfConfig::get('cronTestID')){
+			wfConfig::set('cronTestID', wfUtils::bigRandomHex());
+		}
+		$URL = wfConfig::get('cronURL');
+		$sendHeader = wfConfig::get('cronSendHeader');
+		$opts = array(
+			'timeout' => 30, //Long timeout here which is fine because it should return immediately if there are no delays.
+			'blocking' => true,
+			'sslverify' => false
+			);
+		if($sendHeader){ 
+			$host = self::getOwnHostname();
+			$opts['headers'] = array( 'Host' => $host); 
+		}
+		wordfence::status(4, 'info', "Starting HTTP connection to test if we can kick off a scan");
+		$result = wp_remote_post($URL . '?test=1', $opts);
+		wordfence::status(4, 'info', "Done test HTTP connection");
+		if( is_array($result) && isset($result['body']) && preg_match('/WFCRONTESTOK:' . wfConfig::get('cronTestID') . '/', $result['body'])){
+			return true;
+		}
+		return false;
+	}
+	private static function detectCronURL(){
+		$URL = wfConfig::get('cronURL');
+		if($URL){
+			if(self::tryCronURL()){
+				return true;
+			}
+		}
+
+		$host = self::getOwnHostname();
+		$URLS = array();
+		$URLS[] = array(false, plugins_url('wordfence/wfscan.php'));
+		$URLS[] = array(true, preg_replace('/^https?:\/\/[^\/]+/i', 'http://127.0.0.1', $URLS[0][1]));
+		$URLS[] = array(true, preg_replace('/^https?:\/\/[^\/]+/i', 'https://127.0.0.1', $URLS[0][1]));
+		$withHostInsecure = 'http://' . $host . '/wp-content/plugins/wordfence/wfscan.php';
+		$withHostSecure = 'https://' . $host . '/wp-content/plugins/wordfence/wfscan.php';
+		if($URLS[0][1] != $withHostInsecure){
+			$URLS[] = array(false, $withHostInsecure);
+		}
+		if($URLS[0][1] != $withHostSecure){
+			$URLS[] = array(false, $withHostSecure);
+		}
+		foreach($URLS as $elem){
+			wfConfig::set('cronSendHeader', $elem[0] ? 1 : 0);
+			wfConfig::set('cronURL', $elem[1]);
+			if(self::tryCronURL()){
+				return true;
+			}
+		}
+		return false;
+	}
 	public static function startScan($isFork = false){
 		if(! $isFork){ //beginning of scan
 			wfConfig::set('wfKillRequested', 0);
@@ -859,119 +955,35 @@ class wfScanEngine {
 			if(wfUtils::isScanRunning()){
 				return "A scan is already running. Use the kill link if you would like to terminate the current scan.";
 			}
+			if(! self::detectCronURL()){
+				return "We could not determine how this WordPress server connects to itself. You can try asking your WordPress host to edit their hosts file and add the hostname for this machine to the file. This machine's hostname is: " . self::getOwnHostname();
+			}
 		}
 
-		$cron_url = plugins_url('wordfence/wfscan.php?isFork=' . ($isFork ? '1' : '0'));
-		wordfence::status(4, 'info', "Cron URL is: " . $cron_url);
 		$cronKey = wfUtils::bigRandomHex();
-		wordfence::status(4, 'info', "cronKey is: " . $cronKey);
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
-		wordfence::status(4, 'info', "cronKey is set");
-		$result = wp_remote_post( $cron_url, array(
-			'timeout' => 0.5, 
-			'blocking' => true, 
-			'sslverify' => false,
-			'headers' => array(
-				'x-wordfence-cronkey' => $cronKey
-				)
-			) );
-		$procResp = self::processResponse($result);				
-		if($procResp){ return $procResp; }
-		//If the currentCronKey was eaten, then cron executed so return
-		wfConfig::clearCache(); if(! wfConfig::get('currentCronKey')){ 
-			wordfence::status(4, 'info', "cronkey is empty so cron executed. Returning.");
-			return false; 
+		$cronURL = wfConfig::get('cronURL') . '?isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+		wordfence::status(4, 'info', "Starting cron at URL $cronURL");
+		$headers = array();
+		if(wfConfig::get('cronSendHeader')){
+			$headers['Host'] = self::getOwnHostname();
 		}
-
-
-		//This request is for hosts that don't know their own name. i.e. they don't have example.com in their hosts file or DNS pointing to their own IP address or loopback address. So we throw a hail mary to loopback.
-		wordfence::status(4, 'info', "cronkey is still set so sleeping for 0.2 seconds and checking again before trying another approach");
-		usleep(200000);
-		wfConfig::clearCache();
-		if(wfConfig::get('currentCronKey')){ //cron key is still set, so cron hasn't executed yet. Maybe the request didn't go through
-			wordfence::status(4, 'info', "cronkey is still set so about to manually set host header and try again");
-			$cron_url2 = preg_replace('/^(https?):\/\/[^\/]+/', '$1://127.0.0.1', $cron_url);
-			wordfence::status(4, 'info', "cron url is: $cron_url2");
-			$siteURL = site_url();
-			wordfence::status(4, 'info', "siteURL is: $siteURL");
-			if(preg_match('/^https?:\/\/([^\/]+)/i', site_url(), $matches)){
-				$host = $matches[1];
-				wordfence::status(4, 'info', "Extracted host $host from siteURL and trying remote post with manual host header set.");
-				$result = wp_remote_post( $cron_url2, array(
-					'timeout' => 0.5, 
-					'blocking' => true, 
-					'sslverify' => false,
-					'headers' => array(
-						'x-wordfence-cronkey' => $cronKey,
-						'Host' => $host
-						)
-					) );
-				$procResp = self::processResponse($result);				
-				if($procResp){ return $procResp; }
-			}
+		wordfence::status(4, 'info', "Starting wp_remote_post");
+		if($isFork){
+			$timeout = 8; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
 		} else {
-			return false;
+			$timeout = 3; //3 seconds if we're kicking off the scan so that the Ajax call returns quickly and UI isn't too slow
 		}
-
-		//Try again with longer timeout. Dreamhost was giving DNS lookup timeouts
-		usleep(200000);
-		wfConfig::clearCache();
-		if(wfConfig::get('currentCronKey')){
-			wordfence::status(4, "info", "cronkey is still set. Trying hostname again with longer timeout.");
-			$result = wp_remote_post( $cron_url, array(
-				'timeout' => 10, 
-				'blocking' => true, 
-				'sslverify' => false,
-				'headers' => array(
-					'x-wordfence-cronkey' => $cronKey
-					)
-				) );
-			$procResp = self::processResponse($result);				
-			if($procResp){ return $procResp; }
-			//If the currentCronKey was eaten, then cron executed so return
-			wfConfig::clearCache(); if(! wfConfig::get('currentCronKey')){ 
-				wordfence::status(4, 'info', "cronkey is empty so cron executed. Returning.");
-				return false; 
-			}
-		}
-		return false;
+		$result = wp_remote_post( $cronURL, array(
+			'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
+			'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
+			'sslverify' => false,
+			'headers' => $headers 
+			) );
+		wordfence::status(4, 'info', "Scan process ended after forking.");
+		return false; //No error
 	}
 	public function processResponse($result){
-		if(is_wp_error($result)){
-			wordfence::status(4, 'info', "Debug output of WP_Error: " . implode('; ', $result->get_error_messages()) );
-		} else {
-			if(is_array($result)){
-				if(is_array($result['response'])){
-					wordfence::status(4, 'info', "POST response: " . $result['response']['code'] . ' ' . $result['response']['message']);
-				}
-				wordfence::status(4, 'info', "POST response body: " . $result['body']);
-			}
-		}
-		if((! is_wp_error($result)) && is_array($result) && empty($result['body']) === false){
-			if(strpos($result['body'], 'WFSOURCEVISIBLE') !== false){
-				wordfence::status(4, 'info', "wfscan.php source is visible.");
-				$msg = "Wordfence can't run because the source code of your WordPress plugin files is visible from the Internet. This is a serious security risk which you need to fix. Please look for .htaccess files in your WordPress root directory and your wp-content/ and wp-content/plugins/ directories that may contain malicious code designed to reveal your site source code to a hacker.";
-				$htfiles = array();
-				if(file_exists(ABSPATH . 'wp-content/.htaccess')){
-					array_push($htfiles, '<a href="' . wfUtils::getSiteBaseURL() . '?_wfsf=view&nonce=' . wp_create_nonce('wp-ajax') . '&file=wp-content/.htaccess" target="_blank">wp-content/.htaccess</a>');
-				}
-				if(file_exists(ABSPATH . 'wp-content/plugins/.htaccess')){
-					array_push($htfiles, '<a href="' . wfUtils::getSiteBaseURL() . '?_wfsf=view&nonce=' . wp_create_nonce('wp-ajax') . '&file=wp-content/plugins/.htaccess" target="_blank">wp-content/plugins/.htaccess</a>');
-				}
-				if(sizeof($htfiles) > 0){
-					$msg .= "<br /><br />Click to view the .htaccess files below that may be the cause of this problem:<br />" . implode('<br />', $htfiles);
-				}
-				return $msg;	
-					
-			} else if(strpos($result['body'], '{') !== false && strpos($result['body'], 'errorMsg') !== false){
-				wordfence::status(4, 'info', "Got response from cron containing json");
-				$resp = json_decode($result['body'], true);
-				if(empty($resp['errorMsg']) === false){
-					wordfence::status(4, 'info', "Got an error message from cron: " . $resp['errorMsg']);
-					return $resp['errorMsg'];
-				}
-			}
-		}
 		return false;
 	}
 }
