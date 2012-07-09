@@ -20,11 +20,12 @@ class wfSchema {
 	lastAttempt int UNSIGNED default 0,
 	blockedHits int UNSIGNED default 0,
 	wfsn tinyint UNSIGNED default 0,
+	permanent tinyint UNSIGNED default 0,
 	KEY k1(wfsn)
 ) default charset=utf8",
 "wfConfig" => "(
 	name varchar(100) PRIMARY KEY NOT NULL,
-	val text
+	val longblob
 ) default charset=utf8",
 "wfCrawlers" => "(
 	IP INT UNSIGNED NOT NULL,
@@ -51,7 +52,6 @@ class wfSchema {
 	URL text,
 	referer text,
 	UA text,
-	HTTPHeaders text,
 	KEY k1(ctime),
 	KEY k2(IP, ctime)
 ) default charset=latin1",
@@ -125,7 +125,7 @@ class wfSchema {
 	ctime DOUBLE(17,6) UNSIGNED NOT NULL,
 	level tinyint UNSIGNED NOT NULL,
 	type char(5) NOT NULL,
-	msg varchar(255) NOT NULL,
+	msg varchar(1000) NOT NULL,
 	KEY k1(ctime),
 	KEY k2(type)
 ) default charset=utf8",
@@ -142,6 +142,10 @@ class wfSchema {
 	path text,
 	hostKey binary(4),
 	KEY k2(hostKey)
+) default charset=utf8",
+'wfFileQueue' => "(
+	id int UNSIGNED NOT NULL auto_increment PRIMARY KEY,
+	filename text
 ) default charset=utf8"
 );
 	private $db = false;
@@ -156,9 +160,9 @@ class wfSchema {
 			$this->prefix = $wpdb->base_prefix;
 		}
 	}
-	public function dropAll($prefix){
+	public function dropAll(){
 		foreach($this->tables as $table => $def){
-			$this->db->query("drop table if exists " . $prefix . $table);
+			$this->db->query("drop table if exists " . $this->prefix . $table);
 		}
 	}
 	public function createAll(){
