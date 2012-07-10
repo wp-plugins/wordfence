@@ -151,7 +151,7 @@ class wfScan {
 	public static function becomeAdmin(){
 		$db = new wfDB();
 		global $wpdb;
-		$adminUserID = $db->querySingle("select user_id from " . $wpdb->usermeta . " where meta_key='wp_user_level' order by meta_value desc, user_id asc limit 1");
+		$adminUserID = $db->querySingle("select user_id from " . $wpdb->usermeta . " where meta_key='" . $wpdb->base_prefix . "user_level' order by meta_value desc, user_id asc limit 1");
 		if(! $adminUserID){
 			self::status(1, 'error', "Could not get the administrator's user ID. Scan can't continue.");
 			exit();
