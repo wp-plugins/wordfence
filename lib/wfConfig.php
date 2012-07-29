@@ -329,9 +329,6 @@ class wfConfig {
 			}
 		}
 		self::set('encKey', substr(wfUtils::bigRandomHex(),0 ,16) );
-		if(! self::get('isPaid', false)){
-			self::set('isPaid', 'free');
-		}
 		if(self::get('maxMem', false) === false ){
 			self::set('maxMem', '256');
 		}

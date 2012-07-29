@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.1
-Stable tag: 3.0.8
+Stable tag: 3.0.9
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,18 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.0.9 =
+* Fixed problem where scan process can't get admin ID.
+* Fixed issue that caused permanent IP's to not be permanent.
+* Fixed SQL error when calculating if IP block has expired.
+* Fixed incorrect calling of is_404 that caused intermittent issues.
+* Fixed basedir warnings when scan tries to scan files it does not have access to.
+* Fixed warning and incorrect calculation of rows in DB.
+* Added ability to get IP from "HTTP_X_REAL_IP" header of a front-end proxy is sending it.
+* Fixed warning about HTTPS element not existing in getRequestedURL()
+* Fixed problem with paid vs free keys getting confused.
+* Fixed error with fetching vulnerability patterns.
+
 = 3.0.8 =
 * Fixed bug that caused "Could not get the administrator’s user ID. Scan can’t continue."
 
@@ -451,6 +463,9 @@ or a theme, because often these have been updated to fix a security hole.
 * Initial public release of Wordfence.
 
 == Upgrade Notice ==
+= 3.0.9 =
+Upgrade immediately. Fixes two critical bugs: Could not get admin ID bug and permanent IP blocks not staying permanent. 
+
 = 3.0.6 =
 Upgrade immediately. Improves malware URL detection by 20% or more.
 

@@ -46,16 +46,6 @@ class wordfence {
 	public static function hourlyCron(){
 		global $wpdb; $p = $wpdb->base_prefix;
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-		try {
-			$patData = $api->call('get_known_vuln_pattern');
-			if(is_array($patData) && $patData['pat']){
-				if(@preg_match($patData['pat'], 'wordfence_test_vuln_match')){
-					wfConfig::set('vulnRegex', $pat);
-				}
-			}
-		} catch(Exception $e){
-			wordfence::status(2, 'error', "Could not fetch vulnerability patterns in hourly scheduled job: " . $e->getMessage());
-		}
 			
 		
 		if(wfConfig::get('other_WFNet')){
@@ -93,7 +83,7 @@ class wordfence {
 					if($resp['code'] == 200){
 						$len = strlen($resp['data']);
 						$reason = "WFSN: Blocked by Wordfence Security Network";
-						$wfdb->query("delete from $p"."wfBlocks where wfsn=1");
+						$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
 						if($len > 0 && $len % 4 == 0){
 							for($i = 0; $i < $len; $i += 4){
 								list($ipLong) = array_values(unpack('N', substr($resp['data'], $i, 4)));
@@ -111,9 +101,21 @@ class wordfence {
 	public static function dailyCron(){
 		$wfdb = new wfDB();
 		global $wpdb; $p = $wpdb->base_prefix;
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+		try {
+			$patData = $api->call('get_known_vuln_pattern');
+			if(is_array($patData) && $patData['pat']){
+				if(@preg_match($patData['pat'], 'wordfence_test_vuln_match')){
+					wfConfig::set('vulnRegex', $patData['pat']);
+				}
+			}
+		} catch(Exception $e){
+			wordfence::status(4, 'error', "Could not fetch vulnerability patterns in scheduled job: " . $e->getMessage());
+		}
+
 		$wfdb->query("delete from $p"."wfLocs where ctime < unix_timestamp() - %d", WORDFENCE_MAX_IPLOC_AGE); 
 		$wfdb->query("truncate table $p"."wfBadLeechers"); //only uses date that's less than 1 minute old
-		$wfdb->query("delete from $p"."wfBlocks where blockedTime + %s < unix_timestamp() and permanent=0", wfConfig::get('blockedTime'));
+		$wfdb->query("delete from $p"."wfBlocks where (blockedTime + %s < unix_timestamp()) and permanent=0", wfConfig::get('blockedTime'));
 		$wfdb->query("delete from $p"."wfCrawlers where lastUpdate < unix_timestamp() - (86400 * 7)");
 
 		$count = $wfdb->querySingle("select count(*) as cnt from $p"."wfHits");
@@ -376,6 +378,7 @@ class wordfence {
 				header('Location: ' . wp_login_url());
 				exit();
 			} else if($_GET['func'] == 'unlockAllIPs'){
+				wordfence::status(1, 'info', "Request received via unlock email link to unblock all IP's.");
 				$wfLog->unblockAllIPs();
 				$wfLog->unlockAllIPs();
 				header('Location: ' . wp_login_url());
@@ -383,6 +386,7 @@ class wordfence {
 			} else if($_GET['func'] == 'disableRules'){
 				wfConfig::set('firewallEnabled', 0);
 				wfConfig::set('loginSecurityEnabled', 0);
+				wordfence::status(1, 'info', "Request received via unlock email link to unblock all IP's via disabling firewall rules.");
 				$wfLog->unblockAllIPs();
 				$wfLog->unlockAllIPs();
 				header('Location: ' . wp_login_url());
@@ -619,7 +623,7 @@ class wordfence {
 				if($res['ok'] && isset($res['isPaid'])){
 					wfConfig::set('apiKey', $opts['apiKey']);
 					$reload = 'reload';
-					wfConfig::set('isPaid', $res['isPaid']);
+					wfConfig::set('isPaid', $res['isPaid']); //res['isPaid'] is boolean coming back as JSON and turned back into PHP struct. Assuming JSON to PHP handles bools.
 					if($res['isPaid']){
 						$paidKeyMsg = true;
 					}
@@ -640,7 +644,7 @@ class wordfence {
 			$wfdb = new wfDB();
 			global $wpdb;
 			$p = $wpdb->base_prefix;
-			$wfdb->query("delete from $p"."wfBlocks where wfsn=1");
+			$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
 		}
 		foreach($opts as $key => $val){
 			wfConfig::set($key, $val);
@@ -658,6 +662,7 @@ class wordfence {
 		$op = $_POST['op'];
 		$wfLog = self::getLog();
 		if($op == 'blocked'){
+			wordfence::status(1, 'info', "Ajax request received to unblock All IP's including permanent blocks.");	
 			$wfLog->unblockAllIPs();
 		} else if($op == 'locked'){
 			$wfLog->unlockAllIPs();
@@ -889,7 +894,7 @@ class wordfence {
 		$wfFunc = get_query_var('_wfsf');		
 		$wfLog = self::getLog();
 		if($wfLog->logHitOK()){
-			if(is_404() ){
+			if( (! empty($wfFunc)) && is_404() ){
 				$wfLog->logLeechAndBlock('404');
 			} else {
 				$wfLog->logLeechAndBlock('hit');
@@ -1084,6 +1089,8 @@ class wordfence {
 	}
 	public static function initAction(){
 		global $wp;
+		if (!is_object($wp)) return; //Suggested fix for compatability with "Portable phpmyadmin"
+
 		$wp->add_query_var('_wfsf');
 		//add_rewrite_rule('wfStaticFunc/([a-zA-Z0-9]+)/?$', 'index.php?wfStaticFunc=' . $matches[1], 'top');
 		$cookieName = 'wfvt_' . crc32(site_url());

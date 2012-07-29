@@ -161,14 +161,13 @@ class wfLog {
 		if($this->isWhitelisted($IP)){ return false; }
 		$wfsn = $wfsn ? 1 : 0;
 		$permanent = $permanent ? 1 : 0;
-		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
+		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
 			wfUtils::inet_aton($IP),
 			$reason,
 			$wfsn,
 			$permanent,
 			$reason,
-			$wfsn,
-			$permanent
+			$wfsn
 			);
 		return true;
 	}
@@ -266,7 +265,7 @@ class wfLog {
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
 			$elem['timeAgo'] = wfUtils::makeTimeAgo($this->getDB()->querySingle("select unix_timestamp() - (eMin * 60) from $table where IP=%s", $elem['IP']));
-			$elem['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", $elem['IP'], wfConfig::get('blockedTime'));
+			$elem['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and ((blockedTime + %s > unix_timestamp()) OR permanent = 1)", $elem['IP'], wfConfig::get('blockedTime'));
 			//take action
 			$elem['IP'] = wfUtils::inet_ntoa($elem['IP']);
 		}
@@ -345,7 +344,7 @@ class wfLog {
 		foreach($results as &$res){ 
 			$res['type'] = $type;
 			$res['timeAgo'] = wfUtils::makeTimeAgo($serverTime - $res['ctime']);
-			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", $res['IP'], wfConfig::get('blockedTime'));
+			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and (permanent = 1 OR (blockedTime + %s > unix_timestamp()))", $res['IP'], wfConfig::get('blockedTime'));
 			$res['IP'] = wfUtils::inet_ntoa($res['IP']); 
 			$res['extReferer'] = false;
 			if($res['referer']){
@@ -471,9 +470,11 @@ class wfLog {
 	}
 	public function firewallBadIPs(){
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
-		if($rec = $this->getDB()->querySingleRec("select (blockedTime + %s) - unix_timestamp() as secsToGo, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR blockedTime + %s > unix_timestamp())", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
-			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP); 
-			$this->do503($rec['secsToGo'], $rec['reason']); 
+		if($rec = $this->getDB()->querySingleRec("select blockedTime, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR (blockedTime + %s > unix_timestamp()))", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
+			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP);
+			$now = $this->getDB()->querySingle("select unix_timestamp()");
+			$secsToGo = ($rec['blockedTime'] + wfConfig::get('blockedTime')) - $now;
+			$this->do503($secsToGo, $rec['reason']); 
 		}
 	}
 	private function takeBlockingAction($configVar, $reason){

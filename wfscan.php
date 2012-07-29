@@ -151,10 +151,22 @@ class wfScan {
 	public static function becomeAdmin(){
 		$db = new wfDB();
 		global $wpdb;
-		$adminUserID = $db->querySingle("select user_id from " . $wpdb->usermeta . " where meta_key='" . $wpdb->base_prefix . "user_level' order by meta_value desc, user_id asc limit 1");
-		if(! $adminUserID){
-			self::status(1, 'error', "Could not get the administrator's user ID. Scan can't continue.");
-			exit();
+		$adminUserID = false;
+		if(is_multisite()){
+			$users = get_users('role=super&fields=ID');
+		} else {
+			$users = get_users('role=administrator&fields=ID');
+		}
+		if(sizeof($users) > 1){
+			sort($users, SORT_NUMERIC);
+			$adminUserID = $users[0];
+		} else {
+			//Last ditch attempt
+			$adminUserID = $db->querySingle("select user_id from " . $wpdb->usermeta . " where meta_key='" . $wpdb->base_prefix . "user_level' order by meta_value desc, user_id asc limit 1");
+			if(! $adminUserID){
+				self::status(1, 'error', "Could not get the administrator's user ID. Scan can't continue.");
+				exit();
+			}
 		}
 		$adminUsername = $db->querySingle("select user_nicename from " . $wpdb->users . " where ID=%d", $adminUserID);
 		self::status(4, 'info', "Scan will run as admin user '$adminUsername' with ID '$adminUserID'");

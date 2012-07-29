@@ -184,7 +184,7 @@ class wfScanEngine {
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
 			if($scanOutside){
 				$includeInScan[] = $file;
-			} else if(in_array($file, $baseWPStuff) || (is_file($fullFile) && is_readable($fullFile) && (! wfUtils::fileTooBig($fullFile)) ) ){
+			} else if(in_array($file, $baseWPStuff) || (@is_file($fullFile) && @is_readable($fullFile) && (! wfUtils::fileTooBig($fullFile)) ) ){
 				$includeInScan[] = $file;
 			}
 		}

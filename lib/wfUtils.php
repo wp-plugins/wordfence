@@ -78,12 +78,20 @@ class wfUtils {
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
 		}
+		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['HTTP_X_REAL_IP'])){
+			$IP = $_SERVER['HTTP_X_REAL_IP'];
+		}
 		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['REMOTE_ADDR'])){
 			$IP = $_SERVER['REMOTE_ADDR'];
 		}
 		if(preg_match('/,/', $IP)){
-			$parts = explode(',', $IP);
-			$IP = trim($parts[0]);
+			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
+			foreach($parts as $part){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+					$IP = trim($part);
+					break;
+				}
+			}
 		}
 		if(preg_match('/:\d+$/', $IP)){
 			$IP = preg_replace('/:\d+$/', '', $IP);
@@ -125,7 +133,7 @@ class wfUtils {
 		return false;
 	}
 	public static function getRequestedURL(){
-		return ($_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){

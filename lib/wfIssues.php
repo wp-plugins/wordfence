@@ -227,7 +227,9 @@ class wfIssues {
 		$totalRows = 0;
 		foreach($res1 as $table){
 			$res2 = $wpdb->get_col($wpdb->prepare("select count(*) from $table"));
-			$totalRows += $res2[0];
+			if(isset($res2[0]) ){
+				$totalRows += $res2[0];
+			}
 		}
 		$dat['totalRows'] = $totalRows;
 		$arr = wfConfig::get_ser('wf_summaryItems', array());
