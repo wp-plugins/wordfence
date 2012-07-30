@@ -694,18 +694,18 @@ class wfScanEngine {
 		}
 		$this->status(2, 'info', "Total disk space: " . sprintf('%.4f', ($total / 1024 / 1024 / 1024)) . "GB -- Free disk space: " . sprintf('%.4f', ($free / 1024 / 1024 / 1024)) . "GB");
 		$level = false;
-		$spaceLeft = sprintf('%.2f', ($free / $total * 100));
-		$this->status(2, 'info', "The disk has $spaceLeft percent space available");
-		if($spaceLeft < 1){
+		$freeMegs = sprintf('%.2f', $free / 1024 / 1024);
+		$this->status(2, 'info', "The disk has $freeMegs MB space available");
+		if($freeMegs < 5){
 			$level = 1;
-		} else if($spaceLeft < 1.5){
+		} else if($freeMegs < 20){
 			$level = 2;
 		} else {
 			wordfence::statusEnd($this->statusIDX['diskSpace'], false);
 			return;
 		}
-		if($this->addIssue('diskSpace', $level, 'diskSpace' . $level, 'diskSpace' . $level, "You have $spaceLeft" . "% disk space remaining", "You only have $spaceLeft" . "% of your disk space remaining. Please free up disk space or your website may stop serving requests.", array(
-			'spaceLeft' => $spaceLeft ))){
+		if($this->addIssue('diskSpace', $level, 'diskSpace' . $level, 'diskSpace' . $level, "You have $freeMegs" . "MB disk space remaining", "You only have $freeMegs" . " Megabytes of your disk space remaining. Please free up disk space or your website may stop serving requests.", array(
+			'spaceLeft' => $freeMegs . "MB" ))){
 			wordfence::statusEnd($this->statusIDX['diskSpace'], true);
 		} else {
 			wordfence::statusEnd($this->statusIDX['diskSpace'], false);

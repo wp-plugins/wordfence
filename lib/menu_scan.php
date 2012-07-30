@@ -233,7 +233,7 @@
 	<h2>${shortMsg}</h2>
 	<p>
 		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
-		<tr><th>Space remaining:</th><td>${data.spaceLeft}%</td></tr>
+		<tr><th>Space remaining:</th><td>${data.spaceLeft}</td></tr>
 		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
 		<tr><th>Status</th><td>
 			{{if status == 'new' }}New{{/if}}

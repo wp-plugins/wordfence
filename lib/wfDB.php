@@ -52,7 +52,8 @@ class wfDB {
 			}
 			$this->query("SET NAMES 'utf8'");
 			$this->queryIgnoreError("SET GLOBAL max_allowed_packet=256*1024*1024");
-			$this->queryIgnoreError("SET GLOBAL wait_timeout=28800");
+			//$this->queryIgnoreError("SET GLOBAL wait_timeout=28800");
+			$this->queryIgnoreError("SET @@wait_timeout=30800"); //Changing to session setting bc user may not have super privilege
 		}
 	}
 	public function querySingleRec(){

@@ -77,12 +77,15 @@ class wfUtils {
 		$IP = 0;
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
+			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
 		}
 		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['HTTP_X_REAL_IP'])){
 			$IP = $_SERVER['HTTP_X_REAL_IP'];
+			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
 		}
 		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['REMOTE_ADDR'])){
 			$IP = $_SERVER['REMOTE_ADDR'];
+			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
 		}
 		if(preg_match('/,/', $IP)){
 			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
