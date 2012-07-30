@@ -4,6 +4,8 @@
 	<div class="wordfenceWrap">
 		<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" id="wfStartScanButton1" class="wfStartScanButton button-primary" onclick="wordfenceAdmin.startScan();" />
 		<a target="_blank" href="http://www.wordfence.com/forums/">You can always get help on our support forum.</a>
+		<br />
+		&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.killScan(); return false;" style="font-size: 10px; color: #AAA;">Click here to kill a running scan.</a>
 		</div>
 		<div>
 			<div class="consoleHead">
@@ -43,7 +45,11 @@
 						foreach($events as $e){
 							if(strpos($e['msg'], 'SUM_') !== 0){
 								if( $debugOn || $e['level'] < 4){
-									echo '<div class="wfActivityLine wf' . $e['type'] . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+									$typeClass = '';
+									if($debugOn){
+										$typeClass = ' wf' . $e['type'];
+									}
+									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
 								}
 							}
 							$newestItem = $e['ctime'];
@@ -227,7 +233,7 @@
 	<h2>${shortMsg}</h2>
 	<p>
 		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
-		<tr><th>Space remaining:</th><td>${data.spaceLeft}%</td></tr>
+		<tr><th>Space remaining:</th><td>${data.spaceLeft}</td></tr>
 		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
 		<tr><th>Status</th><td>
 			{{if status == 'new' }}New{{/if}}
@@ -389,6 +395,9 @@
 	<p>
 		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
 		<tr><th>Filename:</th><td>${data.file}</td></tr>
+		{{if ((typeof data.badURL !== 'undefined') && data.badURL)}}
+		<tr><th>Bad URL:</th><td><strong class="wfWarn">${data.badURL}</strong></td></tr>
+		{{/if}}
 		<tr><th>File type:</th><td>{{if data.cType}}${WFAD.ucfirst(data.cType)}{{else}}Not a core, theme or plugin file.{{/if}}</td></tr>
 		<tr><th>Issue first detected:</th><td>${timeAgo} ago.</td></tr>
 		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
