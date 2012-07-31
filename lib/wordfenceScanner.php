@@ -135,7 +135,23 @@ class wordfenceScanner {
 							));
 						break;
 					}
-					
+					if(preg_match('/eval.*base'.'64_decode/i', $data)){
+						$this->addResult(array(
+							'type' => 'file',
+							'severity' => 1,
+							'ignoreP' => $this->path . $file,
+							'ignoreC' => $fileSum,
+							'shortMsg' => "This file may contain malicious executable code",
+							'longMsg' => "This file is a PHP executable file and contains an evaluation function and base"."64 decoding function on the same line. This is a common technique used by hackers to hide and execute code. If you know about this file you can choose to ignore it to exclude it from future scans.",
+							'data' => array(
+								'file' => $file,
+								'canDiff' => false,
+								'canFix' => false,
+								'canDelete' => true
+							)
+							));
+						break;
+					}
 					$this->urlHoover->hoover($file, $data);
 				} else {
 					$this->urlHoover->hoover($file, $data);
@@ -170,7 +186,7 @@ class wordfenceScanner {
 						'ignoreP' => $this->path . $file,
 						'ignoreC' => md5_file($this->path . $file),
 						'shortMsg' => "File contains suspected malware URL: " . $this->path . $file,
-						'longMsg' => "This file contains a suspected malware URL listed on Google's list of malware sites. Wordfence decodes base64 when scanning files so the URL may not be visible if you view this file. The URL is: " . $result['URL'] . " - More info available at <a href=\"http://safebrowsing.clients.google.com/safebrowsing/diagnostic?site=" . urlencode($result['URL']) . "&client=googlechrome&hl=en-US\" target=\"_blank\">Google Safe Browsing diagnostic page</a>.",
+						'longMsg' => "This file contains a suspected malware URL listed on Google's list of malware sites. Wordfence decodes base"."64 when scanning files so the URL may not be visible if you view this file. The URL is: " . $result['URL'] . " - More info available at <a href=\"http://safebrowsing.clients.google.com/safebrowsing/diagnostic?site=" . urlencode($result['URL']) . "&client=googlechrome&hl=en-US\" target=\"_blank\">Google Safe Browsing diagnostic page</a>.",
 						'data' => array(
 							'file' => $file,
 							'badURL' => $result['URL'],
@@ -225,7 +241,7 @@ class wordfenceScanner {
 	}
 	public static function containsCode($arr){
 		foreach($arr as $elem){
-			if(preg_match('/(?:base64_decode|base64_encode|eval|if|exists|isset|close|file|implode|fopen|while|feof|fread|fclose|fsockopen|fwrite|explode|chr|gethostbyname|strstr|filemtime|time|count|trim|rand|stristr|dir|mkdir|urlencode|ord|substr|unpack|strpos|sprintf)[\r\n\s\t]*\(/i', $elem)){
+			if(preg_match('/(?:base'.'64_decode|base'.'64_encode|eval|if|exists|isset|close|file|implode|fopen|while|feof|fread|fclose|fsockopen|fwrite|explode|chr|gethostbyname|strstr|filemtime|time|count|trim|rand|stristr|dir|mkdir|urlencode|ord|substr|unpack|strpos|sprintf)[\r\n\s\t]*\(/i', $elem)){
 				return true;
 			}
 		}

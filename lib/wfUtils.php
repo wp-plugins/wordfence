@@ -246,7 +246,7 @@ class wfUtils {
 	}
 	public static function isWindows(){
 		if(! self::$isWindows){
-			if(preg_match('/^win/', PHP_OS)){
+			if(preg_match('/^win/i', PHP_OS)){
 				self::$isWindows = 'yes';
 			} else {
 				self::$isWindows = 'no';
@@ -392,7 +392,9 @@ class wfUtils {
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
 	public static function fileTooBig($file){
+		wfUtils::errorsOff();
 		$fh = @fopen($file, 'r');
+		wfUtils::errorsOn();
 		if(! $fh){ return false; }
 		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1; 
 		$tooBig = false;

@@ -160,15 +160,28 @@ class wfLog {
 	public function blockIP($IP, $reason, $wfsn = false, $permanent = false){ //wfsn indicates it comes from Wordfence secure network
 		if($this->isWhitelisted($IP)){ return false; }
 		$wfsn = $wfsn ? 1 : 0;
-		$permanent = $permanent ? 1 : 0;
-		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
-			wfUtils::inet_aton($IP),
-			$reason,
-			$wfsn,
-			$permanent,
-			$reason,
-			$wfsn
-			);
+		if($permanent){
+			//Insert permanent=1 or update existing perm or non-per block to be permanent
+			$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
+				wfUtils::inet_aton($IP),
+				$reason,
+				$wfsn,
+				1,
+				$reason,
+				$wfsn,
+				1
+				);
+		} else {
+			//insert perm=0 but don't update and make perm blocks non-perm. 
+			$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
+				wfUtils::inet_aton($IP),
+				$reason,
+				$wfsn,
+				0,
+				$reason,
+				$wfsn
+				);
+		}
 		return true;
 	}
 	public function lockOutIP($IP, $reason){

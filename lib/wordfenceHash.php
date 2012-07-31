@@ -169,7 +169,7 @@ class wordfenceHash {
 				$this->writeHashingStatus();
 			}
 		} else {
-			wordfence::status(2, 'error', "Could not gen hash for file: $file");
+			wordfence::status(2, 'error', "Could not gen hash for file (probably because we don't have permission to access the file): $file");
 		}
 	}
 	private function sendHashPacket(){
@@ -199,7 +199,10 @@ class wordfenceHash {
 		return $this->hashStorageID;
 	}
 	public function wfHash($file){
+		wfUtils::errorsOff();
 		$md5 = @md5_file($file, false);
+		wfUtils::errorsOn();
+
 		if(! $md5){ return false; }
 		$fp = @fopen($file, "rb");
 		if(! $fp){

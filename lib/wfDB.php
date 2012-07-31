@@ -6,8 +6,10 @@ class wfDB {
 	private $dbpassword = false;
 	private $dbname = false;
 	private $dbuser = false;
+	private $createNewHandle = false;
 	public $errorMsg = false;
 	public function __construct($createNewHandle = false, $dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
+		$this->createNewHandle = $createNewHandle;
 		if($dbhost && $dbuser && $dbpassword && $dbname){
 			$this->dbhost = $dbhost;
 			$this->dbuser = $dbuser;
@@ -37,14 +39,23 @@ class wfDB {
 				}
 			}
 		}
+		$this->connectHandle();
+	}
+	private function connectHandle(){
 		//We tried reusing wpdb but got disconnection errors from many users.
-		$handleKey = md5($dbhost . $dbuser . $dbpassword . $dbname);
-		if( (! $createNewHandle) && isset(self::$dbhCache[$handleKey]) && mysql_ping(self::$dbhCache[$handleKey]) ){
+		$handleKey = md5($this->dbhost . $this->dbuser . $this->dbpassword . $this->dbname);
+		//Use a cached handle if it exists and is still connected
+		if( (! $this->createNewHandle) && isset(self::$dbhCache[$handleKey]) && mysql_ping(self::$dbhCache[$handleKey]) ){
 			$this->dbh = self::$dbhCache[$handleKey];
 		} else {
-			$dbh = mysql_connect( $this->dbhost, $this->dbuser, $this->dbpassword, true );
+			//This close call is to deal with versions of mysql prior to 5.0.3 which auto-recommend when callig ping. So the conditional above may have reconnected this handle, so we disconnect it before reconnecting, if it's connected.
+			if(isset(self::$dbhCache[$handleKey]) && mysql_ping(self::$dbhCache[$handleKey])){
+				mysql_close(self::$dbhCache[$handleKey]);
+				unset(self::$dbhCache[$handleKey]);
+			}
+			$dbh = mysql_connect($this->dbhost, $this->dbuser, $this->dbpassword, true );
 			mysql_select_db($this->dbname, $dbh);
-			if($createNewHandle){
+			if($this->createNewHandle){
 				$this->dbh = $dbh;
 			} else {
 				self::$dbhCache[$handleKey] = $dbh;
@@ -56,7 +67,13 @@ class wfDB {
 			$this->queryIgnoreError("SET @@wait_timeout=30800"); //Changing to session setting bc user may not have super privilege
 		}
 	}
+	private function reconnect(){
+		if(! mysql_ping($this->dbh)){
+			$this->connectHandle();
+		}
+	}
 	public function querySingleRec(){
+		$this->reconnect();
 		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
@@ -81,6 +98,7 @@ class wfDB {
 			$msg = "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err";
 			global $wpdb;
 			$statusTable = $wpdb->base_prefix . 'wfStatus';
+			$this->reconnect(); //Putting reconnect here so it doesn't mess with the mysql_error() call
 			mysql_query(sprintf("insert into " . $statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", 
 				mysql_real_escape_string(sprintf('%.6f', microtime(true))), 
 				mysql_real_escape_string(1), 
@@ -91,6 +109,7 @@ class wfDB {
 		}
 	}
 	public function querySingle(){
+		$this->reconnect();
 		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){
@@ -113,6 +132,7 @@ class wfDB {
 		return $row[0];
 	}
 	public function query(){ //sprintfString, arguments
+		$this->reconnect();
 		$this->errorMsg = false;
 		$args = func_get_args();
 		$isStatusQuery = false;
@@ -136,6 +156,7 @@ class wfDB {
 		return $res;
 	}
 	public function queryIgnoreError(){ //sprintfString, arguments
+		$this->reconnect();
 		$this->errorMsg = false;
 		$args = func_get_args();
 		if(sizeof($args) == 1){

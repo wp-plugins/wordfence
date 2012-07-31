@@ -25,6 +25,10 @@ class wordfence {
 	private static $statusStartMsgs = array();
 	private static $debugOn = null;
 	public static function installPlugin(){
+		if(wfUtils::isWindows()){
+			die("You are running Windows. Unfortunately Wordfence is not supported on Windows at this time. We may add Windows support in future, but have no ETA at present.");
+		}
+
 		self::runInstall();
 		//Used by MU code below
 		update_option('wordfenceActivated', 1);
