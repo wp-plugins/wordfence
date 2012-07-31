@@ -1,17 +1,24 @@
 <?php
 require_once('wfUtils.php');
 class wfIssues {
+	private $db = false;
+
+	//Properties that are serialized on sleep:
 	private $updateCalled = false;
-	public $lastError = '';
 	private $issuesTable = '';
 	private $newIssues = array();
 	public $totalIssues = 0;
 	public $totalCriticalIssues = 0;
 	public $totalWarningIssues = 0;
-	private $db = false;
+	public function __sleep(){ //Same order here as vars above
+		return array('updateCalled', 'issuesTable', 'newIssues', 'totalIssues', 'totalCriticalIssues', 'totalWarningIssues');
+	}
 	public function __construct(){
 		global $wpdb;
 		$this->issuesTable = $wpdb->base_prefix . 'wfIssues';
+	}
+	public function __wakeup(){
+		$this->db = new wfDB();
 	}
 	public function addIssue($type, $severity, 
 		
@@ -30,12 +37,12 @@ class wfIssues {
 			if($rec['status'] == 'ignoreP' && $rec['ignoreP'] == $ignoreP){ return false; }
 		}
 
-		$this->totalIssues++;
 		if($severity == 1){
 			$this->totalCriticalIssues++;
 		} else if($severity == 2){
 			$this->totalWarningIssues++;
 		}
+		$this->totalIssues++;
 		$this->newIssues[] = array(
 			'type' => $type,
 			'severity' => $severity,
@@ -192,7 +199,7 @@ class wfIssues {
 		}
 		$arr = wfConfig::get_ser('wf_summaryItems', array());
 		//$arr['scanTimeAgo'] = wfUtils::makeTimeAgo(sprintf('%.0f', time() - $arr['scanTime']));
-		$arr['scanRunning'] = wfConfig::get('wf_scanRunning') ? '1' : '0';
+		$arr['scanRunning'] = wfUtils::isScanRunning() ? '1' : '0';
 		$arr['scheduledScansEnabled'] = wfConfig::get('scheduledScansEnabled');
 		$secsToGo = wp_next_scheduled('wordfence_scheduled_scan') - time();
 		if($secsToGo < 1){
@@ -220,7 +227,9 @@ class wfIssues {
 		$totalRows = 0;
 		foreach($res1 as $table){
 			$res2 = $wpdb->get_col($wpdb->prepare("select count(*) from $table"));
-			$totalRows += $res2[0];
+			if(isset($res2[0]) ){
+				$totalRows += $res2[0];
+			}
 		}
 		$dat['totalRows'] = $totalRows;
 		$arr = wfConfig::get_ser('wf_summaryItems', array());
