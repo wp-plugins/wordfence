@@ -1,5 +1,6 @@
 <?php
 require_once('wfConfig.php');
+require_once('wfCountryMap.php');
 class wfUtils {
 	private static $isWindows = false;
 	public static $scanLockFH = false;
@@ -419,6 +420,39 @@ class wfUtils {
 		fclose($fh);
 		return $tooBig;
 	}
+	public static function countryCode2Name($code){
+		if(isset(wfCountryMap::$map[$code])){
+			return wfCountryMap::$map[$code];
+		} else {
+			return '';
+		}
+	}
+	public static function extractBareURI($URL){
+		$URL = preg_replace('/^https?:\/\/[^\/]+/i', '', $URL); //strip of method and host
+		$URL = preg_replace('/\#.*$/', '', $URL); //strip off fragment
+		$URL = preg_replace('/\?.*$/', '', $URL); //strip off query string
+		return $URL;
+	}
+	public static function IP2Country($IP){
+		if(! (function_exists('geoip_open') && function_exists('geoip_country_code_by_addr'))){
+			require_once('wfGeoIP.php');
+		}
+		$gi = geoip_open(dirname(__FILE__) . "/GeoIP.dat",GEOIP_STANDARD);
+		$country = geoip_country_code_by_addr($gi, $IP);
+		geoip_close($gi);
+		return $country ? $country : '';
+	}
+	public static function siteURLRelative(){
+		if(is_multisite()){
+			$URL = network_site_url();
+		} else {
+			$URL = site_url();
+		}
+		$URL = preg_replace('/^https?:\/\/[^\/]+/i', '', $URL);
+		$URL = rtrim($URL, '/') . '/';
+		return $URL;
+	}
+
 }
 
 

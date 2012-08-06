@@ -155,12 +155,40 @@ class wfScan {
 		$userSource = '';
 		if(is_multisite()){
 			$users = get_users('role=super&fields=ID');
-			$userSource = 'multisite get_users() function';
+			if(sizeof($users) < 1){
+				$supers = get_super_admins();
+				if(sizeof($supers) > 0){
+					foreach($supers as $superLogin){
+						$superDat = get_user_by('login', $superLogin);
+						if($superDat){
+							$users = array($superDat->ID);
+							$userSource = 'multisite get_super_admins() function';
+							break;
+						}
+					}
+				}
+			} else {
+				$userSource = 'multisite get_users() function';
+			}
 		} else {
 			$users = get_users('role=administrator&fields=ID');
-			$userSource = 'singlesite get_users() function';
+			if(sizeof($users) < 1){
+				$supers = get_super_admins();
+				if(sizeof($supers) > 0){
+					foreach($supers as $superLogin){
+						$superDat = get_user_by('login', $superLogin);
+						if($superDat){
+							$users = array($superDat->ID);
+							$userSource = 'singlesite get_super_admins() function';
+							break;
+						}
+					}
+				}
+			} else {
+				$userSource = 'singlesite get_users() function';
+			}
 		}
-		if(sizeof($users) > 1){
+		if(sizeof($users) > 0){
 			sort($users, SORT_NUMERIC);
 			$adminUserID = $users[0];
 		} else {

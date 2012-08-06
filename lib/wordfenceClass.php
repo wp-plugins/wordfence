@@ -25,10 +25,6 @@ class wordfence {
 	private static $statusStartMsgs = array();
 	private static $debugOn = null;
 	public static function installPlugin(){
-		if(wfUtils::isWindows()){
-			die("You are running Windows. Unfortunately Wordfence is not supported on Windows at this time. We may add Windows support in future, but have no ETA at present.");
-		}
-
 		self::runInstall();
 		//Used by MU code below
 		update_option('wordfenceActivated', 1);
@@ -38,7 +34,13 @@ class wordfence {
 		update_option('wordfenceActivated', 0);
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
+		
+		//Remove old legacy cron job if it exists
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
+		
+		//Remove all scheduled scans.
+		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Clear all scheduled scans.
+		
 		if(wfConfig::get('deleteTablesOnDeact')){
 			$schema = new wfSchema();
 			$schema->dropAll();
@@ -160,6 +162,13 @@ class wordfence {
 	public static function runInstall(){
 		update_option('wordfence_version', WORDFENCE_VERSION); //In case we have a fatal error we don't want to keep running install.
 		//EVERYTHING HERE MUST BE IDEMPOTENT
+
+		//Remove old legacy cron job if exists
+		wp_clear_scheduled_hook('wordfence_scheduled_scan');
+
+		//Install new schedule. If schedule config is blank it will install the default 'auto' schedule.
+		wordfence::scheduleScans();
+
 		$schema = new wfSchema();
 		$schema->createAll(); //if not exists
 		wfConfig::setDefaults(); //If not set
@@ -227,11 +236,10 @@ class wordfence {
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
 		}
-
+		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
 		add_action('plugins_loaded', 'wordfence::veryFirstAction');
-		add_action('wordfence_scheduled_scan','wordfence::startScan');	
 		add_action('init', 'wordfence::initAction');
 		add_action('template_redirect', 'wordfence::templateRedir');
 		add_action('shutdown', 'wordfence::shutdownAction');
@@ -393,6 +401,7 @@ class wordfence {
 				wordfence::status(1, 'info', "Request received via unlock email link to unblock all IP's via disabling firewall rules.");
 				$wfLog->unblockAllIPs();
 				$wfLog->unlockAllIPs();
+				wfConfig::set('cbl_countries', ''); //unblock all countries
 				header('Location: ' . wp_login_url());
 				exit();
 			} else {
@@ -511,6 +520,92 @@ class wordfence {
 			return array('errorMsg' => $e->getMessage());
 		}
 	}
+	public static function ajax_saveScanSchedule_callback(){
+		if(! wfConfig::get('isPaid')){
+			return array('errorMsg' => "Sorry but this feature is only available for paid customers.");
+		}
+		$schedDays = explode('|', $_POST['schedTxt']);
+		$schedule = array();
+		for($day = 0; $day <= 6; $day++){
+			$schedule[$day] = explode(',', $schedDays[$day]);
+		}
+		$schedMode = $_POST['schedMode'];
+		wfConfig::set_ser('scanSched', $schedule);
+		wfConfig::set('schedMode', $schedMode);
+		wordfence::scheduleScans();
+		return array('ok' => 1);
+	}
+	public static function wordfenceStartScheduledScan(){
+		//This prevents scheduled scans from piling up on low traffic blogs and all being run at once.
+		//Only one scheduled scan runs within a given 60 min window. Won't run if another scan has run within 30 mins.
+		$lastScanStart = wfConfig::get('lastScheduledScanStart', 0);
+		if($lastScanStart && (time() - $lastScanStart) < 1800){
+			//A scheduled scan was started in the last 30 mins, so skip this one.
+			return;
+		}
+		wfConfig::set('lastScheduledScanStart', time());
+		wordfence::status(1, 'info', "Scheduled Wordfence scan starting at " . date('l jS \of F Y h:i:s A', current_time('timestamp')) );
+		
+		//We call this before the scan actually starts to advance the schedule for the next week.
+		//This  ensures that if the scan crashes for some reason, the schedule will hold.
+		wordfence::scheduleScans();
+
+		wfScanEngine::startScan();
+	}
+	public static function scheduleScans(){ //Idempotent. Deschedules everything and schedules the following week.
+		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Clear all scheduled scans.
+		$sched = wfConfig::get_ser('scanSched', array());
+		$mode = wfConfig::get('schedMode');
+		if($mode == 'manual' && is_array($sched) && is_array($sched[0]) ){
+			//Use sched as it is	
+		} else { //Default to setting scans to run once a day at a randomly selected time.
+			$sched = array();
+			$runAt = rand(0,23);
+			for($day = 0; $day <= 6; $day++){
+				$sched[$day] = array();
+				for($hour = 0; $hour <= 23; $hour++){
+					if($hour == $runAt){
+						$sched[$day][$hour] = 1;
+					} else {
+						$sched[$day][$hour] = 0;
+					}
+				}
+			}
+		}
+		for($scheduledDay = 0; $scheduledDay <= 6; $scheduledDay++){
+			//0 is sunday
+			//6 is Saturday
+			for($scheduledHour = 0; $scheduledHour <= 23; $scheduledHour++){
+				if($sched[$scheduledDay][$scheduledHour]){
+					$wpTime = current_time('timestamp');
+					$currentDayOfWeek = date('w', $wpTime);
+					$daysInFuture = $scheduledDay - $currentDayOfWeek; //It's monday and scheduledDay is Wed (3) then result is 2 days in future. It's Wed and sched day is monday, then result is 3 - 1 = -2
+					if($daysInFuture < 0){ $daysInFuture -= 7; } //Turns -2 into 5 days in future
+					$currentHour = date('G', $wpTime);
+					$secsOffset = ($scheduledHour - $currentHour) * 3600; //Offset from current hour, can be negative
+					$secondsInFuture = ($daysInFuture * 86400) + $secsOffset; //Can be negative, so we schedule those 1 week ahead
+					if($secondsInFuture < 1){
+						$secondsInFuture += (86400 * 7); //Add a week
+					}
+					$wpTimeRoundDownHour = strtotime(date("D, d M y H:00:00 O", $wpTime));
+					$futureTime = $wpTimeRoundDownHour + $secondsInFuture;
+					wordfence::status(4, 'info', "Scheduled time for day $scheduledDay hour $scheduledHour is: " . date('l jS \of F Y h:i:s A', $futureTime));
+					wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan');
+				}
+			}
+		}
+	}
+	public static function ajax_saveCountryBlocking_callback(){
+		if(! wfConfig::get('isPaid')){
+			return array('errorMsg' => "Sorry but this feature is only available for paid customers.");
+		}
+		wfConfig::set('cbl_action', $_POST['blockAction']);
+		wfConfig::set('cbl_countries', $_POST['codes']);
+		wfConfig::set('cbl_redirURL', $_POST['redirURL']);
+		wfConfig::set('cbl_loggedInBlocked', $_POST['loggedInBlocked']);
+		wfConfig::set('cbl_loginFormBlocked', $_POST['loginFormBlocked']);
+		return array('ok' => 1);
+	}
 	public static function ajax_sendActivityLog_callback(){
 		$content = "SITE: " . site_url() . "\nPLUGIN VERSION: " . WORDFENCE_VERSION . "\nWP VERSION: " . wfUtils::getWPVersion() . "\nAPI KEY: " . wfConfig::get('apiKey') . "\nADMIN EMAIL: " . get_option('admin_email') . "\nLOG:\n\n";
 		$wfdb = new wfDB();
@@ -577,10 +672,6 @@ class wordfence {
 		} else {
 			$opts['whitelisted'] = '';
 		}
-		$opts['apiKey'] = trim($opts['apiKey']);
-		if(! preg_match('/^[a-fA-F0-9]+$/', $opts['apiKey'])){
-			return array('errorMsg' => "Please enter a valid API key for Wordfence before saving your options.");
-		}
 		$validUsers = array();
 		$invalidUsers = array();
 		foreach(explode(',', preg_replace('/[\r\n\s\t]+/', '', $opts['liveTraf_ignoreUsers'])) as $val){
@@ -592,6 +683,11 @@ class wordfence {
 				}
 			}
 		}
+		$opts['apiKey'] = trim($opts['apiKey']);
+		if($opts['apiKey'] && (! preg_match('/^[a-fA-F0-9]+$/', $opts['apiKey'])) ){ //User entered something but it's garbage.
+			return array('errorMsg' => "You entered an API key but it is not in a valid format. It must consist only of characters A to F and 0 to 9.");
+		}
+
 		if(sizeof($invalidUsers) > 0){
 			return array('errorMsg' => "The following users you selected to ignore in live traffic reports are not valid on this system: " . implode(', ', $invalidUsers));
 		}
@@ -618,9 +714,43 @@ class wordfence {
 		if(sizeof($validIPs) > 0){
 			$opts['liveTraf_ignoreIPs'] = implode(',', $validIPs);
 		}
+			
+		if(preg_match('/[a-zA-Z0-9\d]+/', $opts['liveTraf_ignoreUA'])){
+			$opts['liveTraf_ignoreUA'] = trim($opts['liveTraf_ignoreUA']);
+		} else {
+			$opts['liveTraf_ignoreUA'] = '';
+		}
+		if(! $opts['other_WFNet']){	
+			$wfdb = new wfDB();
+			global $wpdb;
+			$p = $wpdb->base_prefix;
+			$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
+		}
+		foreach($opts as $key => $val){
+			if($key != 'apiKey'){ //Don't save API key yet
+				wfConfig::set($key, $val);
+			}
+		}
+		
 		$reload = '';
 		$paidKeyMsg = false;
-		if($opts['apiKey'] != wfConfig::get('apiKey')){
+
+
+		if(! $opts['apiKey']){ //Empty API key (after trim above), then try to get one.
+			$api = new wfAPI('', wfUtils::getWPVersion());
+			try {
+				$keyData = $api->call('get_anon_api_key');
+				if($keyData['ok'] && $keyData['apiKey']){
+					wfConfig::set('apiKey', $keyData['apiKey']);
+					wfConfig::set('isPaid', 0);
+					$reload = 'reload';
+				} else {
+					throw new Exception("We could not understand the Wordfence server's response because it did not contain an 'ok' and 'apiKey' element.");
+				}
+			} catch(Exception $e){
+				return array('errorMsg' => "Your options have been saved, but we encountered a problem. You left your API key blank, so we tried to get you a free API key from the Wordfence servers. However we encountered a problem fetching the free key: " . $e->getMessage());
+			}
+		} else if($opts['apiKey'] != wfConfig::get('apiKey')){
 			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
 			try {
 				$res = $api->call('check_api_key', array(), array());
@@ -635,27 +765,13 @@ class wordfence {
 					throw new Exception("We could not understand the Wordfence API server reply when updating your API key.");
 				}
 			} catch (Exception $e){
-				return array('errorMsg' => $e->getMessage());
+				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . $e->getMessage());
 			}
 		}
-			
-		if(preg_match('/[a-zA-Z0-9\d]+/', $opts['liveTraf_ignoreUA'])){
-			$opts['liveTraf_ignoreUA'] = trim($opts['liveTraf_ignoreUA']);
-		} else {
-			$opts['liveTraf_ignoreUA'] = '';
-		}
-		if(! $opts['other_WFNet']){	
-			$wfdb = new wfDB();
-			global $wpdb;
-			$p = $wpdb->base_prefix;
-			$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
-		}
-		foreach($opts as $key => $val){
-			wfConfig::set($key, $val);
-		}
-		
+
+
+
 		//Clears next scan if scans are disabled. Schedules next scan if enabled.
-		$err = self::scheduleNextScan();
 		if($err){
 			return array('errorMsg' => $err);
 		} else {
@@ -1108,7 +1224,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan') as $func){
+		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -1144,7 +1260,7 @@ class wordfence {
 		}
 	}
 	public static function noKeyError(){
-		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence is not configured correctly.</strong> Go to your plugins menu and disable and re-enable Wordfence and this should fix the problem.</p></div>';
+		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence could not get an API key from the Wordfence scanning servers when it activated.</strong> You can try to fix this by going to the Wordfence "options" page and hitting "Save Changes". This will cause Wordfence to retry fetching an API key for you. If you keep seeing this error it usually means your WordPress server can\'t connect to our scanning servers. You can try asking your WordPress host to allow your WordPress server to connect to noc1.wordfence.com.</p></div>';
 	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
@@ -1168,6 +1284,8 @@ class wordfence {
 			add_submenu_page("Wordfence", "Live Traffic", "Live Traffic", "activate_plugins", "WordfenceActivity", 'wordfence::menu_activity');
 		}
 		add_submenu_page('Wordfence', 'Blocked IPs', 'Blocked IPs', 'activate_plugins', 'WordfenceBlockedIPs', 'wordfence::menu_blockedIPs');
+		add_submenu_page("Wordfence", "Country Blocking", "Country Blocking", "activate_plugins", "WordfenceCountryBlocking", 'wordfence::menu_countryBlocking');
+		add_submenu_page("Wordfence", "Scan Schedule", "Scan Schedule", "activate_plugins", "WordfenceScanSchedule", 'wordfence::menu_scanSchedule');
 		add_submenu_page("Wordfence", "Options", "Options", "activate_plugins", "WordfenceSecOpt", 'wordfence::menu_options');
 	}
 	public static function menu_options(){
@@ -1175,6 +1293,12 @@ class wordfence {
 	}
 	public static function menu_blockedIPs(){
 		require 'menu_blockedIPs.php';
+	}
+	public static function menu_scanSchedule(){
+		require 'menu_scanSchedule.php';
+	}
+	public static function menu_countryBlocking(){
+		require 'menu_countryBlocking.php';
 	}
 	public static function menu_activity(){
 		require 'menu_activity.php';
@@ -1264,29 +1388,6 @@ class wordfence {
 		$shortSiteURL = preg_replace('/^https?:\/\//i', '', site_url());
 		$subject = "[Wordfence Alert] $shortSiteURL " . $subject;
 		wp_mail(implode(',', $emails), $subject, $content);
-	}
-	public static function scheduleNextScan($force = false){
-		if(wfConfig::get('scheduledScansEnabled')){
-			$nextScan = wp_next_scheduled('wordfence_scheduled_scan');
-			if((! $force) && $nextScan && $nextScan - time() > 0){
-				//scan is already scheduled for the future
-				return;
-			}
-			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-			try {
-				$result = $api->call('get_next_scan_time', array(), array());
-				$secsToGo = 3600 * 6; //In case we can't contact the API, schedule next scan 6 hours from now.
-				if(is_array($result) && $result['secsToGo'] > 1800){
-					$secsToGo = $result['secsToGo'];
-				}
-				wp_clear_scheduled_hook('wordfence_scheduled_scan');
-				wp_schedule_single_event(time() + $secsToGo, 'wordfence_scheduled_scan');
-			} catch (Exception $e){
-				return $e->getMessage();
-			}
-		} else {
-			wp_clear_scheduled_hook('wordfence_scheduled_scan');
-		}
 	}
 	private static function getLog(){
 		if(! self::$wfLog){

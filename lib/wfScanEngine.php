@@ -7,6 +7,7 @@ require_once('wfIssues.php');
 require_once('wfDB.php');
 require_once('wfUtils.php');
 class wfScanEngine {
+	private static $cronTestFailedURLs = array();
 	private $api = false;
 	private $dictWords = array();
 	private $forkRequested = false;
@@ -79,10 +80,8 @@ class wfScanEngine {
 			$this->i->setScanTimeNow();
 			//scan ID only incremented at end of scan to make UI load new results
 			$this->emailNewIssues();
-			wordfence::scheduleNextScan(true);
 		} catch(Exception $e){
 			wfConfig::set('lastScanCompleted', $e->getMessage());
-			wordfence::scheduleNextScan(true);
 			throw $e;
 		}
 	}
@@ -432,6 +431,10 @@ class wfScanEngine {
 	private function scan_comments_main(){
 		$wfdb = new wfDB();
 		while($elem = array_shift($this->scanQueue)){
+			$queueSize = sizeof($this->scanQueue);
+			if($queueSize > 0 && $queueSize % 1000 == 0){
+				wordfence::status(2, 'info', "Scanning comments with $queueSize left to scan.");
+			}
 			$blog = $elem[0];
 			$commentID = $elem[1];
 			$row = $wfdb->querySingleRec("select comment_ID, comment_date, comment_type, comment_author, comment_author_url, comment_content from " . $blog['table'] . " where comment_ID=%d", $commentID);
@@ -913,11 +916,15 @@ class wfScanEngine {
 			$host = self::getOwnHostname();
 			$opts['headers'] = array( 'Host' => $host); 
 		}
-		wordfence::status(4, 'info', "Starting HTTP connection to test if we can kick off a scan");
-		$result = wp_remote_post($URL . '?test=1', $opts);
-		wordfence::status(4, 'info', "Done test HTTP connection");
+		$testURL = $URL . '?test=1';
+		wordfence::status(4, 'info', "Testing cron URL: $testURL");
+		$result = wp_remote_post($testURL, $opts);
 		if( is_array($result) && isset($result['body']) && preg_match('/WFCRONTESTOK:' . wfConfig::get('cronTestID') . '/', $result['body'])){
+			wordfence::status(4, 'info', "Cron URL test success with: $testURL");
 			return true;
+		} else {
+			wordfence::status(4, 'info', "Cron URL test fail with: $testURL");
+			self::$cronTestFailedURLs[] = $testURL;
 		}
 		return false;
 	}
@@ -959,7 +966,13 @@ class wfScanEngine {
 				return "A scan is already running. Use the kill link if you would like to terminate the current scan.";
 			}
 			if(! self::detectCronURL()){
-				return "We could not determine how this WordPress server connects to itself. You can try asking your WordPress host to edit their hosts file and add the hostname for this machine to the file. This machine's hostname is: " . self::getOwnHostname();
+				$msg = 'We could not determine how this WordPress server connects to itself. Please read <a href="http://www.wordfence.com/docs/wordfence-server-cant-connect-to-itself-error/" target="_blank">the documentation we provide on this page</a> which may help with this error. For your info, this machine\'s hostname is: ' . self::getOwnHostname();
+				$msg .= "<br /><br />We tried the following URLs:<ul>";
+				foreach(self::$cronTestFailedURLs as $URL){
+					$msg .= '<li><a href="' . $URL . '" target="_blank">' . $URL . '</a></li>';
+				}
+				$msg .= '</ul>';
+				return $msg;
 			}
 		}
 

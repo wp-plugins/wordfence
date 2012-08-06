@@ -27,6 +27,9 @@ window['wordfenceAdmin'] = {
 	maxActivityLogItems: 1000,
 	scanReqAnimation: false,
 	debugOn: false,
+	blockedCountriesPending: [],
+	ownCountry: "",
+	schedStartHour: false,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
 		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
@@ -53,6 +56,14 @@ window['wordfenceAdmin'] = {
 			this.staticTabChanged();
 			this.updateTicker(true);
 			startTicker = true;
+		} else if(jQuery('#wordfenceMode_countryBlocking').length > 0){
+			this.mode = 'countryBlocking';
+			startTicker = false;
+			this.drawBlockedCountries();
+		} else if(jQuery('#wordfenceMode_scanScheduling').length > 0){
+			this.mode = 'scanScheduling';
+			startTicker = false;
+			this.sched_modeChange();
 		} else {
 			this.mode = false;
 		}
@@ -63,8 +74,6 @@ window['wordfenceAdmin'] = {
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
-		this.showLoading();
-
 	},
 	showLoading: function(){
 		this.removeLoading();
@@ -848,6 +857,176 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_clearAllBlocked', { op: op }, function(res){ 
 			self.staticTabChanged();
 			});
+	},
+	setOwnCountry: function(code){
+		this.ownCountry = (code + "").toUpperCase();
+	},
+	addBlockedCountry: function(code, name){
+		code = (code + "").toUpperCase();
+		if(code == this.ownCountry){
+			this.colorbox('400px', "Please confirm blocking yourself", "You are about to block your own country. This could lead to you being locked out. Please make sure that your user profile on this machine has a current and valid email address and make sure you know what it is. That way if you are locked out, you can send yourself an unlock email. If you're sure you want to block your own country, click 'Confirm' below, otherwise click 'Cancel'.<br />" +
+				'<input type="button" name="but1" value="Confirm" onclick="jQuery.colorbox.close(); WFAD.addBlockedCountryConfirm(\'' + code + '\',\'' + name + '\');" />&nbsp;<input type="button" name="but1" value="Cancel" onclick="jQuery.colorbox.close();" />');
+		} else {
+			this.addBlockedCountryConfirm(code, name);
+		}
+	},
+	addBlockedCountryConfirm: function(code, name){
+		var exists = false;
+		for(var i = 0; i < this.blockedCountriesPending.length; i++){
+			if(this.blockedCountriesPending[i][0] == code){
+				return;
+			}
+		}
+		this.blockedCountriesPending.push([code, name]);
+		this.drawBlockedCountries();
+	},
+	loadBlockedCountries: function(str){
+		var codes = str.split(',');
+		var self = this;
+		jQuery("#wfBlockedCountry > option").each(function() {
+			for(var i = 0; i < codes.length; i++){
+				if(codes[i] == this.value){
+					self.addBlockedCountryConfirm(this.value, this.text);
+				}
+			}
+			});
+		this.drawBlockedCountries();
+	},
+	drawBlockedCountries: function(){
+		var html = "";
+		var self = this;
+		if(this.blockedCountriesPending.length < 1){
+			jQuery('#wfCountryList').html('<span style="color: #999;">There are no countries currently blocked.</span>');
+			return;
+		}
+		jQuery("#wfBlockedCountry > option").each(function() {
+			for(var i = 0; i < self.blockedCountriesPending.length; i++){
+				if(self.blockedCountriesPending[i][0] == this.value){
+					html += "Blocking: " + this.text + '&nbsp;&nbsp;<a href="#" onclick="WFAD.removeBlockedCountry(\'' + this.value + '\'); return false;">[remove]</a><br />';
+				}
+			}
+			});
+		jQuery('#wfCountryList').html(html);
+
+	},
+	removeBlockedCountry: function(code){
+		var newArr = [];
+		for(var i = 0; i < this.blockedCountriesPending.length; i++){
+			if(this.blockedCountriesPending[i][0] != code){
+				newArr.push(this.blockedCountriesPending[i]);
+			}
+		}
+		this.blockedCountriesPending = newArr;
+		this.drawBlockedCountries();
+	},
+	saveCountryBlocking: function(){
+		var action = jQuery('#wfBlockAction').val();
+		var redirURL = jQuery('#wfRedirURL').val();
+		if(action == 'redir' && (! /^https?:\/\/[^\/]+/i.test(redirURL))){
+			this.colorbox('400px', "Please enter a URL for redirection", "You have chosen to redirect blocked countries to a specific page. You need to enter a URL in the text box provided that starts with http:// or https://");
+			return;
+		}
+		var loggedInBlocked = jQuery('#wfLoggedInBlocked').is(':checked') ? '1' : '0';
+		var loginFormBlocked = jQuery('#wfLoginFormBlocked').is(':checked') ? '1' : '0';
+		var codesArr = [];
+		for(var i = 0; i < this.blockedCountriesPending.length; i++){
+			codesArr.push(this.blockedCountriesPending[i][0]);
+		}
+		var codes = codesArr.join(',');
+		jQuery('.wfAjax24').show();
+		var self = this;
+		this.ajax('wordfence_saveCountryBlocking', {
+			blockAction: action,
+			redirURL: redirURL,
+			loggedInBlocked: loggedInBlocked,
+			loginFormBlocked: loginFormBlocked,
+			codes: codes
+			}, function(res){ 
+				jQuery('.wfAjax24').hide();
+				self.pulse('.wfSavedMsg');
+				});
+	},
+	paidUsersOnly: function(msg){
+		var pos = jQuery('#paidWrap').position();
+		var width = jQuery('#paidWrap').width();
+		var height = jQuery('#paidWrap').height();
+		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
+	},
+	sched_modeChange: function(){
+		var self = this;
+		if(jQuery('#schedMode').val() == 'auto'){
+			jQuery('.wfSchedCheckbox').attr('disabled', true);
+		} else {
+			jQuery('.wfSchedCheckbox').attr('disabled', false);
+		}
+	},
+	sched_shortcut: function(mode){
+		if(jQuery('#schedMode').val() == 'auto'){
+			this.colorbox('400px', 'Change the scan mode', "You need to change the scan mode to manually scheduled scans if you want to select scan times.");
+			return;
+		}
+		jQuery('.wfSchedCheckbox').prop('checked', false);
+		if(this.schedStartHour === false){
+			this.schedStartHour = Math.floor((Math.random()*24));
+		} else {
+			this.schedStartHour++;
+			if(this.schedStartHour > 23){
+				this.schedStartHour = 0;
+			}
+		}
+		if(mode == 'onceDaily'){
+			for(var i = 0; i <= 6; i++){
+				jQuery('#wfSchedDay_' + i + '_' + this.schedStartHour).attr('checked', true);
+			}
+		} else if(mode == 'twiceDaily'){
+			var secondHour = this.schedStartHour + 12;
+			if(secondHour >= 24){ secondHour = secondHour - 24; }
+			for(var i = 0; i <= 6; i++){
+				jQuery('#wfSchedDay_' + i + '_' + this.schedStartHour).attr('checked', true);
+				jQuery('#wfSchedDay_' + i + '_' + secondHour).attr('checked', true);
+			}
+		} else if(mode == 'oddDaysWE'){
+			var startDay = Math.floor((Math.random()));
+			jQuery('#wfSchedDay_1_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_3_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_5_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_6_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_0_' + this.schedStartHour).attr('checked', true);
+		} else if(mode == 'weekends'){
+			var startDay = Math.floor((Math.random()));
+			jQuery('#wfSchedDay_6_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_0_' + this.schedStartHour).attr('checked', true);
+		} else if(mode == 'every6hours'){
+			for(var i = 0; i <= 6; i++){
+				for(var hour = this.schedStartHour; hour < this.schedStartHour + 24; hour = hour + 6){
+					var displayHour = hour;
+					if(displayHour >= 24){ displayHour = displayHour - 24; }
+					jQuery('#wfSchedDay_' + i + '_' + displayHour).attr('checked', true);
+				}
+			}
+		}
+
+	},
+	sched_save: function(){
+		var schedMode = jQuery('#schedMode').val();
+		var schedule = [];
+		for(var day = 0; day <= 6; day++){
+			var hours = [];
+			for(var hour = 0; hour <= 23; hour++){
+				var elemID = '#wfSchedDay_' + day + '_' + hour;
+				hours[hour] = jQuery(elemID).is(':checked') ? '1' : '0';
+			}
+			schedule[day] = hours.join(',');
+		}
+		scheduleTxt = schedule.join('|');
+		var self = this;
+		this.ajax('wordfence_saveScanSchedule', {
+			schedMode: schedMode,
+			schedTxt: scheduleTxt
+			}, function(res){
+				jQuery('.wfAjax24').hide();
+				self.pulse('.wfSaveMsg');
+				});
 	}
 };
 window['WFAD'] = window['wordfenceAdmin'];

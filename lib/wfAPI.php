@@ -8,7 +8,7 @@ class wfAPI {
 	private $curlContent = 0;
 	private $APIKey = '';
 	private $wordpressVersion = '';
-	private static $maintMsg = "The Wordfence scanning server may be down for maintenance.";
+	private static $maintMsg = "The Wordfence scanning server could not be contacted.";
 	public function __construct($apiKey, $wordpressVersion){
 		$this->APIKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
@@ -20,12 +20,12 @@ class wfAPI {
 				$getParams	
 				)), $postParams);
 		if(! $json){
-			throw new Exception(self::$maintMsg);
+			throw new Exception("We received an empty data response from the Wordfence scanning servers when calling the '$action' function.");
 		}
 
 		$dat = json_decode($json, true);
 		if(! is_array($dat)){
-			throw new Exception("We could not understand the Wordfence API response when calling '$action'.");
+			throw new Exception("We received a data structure that is not the expected array when contacting the Wordfence scanning servers and calling the '$action' function.");
 		}
 		if(is_array($dat) && isset($dat['errorMsg'])){
 			throw new Exception($dat['errorMsg']);
@@ -64,13 +64,17 @@ class wfAPI {
 			} else {
 				$cerror = curl_error($curl);
 				curl_close($curl);
-				throw new Exception(self::$maintMsg . " Got HTTP status code [$httpStatus] and curl error: $cerror");
+				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus]" . ($cerror ? (' and the error from CURL was ' . $cerror) : ''));
 			}
 		} else {
 			$data = $this->fileGet($url, $postParams);
 			if($data === false){
 				$err = error_get_last();
-				throw new Exception(self::$maintMsg . " Got HTTP error: " . $err);
+				if($err){
+					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . $err);
+				} else {
+					throw new Exception("We received an empty response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function.");
+				}
 			}
 			return $data;
 		}
@@ -119,12 +123,21 @@ class wfAPI {
 			if($httpStatus != 200){
 				$cError = curl_error($curl);
 				curl_close($curl);
-				throw new Exception(self::$maintMsg . " Got HTTP status [$httpStatus] and curl error: $cError");
+				if($cError){
+					throw new Exception("We received an error response when trying to fetch binary data from the Wordfence scanning server. The HTTP status was [$httpStatus] with error: $cError");
+				} else {
+					throw new Exception("We received an error HTTP response when trying to fetch binary data from the Wordfence scanning server: [$httpStatus]");
+				}
 			}
 		} else {
 			$data = $this->fileGet($url, $postData);
 			if($data === false){
-				throw new Exception(self::$maintMsg . " Got HTTP error: " . error_get_last());
+				$err = error_get_last();
+				if($err){
+					throw new Exception("We received an error response when trying to fetch binary data from the Wordfence scanning server using file_get_contents: $err");
+				} else {
+					throw new Exception("We received an error when trying to fetch binary data from the Wordfence scanning server using file_get_contents. There was no message explaining the error.");
+				}
 			}
 			$httpStatus = '200';
 		}

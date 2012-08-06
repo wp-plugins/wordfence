@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.1
-Stable tag: 3.1.1
+Stable tag: 3.1.2
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,6 +152,20 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.1.2 =
+* Fixed permanent IP blocking bug which caused permanently blocked IP's to no longer display in the list after some time, even though there were still blocked. (Incorrect SQL query)
+* Fixed "Can't get admin ID" on scan starts for both MU and single site installs.
+* Improved status messages for sites with very large numbers of comments.
+* Fixed bug that caused sites in subdirectories to not be able to view site config or run the memory test on the Wordfence "options" page.
+* Fixed database disconnect bug (mysql server has gone away). An additional fix was required to finally squash this bug.
+* Removed the code that prevented you from installing Wordfence on Windows. Sorry Windows customers!
+* Improved scheduling so that it is now more reliable.
+* Fixed bug that caused a loop for customers who could not contact the Wordfence servers on install.
+* Added helpful message if you get the "can't connect to itself" error message with some additional documentation to help solve this issue.
+* Improved error reporting when Wordfence can't connect to the scanning servers. Now features a helpful explanation rather than a generic message.
+* Added Country Geo-Blocking feature for paid customers.
+* Added Scan Scheduling feature for paid customers.
+
 = 3.1.1 =
 * Added another fix for "mysql server has gone away" error. Wordfence now makes sure the DB is still connected and reconnects if not.
 * Added new detection for encoded malicious code in files.

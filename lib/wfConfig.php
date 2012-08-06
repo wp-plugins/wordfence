@@ -411,7 +411,8 @@ class wfConfig {
 				}
 			}
 		}
-
+		self::getDB()->reconnect();
+		//We do our own query handling here because we are dealing with some very big strings
 		$dbh = self::getDB()->getDBH();
 		$res = mysql_query("select val from " . self::table() . " where name='" . mysql_real_escape_string($key) . "'", $dbh);
 		$err = mysql_error();
@@ -431,6 +432,7 @@ class wfConfig {
 	public static function set_ser($key, $val, $canUseDisk = false){
 		//We serialize some very big values so this is ultra-memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
 		// because we would have to concatenate $val twice into the query which could also exceed max packet for the mysql server
+		self::getDB()->reconnect();
 		$dbh = self::getDB()->getDBH();
 		$serialized = serialize($val);
 		$tempFilename = 'wordfence_tmpfile_' . $key . '.php';

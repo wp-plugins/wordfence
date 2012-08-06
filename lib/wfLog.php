@@ -233,7 +233,7 @@ class wfLog {
 		return $results;
 	}
 	public function getBlockedIPs(){
-		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
+		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where (permanent=1 OR (blockedTime + %s > unix_timestamp())) order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
 		$results = array();
 		while($elem = mysql_fetch_assoc($res)){			
 			$lastHitAgo = 0;
@@ -482,6 +482,39 @@ class wfLog {
 		return $this->db;
 	}
 	public function firewallBadIPs(){
+		$blockedCountries = wfConfig::get('cbl_countries', false);
+		if($blockedCountries && wfConfig::get('isPaid')){
+			if(is_user_logged_in() && (! wfConfig::get('cbl_loggedInBlocked', false)) ){ //User is logged in and we're allowing logins
+				//Do nothing
+			} else if(strpos($_SERVER['REQUEST_URI'], '/wp-login.php') !== false && (! wfConfig::get('cbl_loginFormBlocked', false))  ){ //It's the login form and we're allowing that
+				//Do nothing 
+			} else {
+				if($country = wfUtils::IP2Country(wfUtils::getIP()) ){
+					foreach(explode(',', $blockedCountries) as $blocked){
+						if(strtoupper($blocked) == strtoupper($country)){
+							if(wfConfig::get('cbl_action') == 'redir'){
+								$redirURL = wfConfig::get('cbl_redirURL');
+								if(wfUtils::extractBareURI($redirURL) == wfUtils::extractBareURI($_SERVER['REQUEST_URI'])){ //Is this the URI we want to redirect to, then don't block it
+									//Do nothing
+								/* Uncomment the following if page components aren't loading for the page we redirect to.
+								   Uncommenting is not recommended because it means that anyone from a blocked country
+								   can crawl your site by sending the page blocked users are redirected to as the referer for every request.
+								   But it's your call.
+								} else if(wfUtils::extractBareURI($_SERVER['HTTP_REFERER']) == $redirURL){ //If the referer the page we want to redirect to? Then this might be loading as a component so don't block.
+									//Do nothing	
+								*/
+								} else {
+									$this->redirect(wfConfig::get('cbl_redirURL'));
+								}
+							} else {
+								$this->do503(3600, "Access from your area has been temporarily limited for security reasons");
+							}
+						}
+					}
+				}
+			}
+		}
+
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
 		if($rec = $this->getDB()->querySingleRec("select blockedTime, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR (blockedTime + %s > unix_timestamp()))", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
 			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP);
@@ -524,6 +557,10 @@ class wfLog {
 			header('Retry-After: ' . $secsToGo);
 		}
 		require_once('wf503.php');
+		exit();
+	}
+	private function redirect($URL){
+		wp_redirect($URL, 302);
 		exit();
 	}
 	private function googleSafetyCheckOK(){ //returns true if OK to block. Returns false if we must not block.

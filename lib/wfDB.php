@@ -67,7 +67,7 @@ class wfDB {
 			$this->queryIgnoreError("SET @@wait_timeout=30800"); //Changing to session setting bc user may not have super privilege
 		}
 	}
-	private function reconnect(){
+	public function reconnect(){
 		if(! mysql_ping($this->dbh)){
 			$this->connectHandle();
 		}
