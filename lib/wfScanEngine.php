@@ -336,6 +336,23 @@ class wfScanEngine {
 			$postID = $elem[1];
 			$row = $wfdb->querySingleRec("select ID, post_title, post_type, post_date, post_content from " . $blog['table'] . " where ID=%d", $postID);
 			$this->hoover->hoover($blog['blog_id'] . '-' . $row['ID'], $row['post_title'] . ' ' . $row['post_content']);
+			if(preg_match('/(?:<[\s\n\r\t]*script[\r\s\n\t]+.*>|<[\s\n\r\t]*meta.*refresh)/i', $row['post_title'])){
+				$postID = $row['ID'];
+				$this->addIssue('postBadTitle', 1, $row['ID'], md5($row['post_title']), "Post title contains suspicious code", "This post contains code that is suspicious. Please check the title of the post and confirm that the code in the title is not malicious.", array(
+					'postID' => $postID,
+					'postTitle' => $row['post_title'],
+					'permalink' => get_permalink($postID),
+					'editPostLink' => get_edit_post_link($postID),
+					'type' => $row['post_type'],
+					'postDate' => $row['post_date'],
+					'isMultisite' => $blog['isMultisite'],
+					'domain' => $blog['domain'],
+					'path' => $blog['path'],
+					'blog_id' => $blog['blog_id']
+					));
+			}
+
+				
 			$this->scanData[$blog['blog_id'] . '-' . $row['ID']] = array(
 				'contentMD5' => md5($row['post_content']),
 				'title' => $row['post_title'],

@@ -64,7 +64,7 @@ class wordfenceScanner {
 			if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt)){
 				continue;
 			}
-			if(wfUtils::fileTooBig($this->path . $file)){
+			if(wfUtils::fileTooBig($this->path . $file)){ //We can't use filesize on 32 bit systems for files > 2 gigs
 				//We should not need this check because files > 2 gigs are not hashed and therefore won't be received back as unknowns from the API server
 				//But we do it anyway to be safe.
 				wordfence::status(2, 'error', "Encountered file that is too large: $file - Skipping.");

@@ -392,7 +392,7 @@ class wfUtils {
 		@ini_set('display_errors', self::$lastDisplayErrors);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
-	public static function fileTooBig($file){
+	public static function fileTooBig($file){ //Deals with files > 2 gigs on 32 bit systems which are reported with the wrong size due to integer overflow
 		wfUtils::errorsOff();
 		$fh = @fopen($file, 'r');
 		wfUtils::errorsOn();

@@ -337,6 +337,48 @@
 </div>
 </div>
 </script>
+<script type="text/x-jquery-template" id="issueTmpl_postBadTitle">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Title:</th><td><strong class="wfWarn">${data.postTitle}</strong></td></tr>
+		<tr><th>Posted on:</th><td>${data.postDate}</td></tr>
+		{{if data.isMultisite}}
+		<tr><th>Multisite Blog ID:</th><td>${data.blog_id}</td></tr>
+		<tr><th>Multisite Blog Domain:</th><td>${data.domain}</td></tr>
+		<tr><th>Multisite Blog Path:</th><td>${data.path}</td></tr>
+		{{/if}}
+		<tr><th>Severity:</th><td>Critical</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreC' }}This bad title will be ignored in this ${data.type}.{{/if}}
+			{{if status == 'ignoreP' }}This post won't be scanned for bad titles.{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+		<strong>Tools:</strong> 
+		<a target="_blank" href="${data.editPostLink}">Edit this ${data.type}</a>
+	</div>
+	<div class="wfIssueOptions">
+	{{if status == 'new'}}
+		<strong>Resolve:</strong> 
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreC'); return false;">Ignore this title in this ${data.type}</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore all dangerous titles in this ${data.type}</a>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
 
 <script type="text/x-jquery-template" id="issueTmpl_postBadURL">
 <div>
