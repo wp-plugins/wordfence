@@ -268,4 +268,35 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 .wferror {
 	color: #F00;
 }
-
+#wordfenceWorking {
+	padding: 2px 8px 2px 24px;
+	z-index: 100000;  
+	position: fixed; 
+	right: 2px; 
+	bottom: 2px; 
+	border: 1px solid #000; 
+	background-color: #F00; 
+	color: #FFF; 
+	font-size: 12px; 
+	font-weight: bold; 
+	font-family: Arial; 
+	text-align: center;
+	background-image: url('../images/icons/ajaxRed16.gif');
+	background-position: 2px 2px;
+	background-repeat: no-repeat;
+}
+#paidWrap {
+	position: relative;
+}
+#paidCover {
+}
+.paidInnerMsg {
+	width: 400px;
+	margin: 200px auto 0 auto;
+	color: #000;
+	font-size: 18px;
+	font-family: Georgia, Times;
+	line-height: 1.8em;
+	text-align: center;
+	-webkit-font-smoothing: antialiased;
+}

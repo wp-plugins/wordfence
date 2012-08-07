@@ -4,7 +4,6 @@ require_once('wfUtils.php');
 require_once('wfBrowscap.php');
 class wfLog {
 	private $hitsTable = '';
-	private $locsTable = '';
 	private $apiKey = '';
 	private $wp_version = '';
 	private $db = false;
@@ -16,13 +15,11 @@ class wfLog {
 		global $wpdb;
 		$this->hitsTable = $wpdb->base_prefix . 'wfHits';
 		$this->loginsTable = $wpdb->base_prefix . 'wfLogins';
-		$this->locsTable = $wpdb->base_prefix . 'wfLocs';
 		$this->blocksTable = $wpdb->base_prefix . 'wfBlocks';
 		$this->lockOutTable = $wpdb->base_prefix . 'wfLockedOut';
 		$this->leechTable = $wpdb->base_prefix . 'wfLeechers';
 		$this->badLeechersTable = $wpdb->base_prefix . 'wfBadLeechers';
 		$this->scanTable = $wpdb->base_prefix . 'wfScanners';
-		$this->reverseTable = $wpdb->base_prefix . 'wfReverseCache';
 		$this->throttleTable = $wpdb->base_prefix . 'wfThrottleLog';
 		$this->statusTable = $wpdb->base_prefix . 'wfStatus';
 	}
@@ -58,7 +55,8 @@ class wfLog {
 		} else if($type == 'hit'){
 			$table = $this->leechTable;
 		} else {
-			wfUtils::wdie("Invalid type to logLeechAndBlock(): $type");
+			wordfence::status(1, 'error', "Invalid type to logLeechAndBlock(): $type");
+			return;
 		}
 		$IP = wfUtils::getIP();
 		$this->getDB()->query("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
@@ -111,6 +109,45 @@ class wfLog {
 			}
 		}
 	}
+	public function isWhitelisted($IP){
+		//We now whitelist all RFC1918 IP addresses and loopback
+		if(strpos($IP, '127.') === 0 || strpos($IP, '10.') === 0 || strpos($IP, '192.168.') === 0 || strpos($IP, '172.') === 0){
+			if(strpos($IP, '172.') === 0){
+				$parts = explode('.', $IP);
+				if($parts[1] >= 16 && $parts[1] <= 31){
+					return true;
+				}
+			} else {
+				return true;
+			}
+		}
+		$list = wfConfig::get('whitelisted');
+		if(! $list){ return false; }
+		$list = explode(',', $list);
+		if(sizeof($list) < 1){ return false; }
+		foreach($list as $whiteIP){
+			if(preg_match('/\[\d+\-\d+\]/', $whiteIP)){
+				$IPparts = explode('.', $IP);
+				$whiteParts = explode('.', $whiteIP);
+				$mismatch = false;
+				for($i = 0; $i <= 3; $i++){
+					if(preg_match('/^\[(\d+)\-(\d+)\]$/', $whiteParts[$i], $m)){
+						if($IPparts[$i] < $m[1] || $IPparts[$i] > $m[2]){
+							$mismatch = true;
+						}
+					} else if($whiteParts[$i] != $IPparts[$i]){
+						$mismatch = true;
+					}
+				}
+				if($mismatch === false){
+					return true; //Is whitelisted because we did not get a mismatch
+				}
+			} else if($whiteIP == $IP){
+				return true;
+			}
+		}
+		return false;
+	}
 	public function unblockAllIPs(){
 		$this->getDB()->query("delete from " . $this->blocksTable);
 	}
@@ -120,22 +157,41 @@ class wfLog {
 	public function unblockIP($IP){
 		$this->getDB()->query("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
 	}
-	public function blockIP($IP, $reason, $wfsn = false){				
+	public function blockIP($IP, $reason, $wfsn = false, $permanent = false){ //wfsn indicates it comes from Wordfence secure network
+		if($this->isWhitelisted($IP)){ return false; }
 		$wfsn = $wfsn ? 1 : 0;
-		$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn) values (%s, unix_timestamp(), '%s', %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
-			wfUtils::inet_aton($IP),
-			$reason,
-			$wfsn,
-			$reason,
-			$wfsn
-			);
+		if($permanent){
+			//Insert permanent=1 or update existing perm or non-per block to be permanent
+			$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
+				wfUtils::inet_aton($IP),
+				$reason,
+				$wfsn,
+				1,
+				$reason,
+				$wfsn,
+				1
+				);
+		} else {
+			//insert perm=0 but don't update and make perm blocks non-perm. 
+			$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
+				wfUtils::inet_aton($IP),
+				$reason,
+				$wfsn,
+				0,
+				$reason,
+				$wfsn
+				);
+		}
+		return true;
 	}
 	public function lockOutIP($IP, $reason){
+		if($this->isWhitelisted($IP)){ return false; }
 		$this->getDB()->query("insert into " . $this->lockOutTable . " (IP, blockedTime, reason) values(%s, unix_timestamp(), '%s') ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s'",
 			wfUtils::inet_aton($IP),
 			$reason,
 			$reason
 			);
+		return true;
 	}
 	public function unlockOutIP($IP){
 		$this->getDB()->query("delete from " . $this->lockOutTable . " where IP=%s", wfUtils::inet_aton($IP));
@@ -177,7 +233,7 @@ class wfLog {
 		return $results;
 	}
 	public function getBlockedIPs(){
-		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->blocksTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
+		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where (permanent=1 OR (blockedTime + %s > unix_timestamp())) order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
 		$results = array();
 		while($elem = mysql_fetch_assoc($res)){			
 			$lastHitAgo = 0;
@@ -211,7 +267,8 @@ class wfLog {
 		} else if($type == 'topLeechers'){
 			$table = $this->leechTable;
 		} else {
-			wfUtils::wdie("Invalid type to getLeechers(): $type");
+			wordfence::status(1, 'error', "Invalid type to getLeechers(): $type");
+			return false;
 		}
 		$res = $this->getDB()->query("select IP, sum(hits) as totalHits from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
 		$results = array();
@@ -221,7 +278,7 @@ class wfLog {
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
 			$elem['timeAgo'] = wfUtils::makeTimeAgo($this->getDB()->querySingle("select unix_timestamp() - (eMin * 60) from $table where IP=%s", $elem['IP']));
-			$elem['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", $elem['IP'], wfConfig::get('blockedTime'));
+			$elem['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and ((blockedTime + %s > unix_timestamp()) OR permanent = 1)", $elem['IP'], wfConfig::get('blockedTime'));
 			//take action
 			$elem['IP'] = wfUtils::inet_ntoa($elem['IP']);
 		}
@@ -235,7 +292,7 @@ class wfLog {
 				$headers[$matches[1]] = $v;
 			}
 		}
-		$this->getDB()->query("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA, HTTPHeaders) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s', '%s')", 
+		$this->getDB()->query("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s')", 
 			sprintf('%.6f', microtime(true)),
 			(is_404() ? 1 : 0),
 			(wfCrawl::isGoogleCrawler() ? 1 : 0),
@@ -244,8 +301,7 @@ class wfLog {
 			(wordfence::$newVisit ? 1 : 0),
 			wfUtils::getRequestedURL(),
 			(isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : ''),
-			(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''),
-			serialize($headers)
+			(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '')
 			);
 		return $this->getDB()->querySingle("select last_insert_id()");
 	}
@@ -270,7 +326,8 @@ class wfLog {
 			} else if($type == 'ruser'){
 				$typeSQL = " and userID > 0 ";
 			} else {
-				wfUtils::wdie("Invalid log type to wfLog: $type");
+				wordfence::status(1, 'error', "Invalid log type to wfLog: $type");
+				return false;
 			}
 
 			$r1 = $this->getDB()->query("select * from " . $this->hitsTable . " where ctime > %f $IPSQL $typeSQL order by ctime desc limit %s", 
@@ -285,7 +342,8 @@ class wfLog {
 				);
 
 		} else {
-			wfUtils::wdie("getHits got invalid hitType: $hitType");
+			wordfence::status(1, 'error', "getHits got invalid hitType: $hitType");
+			return false;
 		}
 		$results = array();
 		while($res = mysql_fetch_assoc($r1)){
@@ -298,11 +356,8 @@ class wfLog {
 		$browscap = new wfBrowscap();
 		foreach($results as &$res){ 
 			$res['type'] = $type;
-			if(isset($res['HTTPHeaders'])){
-				$res['HTTPHeaders'] = unserialize($res['HTTPHeaders']);
-			}
 			$res['timeAgo'] = wfUtils::makeTimeAgo($serverTime - $res['ctime']);
-			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", $res['IP'], wfConfig::get('blockedTime'));
+			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and (permanent = 1 OR (blockedTime + %s > unix_timestamp()))", $res['IP'], wfConfig::get('blockedTime'));
 			$res['IP'] = wfUtils::inet_ntoa($res['IP']); 
 			$res['extReferer'] = false;
 			if($res['referer']){
@@ -376,61 +431,8 @@ class wfLog {
 				$IPs[] = $res['IP'];
 			}
 		}
-		$IPs = array_unique($IPs);
-		$IPLocs = array();
-		$toResolve = array();
-		foreach($IPs as $IP){
-			$r1 = $this->getDB()->query("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $this->locsTable . " where IP=%s", $IP);
-			if($r1){
-				if($row = mysql_fetch_assoc($r1)){
-					if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
-						$this->getDB()->query("delete from " . $this->locsTable . " where IP=%s", $row['IP']);
-					} else {
-						if($row['failed'] == 1){
-							$IPLocs[$IP] = false;
-						} else {
-							$IPLocs[$IP] = $row;
-						}
-					}
-				}
-			}
-			if(! isset($IPLocs[$IP])){
-				$toResolve[] = $IP;
-			}
-		}
-		if(sizeof($toResolve) > 0){
-			$api = new wfAPI($this->apiKey, $this->wp_version); 
-			$freshIPs = $api->call('resolve_ips', array(), array(
-				'ips' => implode(',', $toResolve)
-				));
-			if(is_array($freshIPs)){
-				foreach($freshIPs as $IP => $value){
-					if($value == 'failed'){
-						$this->getDB()->query("insert IGNORE into " . $this->locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", $IP);
-						$IPLocs[$IP] = false;
-					} else {
-						$this->getDB()->query("insert IGNORE into " . $this->locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
-							$IP,
-							$value[3], //city
-							$value[2], //region
-							$value[1], //countryName
-							$value[0],//countryCode
-							$value[4],//lat
-							$value[5]//lon
-							);
-						$IPLocs[$IP] = array(
-							'IP' => $IP,
-							'city' => $value[3],
-							'region' => $value[2],
-							'countryName' => $value[1],
-							'countryCode' => $value[0],
-							'lat' => $value[4],
-							'lon' => $value[5]
-							);
-					}
-				}
-			}
-		}
+		$IPLocs = wfUtils::getIPsGeo($IPs); //Creates an array with IP as key and data as value
+
 		foreach($results as &$res){
 			if(isset($IPLocs[$res['IP']])){
 				$res['loc'] = $IPLocs[$res['IP']];
@@ -480,10 +482,45 @@ class wfLog {
 		return $this->db;
 	}
 	public function firewallBadIPs(){
+		$blockedCountries = wfConfig::get('cbl_countries', false);
+		if($blockedCountries && wfConfig::get('isPaid')){
+			if(is_user_logged_in() && (! wfConfig::get('cbl_loggedInBlocked', false)) ){ //User is logged in and we're allowing logins
+				//Do nothing
+			} else if(strpos($_SERVER['REQUEST_URI'], '/wp-login.php') !== false && (! wfConfig::get('cbl_loginFormBlocked', false))  ){ //It's the login form and we're allowing that
+				//Do nothing 
+			} else {
+				if($country = wfUtils::IP2Country(wfUtils::getIP()) ){
+					foreach(explode(',', $blockedCountries) as $blocked){
+						if(strtoupper($blocked) == strtoupper($country)){
+							if(wfConfig::get('cbl_action') == 'redir'){
+								$redirURL = wfConfig::get('cbl_redirURL');
+								if(wfUtils::extractBareURI($redirURL) == wfUtils::extractBareURI($_SERVER['REQUEST_URI'])){ //Is this the URI we want to redirect to, then don't block it
+									//Do nothing
+								/* Uncomment the following if page components aren't loading for the page we redirect to.
+								   Uncommenting is not recommended because it means that anyone from a blocked country
+								   can crawl your site by sending the page blocked users are redirected to as the referer for every request.
+								   But it's your call.
+								} else if(wfUtils::extractBareURI($_SERVER['HTTP_REFERER']) == $redirURL){ //If the referer the page we want to redirect to? Then this might be loading as a component so don't block.
+									//Do nothing	
+								*/
+								} else {
+									$this->redirect(wfConfig::get('cbl_redirURL'));
+								}
+							} else {
+								$this->do503(3600, "Access from your area has been temporarily limited for security reasons");
+							}
+						}
+					}
+				}
+			}
+		}
+
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
-		if($secsToGo = $this->getDB()->querySingle("select (blockedTime + %s) - unix_timestamp() as secsToGo from " . $this->blocksTable . " where IP=%s and blockedTime + %s > unix_timestamp()", wfConfig::get('blockedTime'), $IP, wfConfig::get('blockedTime'))){
-			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP); 
-			$this->do503($secsToGo); 
+		if($rec = $this->getDB()->querySingleRec("select blockedTime, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR (blockedTime + %s > unix_timestamp()))", $IP, wfConfig::get('blockedTime'))){
+			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP);
+			$now = $this->getDB()->querySingle("select unix_timestamp()");
+			$secsToGo = ($rec['blockedTime'] + wfConfig::get('blockedTime')) - $now;
+			$this->do503($secsToGo, $rec['reason']); 
 		}
 	}
 	private function takeBlockingAction($configVar, $reason){
@@ -497,7 +534,7 @@ class wfLog {
 			if($action == 'block'){
 				$IP = wfUtils::getIP();
 				if(wfConfig::get('alertOn_block')){
-					wordfence::alert("Blocking IP $IP", "Wordfence has blocked IP address $IP.\n The reason is: \"$reason\".\n When we did a reverse lookup on this address it resolved to:\n \"" . $this->reverseLookup($IP) . "\".");
+					wordfence::alert("Blocking IP $IP", "Wordfence has blocked IP address $IP.\nThe reason is: \"$reason\".", $IP);
 				}
 				wordfence::status(2, 'info', "Blocking IP $IP. $reason");
 				$this->blockIP($IP, $reason);
@@ -508,16 +545,22 @@ class wfLog {
 				wordfence::status(2, 'info', "Throttling IP $IP. $reason");
 				$secsToGo = 60;
 			}
-			$this->do503($secsToGo);
+			$this->do503($secsToGo, $reason);
 		} else {
 			return;
 		}
 	}
-	private function do503($secsToGo){
+	private function do503($secsToGo, $reason){
 		header('HTTP/1.1 503 Service Temporarily Unavailable');
 		header('Status: 503 Service Temporarily Unavailable');
-		header('Retry-After: ' . $secsToGo);
+		if($secsToGo){
+			header('Retry-After: ' . $secsToGo);
+		}
 		require_once('wf503.php');
+		exit();
+	}
+	private function redirect($URL){
+		wp_redirect($URL, 302);
 		exit();
 	}
 	private function googleSafetyCheckOK(){ //returns true if OK to block. Returns false if we must not block.
@@ -552,25 +595,6 @@ class wfLog {
 		}
 		return self::$gbSafeCache[$cacheKey]; //return cached value
 	}
-	public function reverseLookup($IP){
-		$IPn = wfUtils::inet_aton($IP);
-		$host = $this->getDB()->querySingle("select host from " . $this->reverseTable . " where IP=%s and unix_timestamp() - lastUpdate < %d", $IPn, WORDFENCE_REVERSE_LOOKUP_CACHE_TIME);
-		if(! $host){
-			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
-			$host = dns_get_record($ptr, DNS_PTR);
-			if($host == null){
-				$host = 'NONE';
-			} else {
-				$host = $host[0]['target'];
-			}
-			$this->getDB()->query("insert into " . $this->reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
-		}
-		if($host == 'NONE'){
-			return '';
-		} else {
-			return $host;
-		}
-	}
 	public function addStatus($level, $type, $msg){
 		//$msg = '[' . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . '] ' . $msg;
 		$this->getDB()->query("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", sprintf('%.6f', microtime(true)), $level, $type, $msg);
@@ -593,7 +617,7 @@ class wfLog {
 		return $results;
 	}
 	public function getSummaryEvents(){
-		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100", $lastCtime);
+		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100");
 		$results = array();
 		$lastTime = false;
 		while($rec = mysql_fetch_assoc($res)){
