@@ -72,7 +72,11 @@ class wordfenceHash {
 		$haveMoreInDB = true;
 		while($haveMoreInDB){
 			$haveMoreInDB = false;
-			$res = $this->db->query("select id, filename from " . $this->table . " limit 1000");
+			//This limit used to be 1000, but we changed it to 5 because forkIfNeeded needs to run frequently, but
+			// we still want to minimize the number of queries we do.
+			// So now we select, process and delete 5 from teh queue and then check forkIfNeeded()
+			// So this assumes that processing 5 files won't take longer than wfScanEngine::$maxExecTime (which was 10 at the time of writing, which is 2 secs per file)
+			$res = $this->db->query("select id, filename from " . $this->table . " limit 5");
 			$ids = array();
 			while($rec = mysql_fetch_row($res)){
 				$this->processFile($rec[1]);

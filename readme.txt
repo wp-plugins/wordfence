@@ -152,6 +152,9 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.1.5 (development) =
+* Fixed issue that caused scans to hang. Wordfence now processes smaller batches of files before checking if it needs to fork.
+
 = 3.1.4 =
 * Fixed SQL error in code that checks if IP blockedTime has expired.  Changed column type to signed.
 * Added detection of malicious injected titles with scripts or meta redirects.
