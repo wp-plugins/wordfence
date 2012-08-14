@@ -3,6 +3,8 @@ require_once('wordfenceConstants.php');
 require_once('wordfenceClass.php');
 require_once('wordfenceURLHoover.php');
 class wordfenceScanner {
+	protected $sigs = array();
+	protected $sigPattern = "";
 	//serialized:
 	protected $path = '';
 	protected $fileList = array();
@@ -17,6 +19,7 @@ class wordfenceScanner {
 		return array('path', 'fileList', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover', 'totalFilesScanned', 'startTime', 'lastStatusTime');
 	}
 	public function __wakeup(){
+		$this->setupSigs();
 	}
 	public function __construct($apiKey, $wordpressVersion, $fileList, $path){
 		$this->apiKey = $apiKey;
@@ -26,10 +29,86 @@ class wordfenceScanner {
 			$path .= '/';
 		}
 		$this->path = $path;
+		
+		
 		$this->results = array();
 		$this->errorMsg = false;
 		//First extract hosts or IP's and their URL's into $this->hostsFound and URL's into $this->urlsFound
 		$this->urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
+		$this->setupSigs();
+	}
+	private function setupSigs(){
+		//Set up sigs
+		$this->sigs = array(
+array('\$QBDB51E25BF9A7F3D2475072803D1C36D', "antichat.php, cgi.php and possibly others, this is the var they assign the code to"),
+array('\$login\s*=\s*"c99"|\$pass\s*=\s*"c99"|\$sess_cookie\s*=\s*"c9'.'9shvars"', "several lines of c99 decoded"),
+array('C9'.'9Shell v\.', "c99.php"),
+array('passthru\s*\(\s*getenv\s*\(\s*"HTTP_ACCEPT_LANGUAGE', "accept_language HTTP header backdoor"),
+array('runcommand\s*\([\'"]etcpasswdfile', "Ajax_PHP Command Shell"),
+array('exesysform', "AK-74 Security Team Web Shell"),
+array('\$password\s*=\s*[\'"]antichat', "Antichat shell"),
+array('if\s*\(\s*\$action\s*==\s*["\']phpeval', "Antichat shell"),
+array('Can\'t open file, permission denide', "Antichat spelling error"),
+array('tmp[\'"],\s*["\']phpshell', "Ayyildiz Tim  -AYT- Shell v 2.1 Biz"),
+array('\$this_file\?op=phpinfo', "aZRaiLPhp v1.0"),
+array('\.\s*\$server_ip\s*=\s*gethostbyname\s*\(\$SERVER_NAME', "c0derz shell [csh] v. 0.1.1"),
+array('dosyayicek', "c99_locus7s and c99_PSych0"),
+array('c99_sess_put', "c99_locus7s, c99_PSych0, c99_w4cking, RedhatC99 "),
+array('PHP Safe\-Mode Bypass', "c99_w4cking"),
+array('fonksiyonlary_kapat', "CasuS"),
+array('Dim szCMD, szTempFile', "CmdAsp.asp"),
+array('Open base dir: \$hopenbasedir', "Crystal shell"),
+array('find config.inc.php files', "Many c99 variants including NFM, Perl, Predator, CTT, r57, Redhatc99"),
+array('find all .htpasswd files', "Many c99 variants including NFM, Perl, Predator, CTT, r57, Redhatc9"),
+array('function anonim_mail', "Cybershell"),
+array('\$_SESSION\[aupass\]=md5\(\$aupassword', "Cybershell"),
+array('echo\s+htmlspecialchars\(\s*crypt\(\s*fread', "dC3 Security Crew Shell PRiV"),
+array('proc_open\(\s*\$_REQUEST', "Dive Shell"),
+array('file_exists\([\'"]\/usr\/bin\/gcc', "DTool Pro"),
+array('find all \*\.php files with word [\'"]password', "Dx"),
+array('WebShell::Configuration', "Gamma Web Shell (perl)"),
+array('base64_decode\(\$prx', "GFS shell"),
+array('icq, command\-n\-conquer and shell nfm', "Various GFS variants"),
+array('open\(FILEHANDLE,\s*[\'"]cd\s+\$param\{dir\}', "go-shell (perl)"),
+array('document.PostActForm\$', "GRP Webshell"),
+array('\$cmd 1> \/tmp\/cmdtemp 2>\&1\; cat', "h4ntu shell"),
+array('\$Düzenlecols, \$Düzenlerows', "iMHaBiRLiGi PHP FTP"),
+array('get_execution_method\s*\(', "ironshell and many others"),
+array('proc\s*=\s*runtime\.exec\(\s*cmd\s*\)', "JSP Web Shell"),
+array('eval>PHP Eval Code', "KAdot Universal Shell"),
+array('if\(\(\$_POST\[\'exe\'\]\) == "Execute"', "Lamashell"),
+array('cat \/etc\/passwd', "Liz0ziM and many other malicious apps"),
+array('exec\(\$com,\$arr\)', "Loaderz WEB Shell"),
+array('\$SFileName=\$PHP_SELF', "Macker's Private PHPShell"),
+array('if\s*\(isset\s*\(\$_POST\)\)\s*walkArray\(\s*\$_POST', "Macker's and some c99 variantes"),
+array('define\(\s*["\']PHPSHELL_VERSION[\'"]\s*,\s*[\'"]\d+', "Matamu and others"),
+array('If\s*\(\$file_name\)\s*\$header\s*\.=\s*"Content\-Transfer\-Encoding:\s*base64', "Moroccan Spamers Ma-EditioN By GhOsT"),
+array('\$MyShellVersion', "MyShell"),
+array('function viewSchema', "Mysql interface"),
+array('global \$HTTP_GET_VARS, \$HTTP_COOKIE_VARS, \$password', "mysql_tool"),
+array('\$file\s*=\s*[\'"]\/etc\/passwd[\'"];', "mysql.php"),
+array('move_uploaded_file\(\$_FILES\[\'probe\'\]\[\'tmp_name\'\]', "NCC-Shell"),
+array('["\']find all suid files[\'"]', "NetworkFileManager.php and variants"),
+array('["\']find all sgid files[\'"]', "NetworkFileManager.php and variants"),
+array('["\']find all config\.inc\.php files[\'"]', "NetworkFileManager.php and variants"),
+array('["\']find writeable directories and files[\'"]', "NetworkFileManager.php and variants"),
+array('xargs grep \-li password', "NetworkFileManager.php and variants"),
+array('\$filename\s*=\s*[\'"]\/etc\/passwd["\']', 'NFM 1.8, NIX Remote Web Shell and others'),
+array('function mvcp\(\$from', 'NGH, Webcommander'),
+array('find \/ \-type f \-name \.ht', 'NIX Remote Web Shell, nsTView and other variants'),
+array('passthru\(\$comd', 'NShell'),
+array('find \/ \-type f \-perm \-04000', 'nsTView and others'),
+array('bind\(S,sockaddr_in\(\$LISTEN_PORT,INADDR_ANY', 'Perl Web Shell by RST-GHC'),
+array('jmp_buf jmp;', 'PHANTASMA'),
+array('\b(?:system|exec|passthru|shell_exec|proc_open)[\r\n\s\t]*\([\r\n\s\t]*\$_(?:POST|GET|REQUEST|SERVER)', 'PHP Backdoor, many malicious apps and any badly written app')
+
+
+); //End sigs
+		$sigArr = array();
+		foreach($this->sigs as $elem){
+			$sigArr[] = $elem[0];
+		}
+		$this->sigPattern = '/(' . implode('|', $sigArr) . ')/i';
 	}
 	public function scan($forkObj){
 		if(! $this->startTime){
@@ -116,6 +195,23 @@ class wordfenceScanner {
 							)
 							));
 						break;
+					} else if(strpos($file, 'lib/wordfenceScanner.php') === false && preg_match($this->sigPattern, $data, $matches)){
+						$this->addResult(array(
+							'type' => 'file',
+							'severity' => 1,
+							'ignoreP' => $this->path . $file,
+							'ignoreC' => $fileSum,
+							'shortMsg' => "This file appears to be an attack shell",
+							'longMsg' => "This file appears to be an executable shell that allows hackers entry to your site via a backdoor. If you know about this file you can choose to ignore it to exclude it from future scans. The text we found in this file that matches a known malicious file is: <strong style=\"color: #F00;\">\"" . $matches[1] . "\"</strong>.",
+							'data' => array(
+								'file' => $file,
+								'canDiff' => false,
+								'canFix' => false,
+								'canDelete' => true
+							)
+							));
+						break;
+
 					}
 					$longestNospace = wfUtils::longestNospace($data);
 					if($longestNospace > 1000 && (strpos($data, 'eval') !== false || preg_match('/preg_replace\([^\(]+\/[a-z]*e/', $data)) ){

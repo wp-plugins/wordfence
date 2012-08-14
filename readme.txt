@@ -153,9 +153,23 @@ or a theme, because often these have been updated to fix a security hole.
 
 == Changelog ==
 = 3.1.5 (development) =
+* [If you like to live on the edge, you can get our development version here.](http://downloads.wordpress.org/plugin/wordfence.zip)
 * Fixed issue that caused scans to hang. Wordfence now processes smaller batches of files before checking if it needs to fork.
+* Security scan for backdoors: "s72 Shell",  "r57 kartal",  "r57shell",  "rootshell",  "r57",  "r57 Mohajer22",  "r57 iFX",  "php backdoor",  "phpRemoteView"
+* Security scan for backdoors: "nstview",  "nshell",  "mysql tool",  "nsTView",  "matamu",  "mysql shell",  "load shell",  "ironshell",  "lamashell",  "hiddens shell"
+* Security scan for backdoors: "h4ntu shell",  "go shell",  "dC3 Shell",  "gfs sh",  "cybershell",  "c99 w4cking",  "ctt sh"
+* Security scan for backdoors: "c99 madnet",  "c99 locus7s",  "c99 PSych0",  "c99",  "c0derz shell",  "accept language",  "Web shell"
+* Security scan for backdoors: "aZRaiLPhp",  "SnIpEr SA Shell",  "Safe0ver Shell"
+* Security scan for backdoors: "SimShell",  "Rootshell",  "Predator",  "PhpSpy",  "PHPJackal",  "PHANTASMA",  "PHP Shell"
+* Security scan for backdoors: "NTDaddy",  "NetworkFileManagerPHP",  "NIX REMOTE WEB SHELL",  "NGH"
+* Security scan for backdoors: "NFM",  "Mysql interface",  "NCC Shell",  "MySQL Web Interface",  "MyShell",  "Macker PHPShell"
+* Security scan for backdoors: "Loaderz WEB Shell",  "KA uShell",  "KAdot Universal Shell",  "Liz0ziM"
+* Security scan for backdoors: "Gamma Web Shell",  "JspWebshell",  "GRP WebShell",  "GFS web shell"
+* Security scan for backdoors: "GFS Web Shell",  "Dx",  "DxShell,  "Dive Shell",  "DTool Pro"
+* Security scan for backdoors: "Ajax PHP Command Shell",  "Antichat Shell",  "Ayyildiz Shell"
+* Security scan for backdoors: "C99 Shell", "C99 madShell",  "CTT Shell",  "CasuS",  "CmdAsp",  "Crystal Shell",  "Cyber Shell" 
 
-= 3.1.4 =
+= 3.1.4 (stable) =
 * Fixed SQL error in code that checks if IP blockedTime has expired.  Changed column type to signed.
 * Added detection of malicious injected titles with scripts or meta redirects.
 * Fixed bug introduced in previous release that prevents blocked IP's from being blocked.
