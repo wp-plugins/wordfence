@@ -42,7 +42,7 @@ class wordfenceHash {
 		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 	}
 	public function buildFileQueue($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
-		$this->db->query("truncate table " . $this->table);
+		$this->db->truncate($this->table);
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
@@ -90,7 +90,7 @@ class wordfenceHash {
 		}
 		//Will only reach here if we empty file queue. fork may cause exit
 		$this->sendHashPacket();
-		$this->db->query("truncate table " . $this->table); //Also resets id autoincrement to 1
+		$this->db->truncate($this->table); //Also resets id autoincrement to 1
 		$this->writeHashingStatus();
 	}
 	private function writeHashingStatus(){

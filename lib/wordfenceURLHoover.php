@@ -39,7 +39,7 @@ class wordfenceURLHoover {
 		} else {
 			$this->table = 'wp_wfHoover';
 		}
-		$this->db->query("truncate table $this->table");
+		$this->db->truncate($this->table);
 	}
 	public function hoover($id, $data){
 		if(strpos($data, '.') === false){

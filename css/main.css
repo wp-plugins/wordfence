@@ -85,6 +85,7 @@ div.wordfenceScanButton input.button-wf-grey {
 	background: #EFEFEF url(../images/button-grad-grey.png) repeat-x scroll left top;
 	border-color: #EFEFEF;
 }
+.wordfenceScanButton table td { vertical-align: top; }
 
 .wfTabsContainer {
 	overflow: hidden;
@@ -300,3 +301,8 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 	text-align: center;
 	-webkit-font-smoothing: antialiased;
 }
+.wfMarker {
+	height: 1px;
+	width: 1px;
+}
+

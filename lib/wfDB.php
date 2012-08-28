@@ -68,7 +68,7 @@ class wfDB {
 		}
 	}
 	public function reconnect(){
-		if(! mysql_ping($this->dbh)){
+		if((! $this->dbh) || (! mysql_ping($this->dbh)) ){
 			$this->connectHandle();
 		}
 	}
@@ -223,6 +223,10 @@ class wfDB {
 	}
 	public function getAffectedRows(){
 		return mysql_affected_rows($this->dbh);
+	}
+	public function truncate($table){ //Ensures everything is deleted if user is using MySQL >= 5.1.16 and does not have "drop" privileges
+		$this->query("truncate table $table");
+		$this->query("delete from $table");
 	}
 }
 

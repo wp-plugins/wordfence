@@ -39,7 +39,7 @@ class wordfence {
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
 		
 		//Remove all scheduled scans.
-		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Clear all scheduled scans.
+		self::unscheduleAllScans();
 		
 		if(wfConfig::get('deleteTablesOnDeact')){
 			$schema = new wfSchema();
@@ -61,7 +61,7 @@ class wordfence {
 			while($rec = mysql_fetch_assoc($q1)){
 				array_push($URIs, $rec['URI']);
 			}
-			$wfdb->query("truncate table $p"."wfNet404s");
+			$wfdb->truncate($p . "wfNet404s");
 			if(sizeof($URIs) > 0){
 				try {
 					$api->call('send_net_404s', array(), array( 'URIs' => json_encode($URIs) ));
@@ -75,7 +75,7 @@ class wordfence {
 			while($rec = mysql_fetch_assoc($q2)){
 				$scanCont .= pack('N', ip2long($rec['IP']));
 			}
-			$wfdb->query("truncate table $p"."wfVulnScanners");
+			$wfdb->truncate($p . "wfVulnScanners");
 
 			$q3 = $wfdb->query("select INET_NTOA(IP) as IP from $p"."wfLockedOut where blockedTime > unix_timestamp() - 3600");
 			$lockCont = "";
@@ -120,7 +120,7 @@ class wordfence {
 		}
 
 		$wfdb->query("delete from $p"."wfLocs where ctime < unix_timestamp() - %d", WORDFENCE_MAX_IPLOC_AGE); 
-		$wfdb->query("truncate table $p"."wfBadLeechers"); //only uses date that's less than 1 minute old
+		$wfdb->truncate($p . "wfBadLeechers"); //only uses date that's less than 1 minute old
 		$wfdb->query("delete from $p"."wfBlocks where (blockedTime + %s < unix_timestamp()) and permanent=0", wfConfig::get('blockedTime'));
 		$wfdb->query("delete from $p"."wfCrawlers where lastUpdate < unix_timestamp() - (86400 * 7)");
 
@@ -136,20 +136,20 @@ class wordfence {
 		$wfdb->query("delete from $p"."wfLockedOut where blockedTime + %s < unix_timestamp()", wfConfig::get('loginSec_lockoutMins') * 60);
 		$count2 = $wfdb->querySingle("select count(*) as cnt from $p"."wfLogins");
 		if($count2 > 20000){
-			$wfdb->query("truncate table $p"."wfLogins"); //in case of Dos
+			$wfdb->truncate($p . "wfLogins"); //in case of Dos
 		} else if($count2 > $maxRows){
 			$wfdb->query("delete from $p"."wfLogins order by ctime asc limit %d", ($count2 - $maxRows));
 		}
 		$wfdb->query("delete from $p"."wfReverseCache where unix_timestamp() - lastUpdate > 86400");
 		$count3 = $wfdb->querySingle("select count(*) as cnt from $p"."wfThrottleLog");
 		if($count3 > 20000){
-			$wfdb->query("truncate table $p"."wfThrottleLog"); //in case of DoS
+			$wfdb->truncate($p . "wfThrottleLog"); //in case of DoS
 		} else if($count3 > $maxRows){
 			$wfdb->query("delete from $p"."wfThrottleLog order by endTime asc limit %d", ($count3 - $maxRows));
 		}
 		$count4 = $wfdb->querySingle("select count(*) as cnt from $p"."wfStatus");
 		if($count4 > 100000){
-			$wfdb->query("truncate table $p"."wfStatus");
+			$wfdb->truncate($p . "wfStatus");
 		} else if($count4 > 1000){ //max status events we keep. This determines how much gets emailed to us when users sends us a debug report. 
 			$wfdb->query("delete from $p"."wfStatus where level != 10 order by ctime asc limit %d", ($count4 - 1000));
 			$count5 = $wfdb->querySingle("select count(*) as cnt from $p"."wfStatus where level=10");
@@ -535,7 +535,22 @@ class wordfence {
 		wfConfig::set_ser('scanSched', $schedule);
 		wfConfig::set('schedMode', $schedMode);
 		wordfence::scheduleScans();
-		return array('ok' => 1);
+		$nextTime = self::getNextScanStartTime();
+		return array(
+			'ok' => 1,
+			'nextStart' => ($nextTime ? $nextTime : '') 
+			);
+	}
+	public static function getNextScanStartTime(){
+		$nextTime = false;
+		$cron = _get_cron_array(); 
+		foreach($cron as $key => $val){
+			if(isset($val['wordfence_start_scheduled_scan'])){
+				$nextTime = $key;
+				break;
+			}
+		}
+		return ($nextTime ? date('l jS \of F Y H:i:s A', $nextTime + (3600 * get_option('gmt_offset'))) : '');
 	}
 	public static function wordfenceStartScheduledScan(){
 		//This prevents scheduled scans from piling up on low traffic blogs and all being run at once.
@@ -555,7 +570,7 @@ class wordfence {
 		wfScanEngine::startScan();
 	}
 	public static function scheduleScans(){ //Idempotent. Deschedules everything and schedules the following week.
-		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Clear all scheduled scans.
+		self::unscheduleAllScans();
 		$sched = wfConfig::get_ser('scanSched', array());
 		$mode = wfConfig::get('schedMode');
 		if($mode == 'manual' && is_array($sched) && is_array($sched[0]) ){
@@ -582,20 +597,37 @@ class wordfence {
 					$wpTime = current_time('timestamp');
 					$currentDayOfWeek = date('w', $wpTime);
 					$daysInFuture = $scheduledDay - $currentDayOfWeek; //It's monday and scheduledDay is Wed (3) then result is 2 days in future. It's Wed and sched day is monday, then result is 3 - 1 = -2
-					if($daysInFuture < 0){ $daysInFuture -= 7; } //Turns -2 into 5 days in future
+					if($daysInFuture < 0){ $daysInFuture += 7; } //Turns -2 into 5 days in future
 					$currentHour = date('G', $wpTime);
 					$secsOffset = ($scheduledHour - $currentHour) * 3600; //Offset from current hour, can be negative
 					$secondsInFuture = ($daysInFuture * 86400) + $secsOffset; //Can be negative, so we schedule those 1 week ahead
 					if($secondsInFuture < 1){
 						$secondsInFuture += (86400 * 7); //Add a week
 					}
-					$wpTimeRoundDownHour = strtotime(date("D, d M y H:00:00 O", $wpTime));
-					$futureTime = $wpTimeRoundDownHour + $secondsInFuture;
+					$futureTime = time() - (time() % 3600) + $secondsInFuture; //Modulo rounds down to top of the hour
 					wordfence::status(4, 'info', "Scheduled time for day $scheduledDay hour $scheduledHour is: " . date('l jS \of F Y h:i:s A', $futureTime));
-					wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan');
+					self::scheduleSingleScan($futureTime);
 				}
 			}
 		}
+	}
+	private static function scheduleSingleScan($futureTime){
+		wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan', array($futureTime));
+		$schedArgs = wfConfig::get_ser('schedScanArgs', array());
+		if(! is_array($schedArgs)){ //paranoia
+			$schedArgs = array();
+		}
+		$schedArgs[] = $futureTime;
+		wfConfig::set_ser('schedScanArgs', $schedArgs);
+	}
+	private static function unscheduleAllScans(){
+		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Unschedule legacy scans without args
+
+		$schedArgs = wfConfig::get_ser('schedScanArgs', array());
+		foreach($schedArgs as $futureTime){
+			wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
+		}
+		wfConfig::set_ser('schedScanArgs', array());
 	}
 	public static function ajax_saveCountryBlocking_callback(){
 		if(! wfConfig::get('isPaid')){
@@ -630,6 +662,14 @@ class wordfence {
 		$content .= $phpinfo;
 		
 		wp_mail($_POST['email'], "Wordfence Activity Log", $content);	
+		return array('ok' => 1);
+	}
+	public static function ajax_startTourAgain_callback(){
+		wfConfig::set('tourClosed', 0);
+		return array('ok' => 1);
+	}
+	public static function ajax_tourClosed_callback(){
+		wfConfig::set('tourClosed', 1);
 		return array('ok' => 1);
 	}
 	public static function ajax_saveConfig_callback(){
@@ -1027,7 +1067,7 @@ class wordfence {
 			}
 		}
 
-		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
+		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
 			return;
 		}
 		if(! wfUtils::isAdmin()){
@@ -1036,7 +1076,7 @@ class wordfence {
 
 		$nonce = $_GET['nonce'];
 		if(! wp_verify_nonce($nonce, 'wp-ajax')){
-			echo "Bad security token. Please sign out and sign-in again.";
+			echo "Bad security token. It may have been more than 12 hours since you reloaded the page you came from. Try reloading the page you came from. If that doesn't work, please sign out and sign-in again.";
 			exit(0);
 		}
 		if($wfFunc == 'diff'){
@@ -1045,6 +1085,8 @@ class wordfence {
 			self::wfFunc_view();
 		} else if($wfFunc == 'sysinfo'){
 			require('sysinfo.php');
+		} else if($wfFunc == 'unknownFiles'){
+			require('unknownFiles.php');
 		} else if($wfFunc == 'IPTraf'){
 			self::wfFunc_IPTraf();
 		} else if($wfFunc == 'viewActivityLog'){
@@ -1153,7 +1195,7 @@ class wordfence {
 		return ($a['ctime'] < $b['ctime']) ? -1 : 1;
 	}
 	public static function wfFunc_view(){
-		$localFile = ABSPATH . '/' . preg_replace('/^[\.\/]+/', '', $_GET['file']);
+		$localFile = ABSPATH . '/' . preg_replace('/^(?:\.\.|[\/]+)/', '', $_GET['file']);
 		if(strpos($localFile, '..') !== false){
 			echo "Invalid file requested. (Relative paths not allowed)";
 			exit();
@@ -1226,12 +1268,13 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule') as $func){
+		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
 		if(preg_match('/^Wordfence/', @$_GET['page'])){
-
+			wp_enqueue_style('wp-pointer');
+			wp_enqueue_script('wp-pointer');
 			wp_enqueue_style('wordfence-main-style', wfUtils::getBaseURL() . 'css/main.css', '', WORDFENCE_VERSION);
 			wp_enqueue_style('wordfence-colorbox-style', wfUtils::getBaseURL() . 'css/colorbox.css', '', WORDFENCE_VERSION);
 			wp_enqueue_style('wordfence-dttable-style', wfUtils::getBaseURL() . 'css/dt_table.css', '', WORDFENCE_VERSION);
@@ -1242,14 +1285,23 @@ class wordfence {
 			wp_enqueue_script('jquery.dataTables', wfUtils::getBaseURL() . 'js/jquery.dataTables.min.js', array('jquery'), WORDFENCE_VERSION);
 			//wp_enqueue_script('jquery.tools', wfUtils::getBaseURL() . 'js/jquery.tools.min.js', array('jquery'));
 			wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'), WORDFENCE_VERSION);
-			wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
-				'ajaxURL' => admin_url('admin-ajax.php'),
-				'firstNonce' => wp_create_nonce('wp-ajax'),
-				'siteBaseURL' => wfUtils::getSiteBaseURL(),
-				'debugOn' => wfConfig::get('debugOn', 0)
-				));
+			self::setupAdminVars();
+		} else {
+			wp_enqueue_style('wp-pointer');
+			wp_enqueue_script('wp-pointer');
+			wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/tourTip.js', array('jquery'), WORDFENCE_VERSION);
+			self::setupAdminVars();
 		}
 
+	}
+	private static function setupAdminVars(){
+		wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
+			'ajaxURL' => admin_url('admin-ajax.php'),
+			'firstNonce' => wp_create_nonce('wp-ajax'),
+			'siteBaseURL' => wfUtils::getSiteBaseURL(),
+			'debugOn' => wfConfig::get('debugOn', 0),
+			'tourClosed' => wfConfig::get('tourClosed', 0)
+			));
 	}
 	public static function configure_warning(){
 		if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
@@ -1266,6 +1318,7 @@ class wordfence {
 	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
+		/* Removed this because we now have the tour.
 		if(! wfConfig::get('alertEmails')){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::configure_warning');
@@ -1273,6 +1326,7 @@ class wordfence {
 				add_action('admin_notices', 'wordfence::configure_warning');
 			}
 		}
+		*/
 		if(! wfConfig::get('apiKey')){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::noKeyError');

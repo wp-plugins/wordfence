@@ -136,27 +136,23 @@ class wfScanEngine {
 		} else {
 			wordfence::statusDisabled("Skipping core scan");
 		}
-		if(wfConfig::get('isPaid')){
-			if(wfConfig::get('scansEnabled_plugins')){
-				$this->pluginScanEnabled = true;
-				$this->statusIDX['plugin'] = wordfence::statusStart("Premium: Comparing plugin files against originals in repository");
-			} else {
-				wordfence::statusDisabled("Skipping comparing plugin files against originals in repository");
-			}
+
+		//These are both now available to free customers
+		if(wfConfig::get('scansEnabled_plugins')){
+			$this->pluginScanEnabled = true;
+			$this->statusIDX['plugin'] = wordfence::statusStart("Comparing open source plugins against WordPress.org originals");
 		} else {
-			wordfence::statusPaidOnly("Skipping comparing plugin files against originals in repository");
+			wordfence::statusDisabled("Skipping comparing plugin files against originals in repository");
 		}
-		if(wfConfig::get('isPaid')){
-			if(wfConfig::get('scansEnabled_themes')){
-				$this->themeScanEnabled = true;
-				$this->statusIDX['theme'] = wordfence::statusStart("Premium: Comparing theme files against originals in repository");
-			} else {
-				wordfence::statusDisabled("Skipping comparing theme files against originals in repository");
-			}
+		
+		if(wfConfig::get('scansEnabled_themes')){
+			$this->themeScanEnabled = true;
+			$this->statusIDX['theme'] = wordfence::statusStart("Comparing open source themes against WordPress.org originals");
 		} else {
-			wordfence::statusPaidOnly("Skipping comparing theme files against originals in repository");
+			wordfence::statusDisabled("Skipping comparing theme files against originals in repository");
 		}
-	
+		//End new section available to free customers
+
 		if(wfConfig::get('scansEnabled_malware')){
 			$this->statusIDX['unknown'] = wordfence::statusStart("Scanning for known malware files");
 			$this->malwareScanEnabled = true;
@@ -259,6 +255,7 @@ class wfScanEngine {
 		$totalUStrLen = unpack('N', substr($dataArr['data'], 0, 4));
 		$totalUStrLen = $totalUStrLen[1];
 		$this->unknownFiles = substr($dataArr['data'], 4, ($totalUStrLen - 4)); //subtruct the first 4 bytes which is an INT that is the total length of unknown string including the 4 bytes
+		wfConfig::set('lastUnknownFileList', $this->unknownFiles);
 		$resultArr = json_decode(substr($dataArr['data'], $totalUStrLen), true);
 		if(! (is_array($resultArr) && isset($resultArr['results'])) ){
 			wordfence::statusEndErr();

@@ -3,29 +3,30 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.1
-Stable tag: 3.1.6
+Stable tag: 3.2.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
 == Description ==
 
-Wordfence Security is a free enterprise class security plugin that includes a firewall and anti-virus scanning for WordPress websites.
+Wordfence Security is a free enterprise class security plugin that includes a firewall, anti-virus scanning, malicious URL scanning and live traffic including crawlers. Wordfence is the only WordPress security plugin that can verify and repair your core, theme and plugin files, even if you don't have backups.
 
-Wordfence is now Multi-Site compatible. Support for Multi-Site is currently in Beta. Please visit our forums to report any issues.
+Wordfence is now Multi-Site compatible. 
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
-Wordfence is 100% free. We also offer a Premium API key that adds additional scanning capabilities.
+Wordfence is 100% free. We also offer a Premium API key that lets you block countries and schedule scans for specific times.
 
 Wordfence:
 
-* Scans core files against repository versions to check their integrity.
-* WordPress Multi-Site (or WordPress MU in the older parlance) compatible (beta).
+* Scans core files, themes and plugins against WordPress.org repository versions to check their integrity.
+* WordPress Multi-Site (or WordPress MU in the older parlance) compatible.
 * Wordfence Security for multi-site also scans all posts and comments across all blogs from one admin panel.
-* Premium API key also scans themes and plugins against repository versions.
+* Premium users can also block countries and schedule scans for specific times and a higher frequency.
 * See how files have changed. Optionally repair changed files that are security threats.
 * Scans for signatures of over 44,000 known malware variants that are known security threats.
-* Continuously scans for malware and phishing URL's in all your comments, posts and files that are security threats.
+* Scans for many known backdoors including C99, R57, RootShell, Crystal Shell, Matamu, Cybershell, W4cking, Sniper, Predator, Jackal, Phantasma, GFS, Dive, Dx and many many more.
+* Continuously scans for malware and phishing URL's including all URL's on the Google Safe Browsing List in all your comments, posts and files that are security threats.
 * Scans for heuristics of backdoors, trojans,  suspicious code and other security issues.
 * Checks the strength of all user and admin passwords to enhance login security.
 * Monitor your DNS security for unauthorized DNS changes.
@@ -152,8 +153,34 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.2.1 =
+* Theme and plugin scanning is now free. Woohoo!
+* Added introductory tour for Wordfence.
+* Upgraded to Wordfence scanning API version 2.0 to allow free theme and plugin scanning.
+* Fixed two issue with scheduled scanning for premium users that would cause scans to not run or run at wrong times under certain conditions.
+* Added feature to view unknown files on system to help clean badly infected systems. See on scanning page in "Tools" under yellow box.
+* Fixed blocked countries overflowing their container in the user interface. 
+* Fixed case where if user is using MySQL >= 5.1.16 and doesn't have the "drop" privilege, they can't truncate the wfFileQueue table and it could grow uncontrollably.
+* Updated to the new Libyan flag.
+* Fixed mysql_ping() reconnection to DB generating warnings.
+* Fixed issue that caused scans to hang. Wordfence now processes smaller batches of files before checking if it needs to fork.
+* Security scan for backdoors: "s72 Shell",  "r57 kartal",  "r57shell",  "rootshell",  "r57",  "r57 Mohajer22",  "r57 iFX",  "php backdoor",  "phpRemoteView"
+* Security scan for backdoors: "nstview",  "nshell",  "mysql tool",  "nsTView",  "matamu",  "mysql shell",  "load shell",  "ironshell",  "lamashell",  "hiddens shell"
+* Security scan for backdoors: "h4ntu shell",  "go shell",  "dC3 Shell",  "gfs sh",  "cybershell",  "c99 w4cking",  "ctt sh"
+* Security scan for backdoors: "c99 madnet",  "c99 locus7s",  "c99 PSych0",  "c99",  "c0derz shell",  "accept language",  "Web shell"
+* Security scan for backdoors: "aZRaiLPhp",  "SnIpEr SA Shell",  "Safe0ver Shell"
+* Security scan for backdoors: "SimShell",  "Rootshell",  "Predator",  "PhpSpy",  "PHPJackal",  "PHANTASMA",  "PHP Shell"
+* Security scan for backdoors: "NTDaddy",  "NetworkFileManagerPHP",  "NIX REMOTE WEB SHELL",  "NGH"
+* Security scan for backdoors: "NFM",  "Mysql interface",  "NCC Shell",  "MySQL Web Interface",  "MyShell",  "Macker PHPShell"
+* Security scan for backdoors: "Loaderz WEB Shell",  "KA uShell",  "KAdot Universal Shell",  "Liz0ziM"
+* Security scan for backdoors: "Gamma Web Shell",  "JspWebshell",  "GRP WebShell",  "GFS web shell"
+* Security scan for backdoors: "GFS Web Shell",  "Dx",  "DxShell,  "Dive Shell",  "DTool Pro"
+* Security scan for backdoors: "Ajax PHP Command Shell",  "Antichat Shell",  "Ayyildiz Shell"
+* Security scan for backdoors: "C99 Shell", "C99 madShell",  "CTT Shell",  "CasuS",  "CmdAsp",  "Crystal Shell",  "Cyber Shell" 
+* DNS fix from previous release backed out because it's no longer needed. (We temporarily hardcoded an IP)
+
 = 3.1.6 =
-* Changing noc1.wordfence.com to IP address
+* Emergency release to deal with DNS issue.
 
 = 3.1.4 =
 * Fixed SQL error in code that checks if IP blockedTime has expired.  Changed column type to signed.

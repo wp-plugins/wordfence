@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_countryBlocking"></div>
 <div class="wrap" id="paidWrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2>Block specific countries from accessing your site</h2>
+	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Block specific countries from accessing your site</h2>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<table class="wfConfigForm">
 		<tr><td colspan="2"><h2>Country Blocking Options</h2></td></tr>
@@ -20,7 +20,7 @@
 			<?php require('wfCountrySelect.php'); ?>
 			</select><input type="button" name="but3" class="button-primary" value="Add Country" onclick="var cVal = jQuery('#wfBlockedCountry').val(); WFAD.addBlockedCountry(cVal, jQuery('#wfBlockedCountry option[value=\'' + cVal + '\']').text());" /></td></tr>
 		<tr><td colspan="2">
-<div id="wfCountryList" style="width: 350px; height: 200px; border: 1px solid #999; padding: 5px; margin: 5px;">
+<div id="wfCountryList" style="width: 350px; height: 200px; border: 1px solid #999; padding: 5px; margin: 5px; overflow: auto;">
 </div>
 <b>Changes to the country list will only take effect once you hit the save button below.</b>
 			</td></tr>
@@ -43,9 +43,34 @@ WFAD.loadBlockedCountries('<?php echo wfConfig::get('cbl_countries'); ?>');
 }
 ?>
 <?php
-if(! wfConfig::get('isPaid')){
+if( (! wfConfig::get('isPaid')) && (wfConfig::get('tourClosed', 0) == '1') ){
 	echo 'WFAD.paidUsersOnly("Country blocking is only available to paid members because we have licensed a commercial geolocation database to provide this feature.");';
 }
 ?>
 </script>
-
+<script type="text/x-jquery-template" id="wfWelcomeContentCntBlk">
+<div>
+<h3>Premium Feature: Block or redirect countries</h3>
+<strong><p>Being targeted by hackers in a specific country?</p></strong>
+<p>
+	The premium version of Wordfence offers country blocking.
+	This uses a commercial geolocation database to block hackers, spammers
+	or other malicious traffic by country with a 99.5% accuracy rate.
+</p>
+<p>
+<?php
+if(wfConfig::get('isPaid')){
+?>
+	You have upgraded to the premium version of Wordfence and have full access
+	to this feature along with our other premium features and priority support.
+<?php
+} else {
+?>
+	If you would like access to this premium feature, please 
+	<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to our premium version</a>.
+</p>
+<?php
+}
+?>
+</div>
+</script>

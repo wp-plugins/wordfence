@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_activity"></div>
 <div class="wrap wordfence">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2>Live Site Activity</h2>
+	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Live Site Activity</h2>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>
@@ -160,5 +160,42 @@
 <tr><td></td></tr>
 </table>
 </div>
+</div>
+</script>
+<script type="text/x-jquery-template" id="wfWelcomeContent3">
+<div>
+<h3>Welcome to ALL Your Site Visits, Live!</h3>
+<strong><p>Traffic you've never seen before</p></strong>
+<p>
+	Google Analytics and other Javascript analytics packages can't show you crawlers, RSS feed readers, hack attempts and other non-human traffic that hits your site.
+	Wordfence runs on your server and shows you, in real-time, all the traffic that is hitting your server right now, including those non-human crawlers, feed readers and hackers that Analytics can't track.
+</p>
+<strong><p>Separated into the important categories</p></strong>
+<p>
+	You'll notice we have divided your traffic into tabs. These include an "All Hits" tab to simply view everything that is hitting your server right now.
+	We then sub-divide that into Human traffic, your site members, crawlers - which we further break down into Google crawlers.
+</p>
+<p>
+	<strong>How to use this page when your site is being attacked</strong>
+</p>
+<p>
+	Start by looking at "All Hits" because you may notice that a single IP address is generating most of your traffic.
+	This could be a denial of service attack, someone stealing your content or a hacker probing for weaknesses.
+	If you see a suspicious pattern, simply block that IP address.
+</p>
+<p>
+	If you don't see any clear patterns of attack, take a look at "Top 404s" which will show you IP addresses that are generating excessive page not found errors. 
+	It's common for an attacker probing for weaknesses to generate a lot of page not found errors. If you see one IP
+	address that is generating many of these requests, and it's not Google or another trusted crawler, then you should consider
+	blocking them.
+</p>
+<p>
+	Next look at "Logins and Logouts". If you see a large number of failed logins from an IP address, block them if you don't recognize who they are.
+</p>
+<p>
+	Finally, take a look at "Top Consumers". These are the top IP addresses who are "consuming" or accessing most of your content.
+	If you're trying to protect yourself against a content thief, this is the first place to look.
+</p>
+
 </div>
 </script>
