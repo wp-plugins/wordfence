@@ -6,7 +6,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 </script>
 <div class="wordfenceModeElem" id="wordfenceMode_options"></div>
 <div class="wrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2>Wordfence Options</h2>
+	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Wordfence Options</h2>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>
@@ -39,6 +39,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
+	<div class="wfMarker" id="wfMarkerBasicOptions"></div>
 	<div style="margin-top: 25px;">
 		<h2>Advanced Options:</h2>
 		<p style="width: 600px;">
@@ -56,28 +57,23 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Alert when the "lost password" form is used for a valid user</th><td><input type="checkbox" id="alertOn_lostPasswdForm" class="wfConfigElem" name="alertOn_lostPasswdForm" value="1" <?php $w->cb('alertOn_lostPasswdForm'); ?>/></td></tr>
 	<tr><th>Alert me when someone with administrator access signs in</th><td><input type="checkbox" id="alertOn_adminLogin" class="wfConfigElem" name="alertOn_adminLogin" value="1" <?php $w->cb('alertOn_adminLogin'); ?>/></td></tr>
 	<tr><th>Alert me when a non-admin user signs in</th><td><input type="checkbox" id="alertOn_nonAdminLogin" class="wfConfigElem" name="alertOn_nonAdminLogin" value="1" <?php $w->cb('alertOn_nonAdminLogin'); ?>/></td></tr>
-	<tr><td colspan="2"><h3 class="wfConfigHeading">Live Traffic View</h3></td></tr>
+	<tr><td colspan="2">
+		<div class="wfMarker" id="wfMarkerLiveTrafficOptions"></div>
+		<h3 class="wfConfigHeading">Live Traffic View</h3>
+	</td></tr>
 	<tr><th class="wfConfigEnable">Enable Live Traffic View</th><td><input type="checkbox" id="liveTrafficEnabled" class="wfConfigElem" name="liveTrafficEnabled" value="1" <?php $w->cb('liveTrafficEnabled'); ?> onclick="WFAD.reloadConfigPage = true; return true;" /></td></tr>
 	<tr><th>Don't log signed-in users with publishing access:</th><td><input type="checkbox" id="liveTraf_ignorePublishers" name="liveTraf_ignorePublishers" value="1" <?php $w->cb('liveTraf_ignorePublishers'); ?> /></td></tr>
 	<tr><th>List of comma separated usernames to ignore:</th><td><input type="text" name="liveTraf_ignoreUsers" id="liveTraf_ignoreUsers" value="<?php echo $w->getHTML('liveTraf_ignoreUsers'); ?>" /></td></tr>
 	<tr><th>List of comma separated IP addresses to ignore:</th><td><input type="text" name="liveTraf_ignoreIPs" id="liveTraf_ignoreIPs" value="<?php echo $w->getHTML('liveTraf_ignoreIPs'); ?>" /></td></tr>
 	<tr><th>Browser user-agent to ignore:</th><td><input type="text" name="liveTraf_ignoreUA" id="liveTraf_ignoreUA" value="<?php echo $w->getHTML('liveTraf_ignoreUA'); ?>" /></td></tr>
-	<tr><th>Limit size of hits table to</th><td><input type="text" name="liveTraf_hitsMaxSize" class="wfConfigElem" name="liveTraf_hitsMaxSize" value="<?php $w->f('liveTraf_hitsMaxSize'); ?>" size="6" />Megabytes</td></tr>
-	<tr><td colspan="2"><h3 class="wfConfigHeading">Scans to include</h3></td></tr>
+	<tr><td colspan="2">
+		<div class="wfMarker" id="wfMarkerScansToInclude"></div>
+		<h3 class="wfConfigHeading">Scans to include</h3></td></tr>
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> /></td></tr>
 	<tr><th>Scan core files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_core" class="wfConfigElem" name="scansEnabled_core" value="1" <?php $w->cb('scansEnabled_core'); ?>/></td></tr>
 	
-	<?php if(wfConfig::get('isPaid')){ ?>
-	<tr><th style="color: #0A0; padding-top: 10px; font-weight: bold;" colspan="2">Premium Scanning:</th><td></td></tr>
-	<tr><th style="font-weight: bold;">Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" <?php $w->cb('scansEnabled_themes'); ?>/></td></tr>
-	<tr><th style="font-weight: bold;">Scan plugin files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_plugins" class="wfConfigElem" name="scansEnabled_plugins" value="1" <?php $w->cb('scansEnabled_plugins'); ?>/></td></tr>
-	<tr><td colspan="2">&nbsp;</td></tr>
-	<?php } else { ?>
-	<tr><th style="color: #F00; padding-top: 10px;" colspan="2">Only available to Premium Members: <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/" target="_blank">[click to upgrade]</a></th><td></td></tr>
-	<tr><th style="color: #999;">Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" DISABLED /></td></tr>
-	<tr><th style="color: #999;">Scan plugin files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_plugins" class="wfConfigElem" name="scansEnabled_plugins" value="1" DISABLED /></td></tr>
-	<tr><td colspan="2">&nbsp;</td></tr>
-	<?php } ?>
+	<tr><th>Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" <?php $w->cb('scansEnabled_themes'); ?>/></td></tr>
+	<tr><th>Scan plugin files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_plugins" class="wfConfigElem" name="scansEnabled_plugins" value="1" <?php $w->cb('scansEnabled_plugins'); ?>/></td></tr>
 	<tr><th>Scan for signatures of known malicious files</th><td><input type="checkbox" id="scansEnabled_malware" class="wfConfigElem" name="scansEnabled_malware" value="1" <?php $w->cb('scansEnabled_malware'); ?>/></td></tr>
 	<tr><th>Scan file contents for backdoors, trojans and suspicious code</th><td><input type="checkbox" id="scansEnabled_fileContents" class="wfConfigElem" name="scansEnabled_fileContents" value="1" <?php $w->cb('scansEnabled_fileContents'); ?>/></td></tr>
 	<tr><th>Scan posts for known dangerous URLs and suspicious content</th><td><input type="checkbox" id="scansEnabled_posts" class="wfConfigElem" name="scansEnabled_posts" value="1" <?php $w->cb('scansEnabled_posts'); ?>/></td></tr>
@@ -88,6 +84,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Scan for unauthorized DNS changes</th><td><input type="checkbox" id="scansEnabled_dns" class="wfConfigElem" name="scansEnabled_dns" value="1" <?php $w->cb('scansEnabled_dns'); ?>/></td></tr>
 	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
 	<tr><td colspan="2">
+		<div class="wfMarker" id="wfMarkerFirewallRules"></div>
 		<h3 class="wfConfigHeading">Firewall Rules</h3>
 	</td></tr>
 
@@ -121,7 +118,10 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 			<option value="2592000"<?php $w->sel('blockedTime', '2592000'); ?>>1 month</option>
 		</select></td></tr>
 
-	<tr><td colspan="2"><h3 class="wfConfigHeading">Login Security Options</h3></td></tr>
+	<tr><td colspan="2">
+		<div class="wfMarker" id="wfMarkerLoginSecurity"></div>
+		<h3 class="wfConfigHeading">Login Security Options</h3>
+		</td></tr>
 	<tr><th class="wfConfigEnable">Enable login security</th><td><input type="checkbox" id="loginSecurityEnabled" class="wfConfigElem" name="loginSecurityEnabled" value="1" <?php $w->cb('loginSecurityEnabled'); ?> /></td></tr>
 	<tr><th>Lock out after how many login failures</th><td>
 		<select id="loginSec_maxFailures" class="wfConfigElem" name="loginSec_maxFailures">
@@ -197,17 +197,119 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		</td></tr>
 	<tr><th>Immediately lock out invalid usernames</th><td><input type="checkbox" id="loginSec_lockInvalidUsers" class="wfConfigElem" name="loginSec_lockInvalidUsers" <?php $w->cb('loginSec_lockInvalidUsers'); ?> /></td></tr>
 	<tr><th>Don't let WordPress reveal valid users in login errors</th><td><input type="checkbox" id="loginSec_maskLoginErrors" class="wfConfigElem" name="loginSec_maskLoginErrors" <?php $w->cb('loginSec_maskLoginErrors'); ?> /></td></tr>
-	<tr><td colspan="2"><h3 class="wfConfigHeading">Other Options</h3></td></tr>
+	<tr><td colspan="2">
+		<div class="wfMarker" id="wfMarkerOtherOptions"></div>
+		<h3 class="wfConfigHeading">Other Options</h3>
+		</td></tr>
+	<tr><th>Whitelisted IP addresses that bypass all rules:</th><td><input type="text" name="whitelisted" id="whitelisted" value="<?php echo $w->getHTML('whitelisted'); ?>" size="40" /></td></tr>
+	<tr><th colspan="2" style="color: #999;">Whitelisted IP's must be separated by commas. You can specify ranges using the following format: 123.23.34.[1-50]<br />Wordfence automatically whitelists <a href="http://en.wikipedia.org/wiki/Private_network" target="_blank">private networks</a> because these are not routable on the public Internet.<br /><br /></th></tr>
 	<tr><th>Hide WordPress version</th><td><input type="checkbox" id="other_hideWPVersion" class="wfConfigElem" name="other_hideWPVersion" value="1" <?php $w->cb('other_hideWPVersion'); ?> /></td></tr>
 	<tr><th>Hold anonymous comments using member emails for moderation</th><td><input type="checkbox" id="other_noAnonMemberComments" class="wfConfigElem" name="other_noAnonMemberComments" value="1" <?php $w->cb('other_noAnonMemberComments'); ?> /></td></tr>
 	<tr><th>Scan comments for malware and phishing URL's</th><td><input type="checkbox" id="other_scanComments" class="wfConfigElem" name="other_scanComments" value="1" <?php $w->cb('other_scanComments'); ?> /></td></tr>
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
-	<tr><th>Enable debugging mode</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
-	<tr><th colspan="2"><a href="/?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
+	<tr><th>Enable debugging mode (increases database load)</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
+	<tr><th>Delete Wordfence tables and data on deactivation?</th><td><input type="checkbox" id="deleteTablesOnDeact" class="wfConfigElem" name="deleteTablesOnDeact" value="1" <?php $w->cb('deleteTablesOnDeact'); ?> /></td></tr>
+	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
+	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=testmem&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's available memory</a></th></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	</div>
 	</form>
 </div>
+<script type="text/x-jquery-template" id="wfContentBasicOptions">
+<div>
+<h3>Basic Options</h3>
+<p>
+	Using Wordfence is simple. Install Wordfence, enter an email address on this page to send alerts to, and then do your first scan and work through the security alerts we provide.
+	We give you a few basic security levels to choose from, depending on your needs. Remember to hit the "Save" button to save any changes you make. 
+</p>
+<p>
+	If you use the free edition of Wordfence, you don't need to worry about entering an API key in the "API Key" field above. One is automatically created for you. If you choose to <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to Wordfence premium edition</a>, you will receive an API key. You will need to copy and paste that key into the "API Key"
+	field above and hit "Save" to activate your key.
+</p>
+</div>
+</script>
+<script type="text/x-jquery-template" id="wfContentLiveTrafficOptions">
+<div>
+<h3>Live Traffic Options</h3>
+<p>
+	These options let you ignore certain types of visitors, based on their level of access, usernames, IP address or browser type.
+	If you run a very high traffic website where it is not feasible to see your visitors in real-time, simply un-check the live traffic option and nothing will be written to the Wordfence tracking tables.
+</p>
+</div>
+</script>
+<script type="text/x-jquery-template" id="wfContentScansToInclude">
+<div>
+<h3>Scans to Include</h3>
+<p>
+	This section gives you the ability to fine-tune what we scan. 
+	If you use many themes or plugins from the public WordPress directory we recommend you 
+	enable theme and plugin scanning. This will verify the integrity of all these themes and plugins and alert you of any changes.
+<p>
+<p>
+	The option to "scan files outside your WordPress installation" will cause Wordfence to do a much wider security scan
+	that is not limited to your base WordPress directory and known WordPress subdirectories. This scan may take longer
+	but can be very useful if you have other infected files outside this WordPress installation that you would like us to look for.
+</p>
+</div>
+</script>
+<script type="text/x-jquery-template" id="wfContentFirewallRules">
+<div>
+<h3>Firewall Rules</h3>
+<p>
+	<strong>NOTE:</strong> Before modifying these rules, make sure you have access to the email address associated with this site's administrator account. If you accidentally lock yourself out, you will be given the option
+	to enter that email address and receive an "unlock email" which will allow you to regain access.
+</p>
+<p>
+	<strong>Tips:</strong>
+	<p>&#8226; If you choose to limit the rate at which your site can be accessed, you need to customize the settings for your site.</p>
+	<p>&#8226; If your users usually skip quickly between pages, you should set the values for human visitors to be high.</p>
+	<p>&#8226; If you are aggressively crawled by non-Google crawlers like Baidu, you should set the page view limit for crawlers to a high value.</p>
+	<p>&#8226; If you are currently under attack and want to aggressively protect your site or your content, you can set low values for most options.</p>
+	<p>&#8226; In general we recommend you don't block fake Google crawlers unless you have a specific problem with someone stealing your content.</p>
+</p>
+<p>
+	Remember that as long as you have your administrator email set correctly in this site's user administration, and you are able to receive email at that address,
+	you will be able to regain access if you are accidentally locked out because your rules are too strict.
+</p>
+</div>
+</script>
+<script type="text/x-jquery-template" id="wfContentLoginSecurity">
+<div>
+<h3>Login Security</h3>
+<p>
+	We have found that real brute force login attacks make hundreds or thousands of requests trying to guess passwords or user login names. 
+	So in general you can leave the number of failed logins before a user is locked out as a fairly high number.
+	We have found that blocking after 20 failed attempts is sufficient for most sites and it allows your real site users enough
+	attempts to guess their forgotten passwords without getting locked out.
+</p>
+</div>
+</script>
+<script type="text/x-jquery-template" id="wfContentOtherOptions">
+<div>
+<h3>Other Options</h3>
+<p>
+	We have worked hard to make Wordfence memory efficient and much of the heavy lifting is done for your site by our cloud scanning servers in our Seattle data center.
+	On most sites Wordfence will only use about 8 megabytes of additional memory when doing a scan, even if you have large files or a large number of files.
+	You should not have to adjust the maximum memory that Wordfence can use, but we have provided the option. Remember that this does not affect the actual memory usage of Wordfence, simply the maximum Wordfence can use if it needs to.
+</p>
+<p>
+	You may find debugging mode helpful if Wordfence is not able to start a scan on your site or
+	if you are experiencing some other problem. Enable debugging by checking the box, save your options
+	and then try to do a scan. You will notice a lot more output on the "Scan" page.
+</p>
+<p>
+	If you decide to permanently remove Wordfence, you can choose the option to delete all data on deactivation.
+	We also provide helpful links at the bottom of this page which lets you see your systems configuration and test how
+	much memory your host really allows you to use.
+</p>
+<p>
+	Thanks for completing this tour and I'm very happy to have you as our newest Wordfence customer. Don't forget to <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">rate us 5 stars if you love Wordfence</a>.<br />
+	<br />
+	<strong>Mark Maunder</strong> - Wordfence Creator.
+</p>
+</div>
+</script>
+

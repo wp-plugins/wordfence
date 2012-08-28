@@ -1,13 +1,14 @@
 <div class="wordfenceModeElem" id="wordfenceMode_blockedIPs"></div>
 <div class="wrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2>Wordfence Blocked IP Addresses</h2>
+	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Wordfence Blocked IP Addresses</h2>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>
 		</table>
 	</div>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
-		<a href="#" onclick="WFAD.clearAllBlocked('blocked'); return false;">Clear all blocked IP addresses</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="#" onclick="WFAD.clearAllBlocked('locked'); return false;">Clear all locked out IP addresses</a>
+		<a href="#" onclick="WFAD.clearAllBlocked('blocked'); return false;">Clear all blocked IP addresses</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="#" onclick="WFAD.clearAllBlocked('locked'); return false;">Clear all locked out IP addresses</a><br />
+		You can manually block an IP by entering the address here: <input type="text" id="wfManualBlock" size="20" maxlength="40" value="" />&nbsp;<input type="button" name="but1" value="Manually block IP" onclick="WFAD.blockIPTwo(jQuery('#wfManualBlock').val(), 'Manual block by administrator'); return false;" />
 	</div>
 	<div class="wordfenceWrap">
 		<div>
@@ -118,6 +119,9 @@
 	</div>
 	<div>
 		<strong>IP:</strong>&nbsp;<a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a> [<a href="#" onclick="WFAD.unblockIP('${IP}'); return false;">unblock</a>]
+		{{if permanent == '1'}}
+			[<span style="color: #F00;">permanently blocked</span>]
+		{{else}}&nbsp;&nbsp;[<a href="#" onclick="WFAD.permBlockIP('${IP}'); return false;">make permanent</a>]{{/if}}
 	</div>
 	<div>
 		<strong>Reason:</strong>&nbsp;${reason}
@@ -142,7 +146,10 @@
 	<ul>
 	<li>${totalHits} hits before blocked</li>
 	<li>${blockedHits} blocked hits</li>
-	<li>Will be unblocked in ${blockedForAgo}</li>
+	<li>
+		{{if permanent == '1'}}Permanently blocked{{else}}
+		Will be unblocked in ${blockedForAgo}{{/if}}
+	</li>
 	</ul>
 </td></tr>
 {{/each}}
@@ -151,3 +158,23 @@
 </div>
 </script>
 
+<script type="text/x-jquery-template" id="wfWelcomeContent4">
+<div>
+<h3>How to manage Blocked IP addresses</h3>
+<strong><p>Block IP's temporarily or permanently</p></strong>
+<p>
+	When you block an IP address, it will appear here with some additional information. 
+	You will be able to see the geographic location of the IP, how many hits occured before
+	it was blocked and how many attempts it has made on your site since it was blocked.
+</p>
+<p>
+	You can also see how long until a blocked IP will be automatically unblocked. 
+	You can also manually add IP addresses on this page to be blocked.
+</p>
+<p>
+	You also have the option to see IP addresses who have been locked out from the login system for too many login attempts. 
+	And finally, when the firewall "throttles" someone's access for accessing the site too quickly, you can 
+	see which IP addresses have been throttled.
+</p>
+</div>
+</script>

@@ -27,9 +27,14 @@ window['wordfenceAdmin'] = {
 	maxActivityLogItems: 1000,
 	scanReqAnimation: false,
 	debugOn: false,
+	blockedCountriesPending: [],
+	ownCountry: "",
+	schedStartHour: false,
+	currentPointer: false,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
 		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
+		this.tourClosed = WordfenceAdminVars.tourClosed == '1' ? true : false;
 		var startTicker = false;
 		if(jQuery('#wordfenceMode_scan').length > 0){
 			this.mode = 'scan';
@@ -39,20 +44,61 @@ window['wordfenceAdmin'] = {
 			this.noScanHTML = jQuery('#wfNoScanYetTmpl').tmpl().html();
 			this.loadIssues();
 			this.startActivityLogUpdates();
+			if(! this.tourClosed){
+				this.scanTourStart();
+			}
 		} else if(jQuery('#wordfenceMode_activity').length > 0){
 			this.mode = 'activity';
 			this.activityMode = 'hit';
 			startTicker = true;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+			}
 		} else if(jQuery('#wordfenceMode_options').length > 0){
 			this.mode = 'options';
 			jQuery('.wfConfigElem').change(function(){ jQuery('#securityLevel').val('CUSTOM'); });
 			this.updateTicker(true);
 			startTicker = true;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfContentBasicOptions', 'wfMarkerBasicOptions', 'top', 'left', "Learn about Live Traffic Options", function(){ 
+					self.tour('wfContentLiveTrafficOptions', 'wfMarkerLiveTrafficOptions', 'bottom', 'left', "Learn about Scanning Options", function(){
+						self.tour('wfContentScansToInclude', 'wfMarkerScansToInclude', 'bottom', 'left', "Learn about Firewall Rules", function(){
+							self.tour('wfContentFirewallRules', 'wfMarkerFirewallRules', 'bottom', 'left', "Learn about Login Security", function(){
+								self.tour('wfContentLoginSecurity', 'wfMarkerLoginSecurity', 'bottom', 'left', "Learn about Other Options", function(){
+									self.tour('wfContentOtherOptions', 'wfMarkerOtherOptions', 'bottom', 'left', false, false);
+									});
+								});
+							});
+						});
+					});
+			}
 		} else if(jQuery('#wordfenceMode_blockedIPs').length > 0){
 			this.mode = 'blocked';
 			this.staticTabChanged();
 			this.updateTicker(true);
 			startTicker = true;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfWelcomeContent4', 'wfHeading', 'top', 'left', "Learn how to Block Countries", function(){ self.tourRedir('WordfenceCountryBlocking'); });
+			}
+		} else if(jQuery('#wordfenceMode_countryBlocking').length > 0){
+			this.mode = 'countryBlocking';
+			startTicker = false;
+			this.drawBlockedCountries();
+			if(! this.tourClosed){
+				var self = this;	
+				this.tour('wfWelcomeContentCntBlk', 'wfHeading', 'top', 'left', "Learn how to Schedule Scans", function(){ self.tourRedir('WordfenceScanSchedule'); });
+			}
+		} else if(jQuery('#wordfenceMode_scanScheduling').length > 0){
+			this.mode = 'scanScheduling';
+			startTicker = false;
+			this.sched_modeChange();
+			if(! this.tourClosed){
+				var self = this;	
+				this.tour('wfWelcomeContentScanSched', 'wfHeading', 'top', 'left', "Learn how to Customize Wordfence", function(){ self.tourRedir('WordfenceSecOpt'); });
+			}
 		} else {
 			this.mode = false;
 		}
@@ -63,7 +109,65 @@ window['wordfenceAdmin'] = {
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
-
+	},
+	scanTourStart: function(){
+		var self = this;
+		this.tour('wfWelcomeContent1', 'wfHeading', 'top', 'left', "Continue the Tour", function(){ 
+			self.tour('wfWelcomeContent2', 'wfHeading', 'top', 'left', "Learn how to use Wordfence", function(){
+				self.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about Live Traffic", function(){ self.tourRedir('WordfenceActivity'); });
+				});
+			});
+	},
+	tourRedir: function(menuItem){
+		window.location.href = 'admin.php?page=' + menuItem;
+	},
+	tourFinish: function(){
+		this.ajax('wordfence_tourClosed', {}, function(res){});
+	},
+	tour: function(contentID, elemID, edge, align, buttonLabel, buttonCallback){
+		var self = this;
+		if(this.currentPointer){
+			this.currentPointer.pointer('destroy');
+			this.currentPointer = false;
+		}
+		var options = {
+			buttons: function(event, t){
+				var buttonElem = jQuery('<div id="wfTourButCont"><a id="pointer-close" style="margin-left:5px" class="button-secondary">End the Tour</a></div><div><a id="wfRateLink" href="http://wordpress.org/extend/plugins/wordfence/" target="_blank" style="font-size: 10px; font-family: Verdana;">Help spread the word by rating us 5&#9733; on WordPress.org</a></div>');
+				buttonElem.find('#pointer-close').bind('click.pointer', function (evtObj) {
+					if(evtObj.srcElement.id == 'wfRateLink'){
+						return true;
+					}
+					self.tourFinish();
+					t.element.pointer('close');
+					return false;
+					});
+				return buttonElem;
+			},
+			close: function(){},
+			content: jQuery('#' + contentID).tmpl().html(),
+			pointerWidth: 400,
+			position: {
+				edge: edge,
+				align: align,
+				}
+			};
+		this.currentPointer = jQuery('#' + elemID).pointer(options).pointer('open');
+		if(buttonLabel && buttonCallback){
+			jQuery('#pointer-close').after('<a id="pointer-primary" class="button-primary">' + buttonLabel + '</a>');
+			jQuery('#pointer-primary').click(buttonCallback);
+		}
+	},
+	startTourAgain: function(){
+		this.ajax('wordfence_startTourAgain', {}, function(res){});
+		this.tourClosed = false;
+		this.scanTourStart();
+	},
+	showLoading: function(){
+		this.removeLoading();
+		jQuery('<div id="wordfenceWorking">Wordfence is working...</div>').appendTo('body');
+	},
+	removeLoading: function(){
+		jQuery('#wordfenceWorking').remove();
 	},
 	startActivityLogUpdates: function(){
 		var self = this;
@@ -79,7 +183,7 @@ window['wordfenceAdmin'] = {
 		var self = this;
 		this.ajax('wordfence_activityLogUpdate', {
 			lastctime: this.lastALogCtime
-			}, function(res){ self.doneUpdateActivityLog(res); }, function(){ self.activityLogUpdatePending = false; });
+			}, function(res){ self.doneUpdateActivityLog(res); }, function(){ self.activityLogUpdatePending = false; }, true);
 
 	},
 	doneUpdateActivityLog: function(res){
@@ -169,7 +273,7 @@ window['wordfenceAdmin'] = {
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDERR') != -1){
 			var msg = item.msg.replace('SUM_ENDERR:', '');
-			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryErr').html('An error occured.');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryErr').html('An error occurred.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_DISABLED:') != -1){
 			var msg = item.msg.replace('SUM_DISABLED:', '');
@@ -185,6 +289,9 @@ window['wordfenceAdmin'] = {
 		} else if(item.msg.indexOf('SUM_PREP:') != -1){
 			var msg = item.msg.replace('SUM_PREP:', '');
 			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult" id="wfStartingScan"><div class="wfSummaryLoading"></div></div><div class="wfClear"></div>');
+		} else if(item.msg.indexOf('SUM_KILLED:') != -1){
+			var msg = item.msg.replace('SUM_KILLED:', '');
+			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult wfSummaryOK">Scan Complete.</div><div class="wfClear"></div>');
 		}
 	},
 	processActQueueItem: function(){
@@ -216,7 +323,7 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_ticker', { 
 			alsoGet: alsoGet,
 			otherParams: otherParams
-			}, function(res){ self.handleTickerReturn(res); }, function(){ self.tickerUpdatePending = false; });
+			}, function(res){ self.handleTickerReturn(res); }, function(){ self.tickerUpdatePending = false; }, true);
 	},
 	handleTickerReturn: function(res){
 		this.tickerUpdatePending = false;
@@ -314,26 +421,16 @@ window['wordfenceAdmin'] = {
 						}
 						});
 					}
-				}
-			);
+				}, false, false);
 	},
-	activateWF: function(key){
-		jQuery('.wfAjax24').show();
-		this.ajax('wordfence_activate', {
-			key: jQuery('#wordfenceKey').val(),
-			email: jQuery('#email').val()
-			},
-			function(res){
-				jQuery('.wfAjax24').hide();
-				if(res.ok){
-					window.location = "admin.php?page=Wordfence&wfAct=" + Math.floor(Math.random()*999999999);
-					return;
-				} else if(res.errorAlert){ 
-					jQuery.colorbox({ width: '400px', html:  
-						"<h3>An error occured:</h3><p>" + res.errorAlert + "</p>"
-						});
-				} 
-
+	killScan: function(){
+		var self = this;
+		this.ajax('wordfence_killScan', {}, function(res){
+			if(res.ok){
+				self.colorbox('400px', "Kill requested", "A termination request has been sent to any running scans.");
+			} else {
+				self.colorbox('400px', "Kill failed", "We failed to send a termination request.");
+			}
 			});
 	},
 	startScan: function(){
@@ -350,7 +447,7 @@ window['wordfenceAdmin'] = {
 		setTimeout(function(res){ 
 			clearInterval(scanReqAnimation); 
 			jQuery('#wfStartScanButton1,#wfStartScanButton2').prop('value', "Start a Wordfence Scan");
-			}, 2000);
+			}, 3000);
 		this.ajax('wordfence_scan', {}, function(res){ } );
 	},
 	loadIssues: function(callback){
@@ -441,7 +538,7 @@ window['wordfenceAdmin'] = {
 		}
 		return true;
 	},
-	ajax: function(action, data, cb, cbErr){
+	ajax: function(action, data, cb, cbErr, noLoading){
 		if(typeof(data) == 'string'){
 			if(data.length > 0){
 				data += '&';
@@ -455,21 +552,25 @@ window['wordfenceAdmin'] = {
 			cbErr = function(){};
 		}
 		var self = this;
+		if(! noLoading){
+			this.showLoading();
+		}
 		jQuery.ajax({
 			type: 'POST',
 			url: WordfenceAdminVars.ajaxURL,
 			dataType: "json",
 			data: data,
 			success: function(json){ 
+				self.removeLoading();
 				if(json && json.nonce){
 					self.nonce = json.nonce;
 				}
 				if(json && json.errorMsg){
-					self.colorbox('400px', 'An error occured', json.errorMsg);
+					self.colorbox('400px', 'An error occurred', json.errorMsg);
 				}
 				cb(json); 
 			},
-			error: cbErr
+			error: function(){ self.removeLoading(); cbErr(); }
 			});
 	},
 	colorbox: function(width, heading, body){ 
@@ -487,7 +588,7 @@ window['wordfenceAdmin'] = {
 		jQuery.colorbox({ width: width, html: "<h3>" + heading + "</h3><p>" + body + "</p>"});
 	},
 	scanRunningMsg: function(){ this.colorbox('400px', "A scan is running", "A scan is currently in progress. Please wait until it finishes before starting another scan."); },
-	errorMsg: function(msg){ this.colorbox('400px', "An error occured:", msg); },
+	errorMsg: function(msg){ this.colorbox('400px', "An error occurred:", msg); },
 	deleteFile: function(issueID){
 		var self = this;
 		this.ajax('wordfence_deleteFile', {
@@ -495,11 +596,12 @@ window['wordfenceAdmin'] = {
 			}, function(res){ self.doneDeleteFile(res); });
 	},
 	doneDeleteFile: function(res){
+		var cb = false;
+		var self = this;
 		if(res.ok){
-			var self = this;
-			this.loadIssues(function(){ self.colorbox('400px', "Success deleting file", "The file " + res.file + " containing " + res.filesize + " bytes was successfully deleted."); });
-		} else if(res.errorMsg){
-			this.loadIssues();
+			this.loadIssues(function(){ self.colorbox('400px', "Success deleting file", "The file " + res.file + " was successfully deleted."); });
+		} else if(res.cerrorMsg){
+			this.loadIssues(function(){ self.colorbox('400px', 'An error occurred', res.cerrorMsg); });
 		}
 	},
 	restoreFile: function(issueID){
@@ -509,26 +611,24 @@ window['wordfenceAdmin'] = {
 			}, function(res){ self.doneRestoreFile(res); });
 	},
 	doneRestoreFile: function(res){
-		this.loadIssues();
+		var self = this;
 		if(res.ok){
-			this.colorbox("400px", "File restored OK", "The file " + res.file + " was restored succesfully.");
+			this.loadIssues(function(){ self.colorbox("400px", "File restored OK", "The file " + res.file + " was restored succesfully."); });
+		} else	if(res.cerrorMsg){
+			this.loadIssues(function(){ self.colorbox('400px', 'An error occurred', res.cerrorMsg); });
 		}
 	},
 	deleteIssue: function(id){
 		var self = this;
 		this.ajax('wordfence_deleteIssue', { id: id }, function(res){ 
 			self.loadIssues();
-			if(res.errMsg){
-				self.colorbox('400px', "An error occured", res.errMsg);
-			}
 			});
 	},
 	updateIssueStatus: function(id, st){
 		var self = this;
 		this.ajax('wordfence_updateIssueStatus', { id: id, 'status': st }, function(res){ 
-			self.loadIssues();
-			if(res.errMsg){
-				self.colorbox('400px', "An error occured", res.errMsg);
+			if(res.ok){
+				self.loadIssues();
 			}
 			});
 	},
@@ -751,6 +851,19 @@ window['wordfenceAdmin'] = {
 				}
 			});
 	},
+	blockIPTwo: function(IP, reason){
+		var self = this;
+		this.ajax('wordfence_blockIP', {
+			IP: IP,
+			reason: reason
+			}, function(res){ 
+				if(res.errorMsg){
+					return;
+				} else {
+					self.staticTabChanged();
+				}
+			});
+	},
 	unlockOutIP: function(IP){
 		var self = this;
 		this.ajax('wordfence_unlockOutIP', {
@@ -760,6 +873,12 @@ window['wordfenceAdmin'] = {
 	unblockIP: function(IP){
 		var self = this;
 		this.ajax('wordfence_unblockIP', {
+			IP: IP
+			}, function(res){ self.staticTabChanged(); });
+	},
+	permBlockIP: function(IP){
+		var self = this;
+		this.ajax('wordfence_permBlockIP', {
 			IP: IP
 			}, function(res){ self.staticTabChanged(); });
 	},
@@ -791,7 +910,7 @@ window['wordfenceAdmin'] = {
 			} else if(res.errorMsg){
 				return;
 			} else {
-				self.colorbox('400px', 'An error occured', 'We encountered an error trying to save your changes.');
+				self.colorbox('400px', 'An error occurred', 'We encountered an error trying to save your changes.');
 			}
 			});
 	},
@@ -825,6 +944,177 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_clearAllBlocked', { op: op }, function(res){ 
 			self.staticTabChanged();
 			});
+	},
+	setOwnCountry: function(code){
+		this.ownCountry = (code + "").toUpperCase();
+	},
+	addBlockedCountry: function(code, name){
+		code = (code + "").toUpperCase();
+		if(code == this.ownCountry){
+			this.colorbox('400px', "Please confirm blocking yourself", "You are about to block your own country. This could lead to you being locked out. Please make sure that your user profile on this machine has a current and valid email address and make sure you know what it is. That way if you are locked out, you can send yourself an unlock email. If you're sure you want to block your own country, click 'Confirm' below, otherwise click 'Cancel'.<br />" +
+				'<input type="button" name="but1" value="Confirm" onclick="jQuery.colorbox.close(); WFAD.addBlockedCountryConfirm(\'' + code + '\',\'' + name + '\');" />&nbsp;<input type="button" name="but1" value="Cancel" onclick="jQuery.colorbox.close();" />');
+		} else {
+			this.addBlockedCountryConfirm(code, name);
+		}
+	},
+	addBlockedCountryConfirm: function(code, name){
+		var exists = false;
+		for(var i = 0; i < this.blockedCountriesPending.length; i++){
+			if(this.blockedCountriesPending[i][0] == code){
+				return;
+			}
+		}
+		this.blockedCountriesPending.push([code, name]);
+		this.drawBlockedCountries();
+	},
+	loadBlockedCountries: function(str){
+		var codes = str.split(',');
+		var self = this;
+		jQuery("#wfBlockedCountry > option").each(function() {
+			for(var i = 0; i < codes.length; i++){
+				if(codes[i] == this.value){
+					self.addBlockedCountryConfirm(this.value, this.text);
+				}
+			}
+			});
+		this.drawBlockedCountries();
+	},
+	drawBlockedCountries: function(){
+		var html = "";
+		var self = this;
+		if(this.blockedCountriesPending.length < 1){
+			jQuery('#wfCountryList').html('<span style="color: #999;">There are no countries currently blocked.</span>');
+			return;
+		}
+		jQuery("#wfBlockedCountry > option").each(function() {
+			for(var i = 0; i < self.blockedCountriesPending.length; i++){
+				if(self.blockedCountriesPending[i][0] == this.value){
+					html += "Blocking: " + this.text + '&nbsp;&nbsp;<a href="#" onclick="WFAD.removeBlockedCountry(\'' + this.value + '\'); return false;">[remove]</a><br />';
+				}
+			}
+			});
+		jQuery('#wfCountryList').html(html);
+
+	},
+	removeBlockedCountry: function(code){
+		var newArr = [];
+		for(var i = 0; i < this.blockedCountriesPending.length; i++){
+			if(this.blockedCountriesPending[i][0] != code){
+				newArr.push(this.blockedCountriesPending[i]);
+			}
+		}
+		this.blockedCountriesPending = newArr;
+		this.drawBlockedCountries();
+	},
+	saveCountryBlocking: function(){
+		var action = jQuery('#wfBlockAction').val();
+		var redirURL = jQuery('#wfRedirURL').val();
+		if(action == 'redir' && (! /^https?:\/\/[^\/]+/i.test(redirURL))){
+			this.colorbox('400px', "Please enter a URL for redirection", "You have chosen to redirect blocked countries to a specific page. You need to enter a URL in the text box provided that starts with http:// or https://");
+			return;
+		}
+		var loggedInBlocked = jQuery('#wfLoggedInBlocked').is(':checked') ? '1' : '0';
+		var loginFormBlocked = jQuery('#wfLoginFormBlocked').is(':checked') ? '1' : '0';
+		var codesArr = [];
+		for(var i = 0; i < this.blockedCountriesPending.length; i++){
+			codesArr.push(this.blockedCountriesPending[i][0]);
+		}
+		var codes = codesArr.join(',');
+		jQuery('.wfAjax24').show();
+		var self = this;
+		this.ajax('wordfence_saveCountryBlocking', {
+			blockAction: action,
+			redirURL: redirURL,
+			loggedInBlocked: loggedInBlocked,
+			loginFormBlocked: loginFormBlocked,
+			codes: codes
+			}, function(res){ 
+				jQuery('.wfAjax24').hide();
+				self.pulse('.wfSavedMsg');
+				});
+	},
+	paidUsersOnly: function(msg){
+		var pos = jQuery('#paidWrap').position();
+		var width = jQuery('#paidWrap').width();
+		var height = jQuery('#paidWrap').height();
+		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
+	},
+	sched_modeChange: function(){
+		var self = this;
+		if(jQuery('#schedMode').val() == 'auto'){
+			jQuery('.wfSchedCheckbox').attr('disabled', true);
+		} else {
+			jQuery('.wfSchedCheckbox').attr('disabled', false);
+		}
+	},
+	sched_shortcut: function(mode){
+		if(jQuery('#schedMode').val() == 'auto'){
+			this.colorbox('400px', 'Change the scan mode', "You need to change the scan mode to manually scheduled scans if you want to select scan times.");
+			return;
+		}
+		jQuery('.wfSchedCheckbox').prop('checked', false);
+		if(this.schedStartHour === false){
+			this.schedStartHour = Math.floor((Math.random()*24));
+		} else {
+			this.schedStartHour++;
+			if(this.schedStartHour > 23){
+				this.schedStartHour = 0;
+			}
+		}
+		if(mode == 'onceDaily'){
+			for(var i = 0; i <= 6; i++){
+				jQuery('#wfSchedDay_' + i + '_' + this.schedStartHour).attr('checked', true);
+			}
+		} else if(mode == 'twiceDaily'){
+			var secondHour = this.schedStartHour + 12;
+			if(secondHour >= 24){ secondHour = secondHour - 24; }
+			for(var i = 0; i <= 6; i++){
+				jQuery('#wfSchedDay_' + i + '_' + this.schedStartHour).attr('checked', true);
+				jQuery('#wfSchedDay_' + i + '_' + secondHour).attr('checked', true);
+			}
+		} else if(mode == 'oddDaysWE'){
+			var startDay = Math.floor((Math.random()));
+			jQuery('#wfSchedDay_1_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_3_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_5_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_6_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_0_' + this.schedStartHour).attr('checked', true);
+		} else if(mode == 'weekends'){
+			var startDay = Math.floor((Math.random()));
+			jQuery('#wfSchedDay_6_' + this.schedStartHour).attr('checked', true);
+			jQuery('#wfSchedDay_0_' + this.schedStartHour).attr('checked', true);
+		} else if(mode == 'every6hours'){
+			for(var i = 0; i <= 6; i++){
+				for(var hour = this.schedStartHour; hour < this.schedStartHour + 24; hour = hour + 6){
+					var displayHour = hour;
+					if(displayHour >= 24){ displayHour = displayHour - 24; }
+					jQuery('#wfSchedDay_' + i + '_' + displayHour).attr('checked', true);
+				}
+			}
+		}
+
+	},
+	sched_save: function(){
+		var schedMode = jQuery('#schedMode').val();
+		var schedule = [];
+		for(var day = 0; day <= 6; day++){
+			var hours = [];
+			for(var hour = 0; hour <= 23; hour++){
+				var elemID = '#wfSchedDay_' + day + '_' + hour;
+				hours[hour] = jQuery(elemID).is(':checked') ? '1' : '0';
+			}
+			schedule[day] = hours.join(',');
+		}
+		scheduleTxt = schedule.join('|');
+		var self = this;
+		this.ajax('wordfence_saveScanSchedule', {
+			schedMode: schedMode,
+			schedTxt: scheduleTxt
+			}, function(res){
+				jQuery('#wfScanStartTime').html(res.nextStart);
+				jQuery('.wfAjax24').hide();
+				self.pulse('.wfSaveMsg');
+				});
 	}
 };
 window['WFAD'] = window['wordfenceAdmin'];
