@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.1
-Stable tag: 3.2.1
+Stable tag: 3.2.2
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -153,6 +153,15 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.2.2 =
+* Improved country blocking to make bulk adding/deleting of countries much easier.
+* Fixed bug that caused Google feed fetcher and other Google UA bots to get blocked if blocking of unverified Googlebots was enabled.
+* Fixed issue where Locked out users were shown having the same expiry time as Blocked IP's.
+* Fixed issue where Locked out users were not shown in the locked out list, but were still locked out if Blocked IP and Locked out expiry was different.
+* Improved performance of whitelisting so if whitelisted, all rules are bypassed.
+* Fixed issue that caused twentyten and twentyeleven themes to be shown as missing core files if they have been removed and theme scanning is enabled.
+* Fixed issue that made it impossible to end the tour for Firefox users.
+
 = 3.2.1 =
 * Theme and plugin scanning is now free. Woohoo!
 * Added introductory tour for Wordfence.

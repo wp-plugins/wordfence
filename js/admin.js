@@ -31,6 +31,8 @@ window['wordfenceAdmin'] = {
 	ownCountry: "",
 	schedStartHour: false,
 	currentPointer: false,
+	countryMap: false,
+	countryCodesToSave: "",
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
 		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
@@ -86,7 +88,6 @@ window['wordfenceAdmin'] = {
 		} else if(jQuery('#wordfenceMode_countryBlocking').length > 0){
 			this.mode = 'countryBlocking';
 			startTicker = false;
-			this.drawBlockedCountries();
 			if(! this.tourClosed){
 				var self = this;	
 				this.tour('wfWelcomeContentCntBlk', 'wfHeading', 'top', 'left', "Learn how to Schedule Scans", function(){ self.tourRedir('WordfenceScanSchedule'); });
@@ -134,7 +135,8 @@ window['wordfenceAdmin'] = {
 			buttons: function(event, t){
 				var buttonElem = jQuery('<div id="wfTourButCont"><a id="pointer-close" style="margin-left:5px" class="button-secondary">End the Tour</a></div><div><a id="wfRateLink" href="http://wordpress.org/extend/plugins/wordfence/" target="_blank" style="font-size: 10px; font-family: Verdana;">Help spread the word by rating us 5&#9733; on WordPress.org</a></div>');
 				buttonElem.find('#pointer-close').bind('click.pointer', function (evtObj) {
-					if(evtObj.srcElement.id == 'wfRateLink'){
+					var evtSourceElem = evtObj.srcElement ? evtObj.srcElement : evtObj.target;
+					if(evtSourceElem.id == 'wfRateLink'){
 						return true;
 					}
 					self.tourFinish();
@@ -948,63 +950,11 @@ window['wordfenceAdmin'] = {
 	setOwnCountry: function(code){
 		this.ownCountry = (code + "").toUpperCase();
 	},
-	addBlockedCountry: function(code, name){
-		code = (code + "").toUpperCase();
-		if(code == this.ownCountry){
-			this.colorbox('400px', "Please confirm blocking yourself", "You are about to block your own country. This could lead to you being locked out. Please make sure that your user profile on this machine has a current and valid email address and make sure you know what it is. That way if you are locked out, you can send yourself an unlock email. If you're sure you want to block your own country, click 'Confirm' below, otherwise click 'Cancel'.<br />" +
-				'<input type="button" name="but1" value="Confirm" onclick="jQuery.colorbox.close(); WFAD.addBlockedCountryConfirm(\'' + code + '\',\'' + name + '\');" />&nbsp;<input type="button" name="but1" value="Cancel" onclick="jQuery.colorbox.close();" />');
-		} else {
-			this.addBlockedCountryConfirm(code, name);
-		}
-	},
-	addBlockedCountryConfirm: function(code, name){
-		var exists = false;
-		for(var i = 0; i < this.blockedCountriesPending.length; i++){
-			if(this.blockedCountriesPending[i][0] == code){
-				return;
-			}
-		}
-		this.blockedCountriesPending.push([code, name]);
-		this.drawBlockedCountries();
-	},
 	loadBlockedCountries: function(str){
 		var codes = str.split(',');
-		var self = this;
-		jQuery("#wfBlockedCountry > option").each(function() {
-			for(var i = 0; i < codes.length; i++){
-				if(codes[i] == this.value){
-					self.addBlockedCountryConfirm(this.value, this.text);
-				}
-			}
-			});
-		this.drawBlockedCountries();
-	},
-	drawBlockedCountries: function(){
-		var html = "";
-		var self = this;
-		if(this.blockedCountriesPending.length < 1){
-			jQuery('#wfCountryList').html('<span style="color: #999;">There are no countries currently blocked.</span>');
-			return;
+		for(var i = 0; i < codes.length; i++){
+			jQuery('#wfCountryCheckbox_' + codes[i]).prop('checked', true);
 		}
-		jQuery("#wfBlockedCountry > option").each(function() {
-			for(var i = 0; i < self.blockedCountriesPending.length; i++){
-				if(self.blockedCountriesPending[i][0] == this.value){
-					html += "Blocking: " + this.text + '&nbsp;&nbsp;<a href="#" onclick="WFAD.removeBlockedCountry(\'' + this.value + '\'); return false;">[remove]</a><br />';
-				}
-			}
-			});
-		jQuery('#wfCountryList').html(html);
-
-	},
-	removeBlockedCountry: function(code){
-		var newArr = [];
-		for(var i = 0; i < this.blockedCountriesPending.length; i++){
-			if(this.blockedCountriesPending[i][0] != code){
-				newArr.push(this.blockedCountriesPending[i]);
-			}
-		}
-		this.blockedCountriesPending = newArr;
-		this.drawBlockedCountries();
 	},
 	saveCountryBlocking: function(){
 		var action = jQuery('#wfBlockAction').val();
@@ -1013,13 +963,33 @@ window['wordfenceAdmin'] = {
 			this.colorbox('400px', "Please enter a URL for redirection", "You have chosen to redirect blocked countries to a specific page. You need to enter a URL in the text box provided that starts with http:// or https://");
 			return;
 		}
+		var codesArr = [];
+		var ownCountryBlocked = false;
+		var self = this;
+		jQuery('.wfCountryCheckbox').each(function(idx, elem){
+			if(jQuery(elem).is(':checked')){
+				var code = jQuery(elem).val();
+				codesArr.push(code);
+				if(code == self.ownCountry){
+					ownCountryBlocked = true;
+				}
+			}
+			});
+		var codes = codesArr.join(',');
+		this.countryCodesToSave = codes;
+		if(ownCountryBlocked){
+			this.colorbox('400px', "Please confirm blocking yourself", "You are about to block your own country. This could lead to you being locked out. Please make sure that your user profile on this machine has a current and valid email address and make sure you know what it is. That way if you are locked out, you can send yourself an unlock email. If you're sure you want to block your own country, click 'Confirm' below, otherwise click 'Cancel'.<br />" +
+				'<input type="button" name="but1" value="Confirm" onclick="jQuery.colorbox.close(); WFAD.confirmSaveCountryBlocking();" />&nbsp;<input type="button" name="but1" value="Cancel" onclick="jQuery.colorbox.close();" />');
+		} else {
+			this.confirmSaveCountryBlocking();
+		}
+	},
+	confirmSaveCountryBlocking: function(){
+		var action = jQuery('#wfBlockAction').val();
+		var redirURL = jQuery('#wfRedirURL').val();
 		var loggedInBlocked = jQuery('#wfLoggedInBlocked').is(':checked') ? '1' : '0';
 		var loginFormBlocked = jQuery('#wfLoginFormBlocked').is(':checked') ? '1' : '0';
-		var codesArr = [];
-		for(var i = 0; i < this.blockedCountriesPending.length; i++){
-			codesArr.push(this.blockedCountriesPending[i][0]);
-		}
-		var codes = codesArr.join(',');
+
 		jQuery('.wfAjax24').show();
 		var self = this;
 		this.ajax('wordfence_saveCountryBlocking', {
@@ -1027,7 +997,7 @@ window['wordfenceAdmin'] = {
 			redirURL: redirURL,
 			loggedInBlocked: loggedInBlocked,
 			loginFormBlocked: loginFormBlocked,
-			codes: codes
+			codes: this.countryCodesToSave
 			}, function(res){ 
 				jQuery('.wfAjax24').hide();
 				self.pulse('.wfSavedMsg');
@@ -1116,6 +1086,7 @@ window['wordfenceAdmin'] = {
 				self.pulse('.wfSaveMsg');
 				});
 	}
+
 };
 window['WFAD'] = window['wordfenceAdmin'];
 }

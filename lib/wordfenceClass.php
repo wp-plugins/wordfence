@@ -94,7 +94,9 @@ class wordfence {
 							for($i = 0; $i < $len; $i += 4){
 								list($ipLong) = array_values(unpack('N', substr($resp['data'], $i, 4)));
 								$IPStr = long2ip($ipLong);
-								self::getLog()->blockIP($IPStr, $reason, true);
+								if(! self::getLog()->isWhitelisted($IPStr)){ 
+									self::getLog()->blockIP($IPStr, $reason, true);
+								}
 							}
 						}
 					}
@@ -225,6 +227,8 @@ class wordfence {
 		$db->queryIgnoreError("alter table $prefix"."wfStatus modify column msg varchar(1000) NOT NULL");
 		//3.1.2 to 3.1.4
 		$db->queryIgnoreError("alter table $prefix"."wfBlocks modify column blockedTime bigint signed NOT NULL");
+		//3.2.1 to 3.2.2
+		$db->queryIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
 
 		//Must be the final line
 	}
@@ -300,7 +304,11 @@ class wordfence {
 		die(json_encode($returnArr));
 	}
 	public static function lostPasswordPost(){
-		if(self::isLockedOut(wfUtils::getIP())){
+		$IP = wfUtils::getIP();
+		if(self::getLog()->isWhitelisted($IP)){
+			return;
+		}
+		if(self::isLockedOut($IP)){
 			require('wfLockedOut.php');
 		}
 		$email = $_POST['user_login'];
@@ -308,11 +316,11 @@ class wordfence {
 		$user = get_user_by('email', $_POST['user_login']);
 		if($user){
 			if(wfConfig::get('alertOn_lostPasswdForm')){
-				wordfence::alert("Password recovery attempted", "Someone tried to recover the password for user with email address: $email", wfUtils::getIP());
+				wordfence::alert("Password recovery attempted", "Someone tried to recover the password for user with email address: $email", $IP);
 			}
 		}
 		if(wfConfig::get('loginSecurityEnabled')){
-			$tKey = 'wffgt_' . wfUtils::inet_aton(wfUtils::getIP());
+			$tKey = 'wffgt_' . wfUtils::inet_aton($IP);
 			$forgotAttempts = get_transient($tKey);
 			if($forgotAttempts){
 				$forgotAttempts++;
@@ -320,7 +328,7 @@ class wordfence {
 				$forgotAttempts = 1;
 			}
 			if($forgotAttempts >= wfConfig::get('loginSec_maxForgotPasswd')){
-				self::lockOutIP(wfUtils::getIP(), "Exceeded the maximum number of tries to recover their password which is set at: " . wfConfig::get('loginSec_maxForgotPasswd'));
+				self::lockOutIP($IP, "Exceeded the maximum number of tries to recover their password which is set at: " . wfConfig::get('loginSec_maxForgotPasswd'));
 				require('wfLockedOut.php');
 			}
 			set_transient($tKey, $forgotAttempts, wfConfig::get('loginSec_countFailMins') * 60);
@@ -432,12 +440,16 @@ class wordfence {
 		}
 	}
 	public static function authenticateFilter($authResult){
+		$IP = wfUtils::getIP();	
+		if(self::getLog()->isWhitelisted($IP)){
+			return $authResult;
+		}
 		if(wfConfig::get('loginSecurityEnabled')){
 			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username' && wfConfig::get('loginSec_lockInvalidUsers')){
-				self::lockOutIP(wfUtils::getIP(), "Used an invalid username to try to sign in.");
+				self::lockOutIP($IP, "Used an invalid username to try to sign in.");
 				require('wfLockedOut.php');
 			}
-			$tKey = 'wflginfl_' . wfUtils::inet_aton(wfUtils::getIP());
+			$tKey = 'wflginfl_' . wfUtils::inet_aton($IP);
 			if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') ){
 				$tries = get_transient($tKey);
 				if($tries){
@@ -446,7 +458,7 @@ class wordfence {
 					$tries = 1;
 				}
 				if($tries >= wfConfig::get('loginSec_maxFailures')){
-					self::lockOutIP(wfUtils::getIP(), "Exceeded the maximum number of login failures which is: " . wfConfig::get('loginSec_maxFailures'));
+					self::lockOutIP($IP, "Exceeded the maximum number of login failures which is: " . wfConfig::get('loginSec_maxFailures'));
 					require('wfLockedOut.php');
 				}
 				set_transient($tKey, $tries, wfConfig::get('loginSec_countFailMins') * 60);

@@ -50,6 +50,10 @@ class wfLog {
 		return $pagename;
 	}
 	public function logLeechAndBlock($type){ //404 or hit
+		$IP = wfUtils::getIP();
+		if($this->isWhitelisted($IP)){
+			return;
+		}
 		if($type == '404'){
 			$table = $this->scanTable;
 		} else if($type == 'hit'){
@@ -58,12 +62,11 @@ class wfLog {
 			wordfence::status(1, 'error', "Invalid type to logLeechAndBlock(): $type");
 			return;
 		}
-		$IP = wfUtils::getIP();
 		$this->getDB()->query("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
 		$hitsPerMinute = $this->getDB()->querySingle("select @wfcurrenthits");
 		if(wfConfig::get('firewallEnabled')){
 			if(wfConfig::get('blockFakeBots')){
-				if(wfCrawl::isGoogleCrawler() && (! wfCrawl::verifyCrawlerPTR($this->googlePattern, $IP) )){
+				if(wfCrawl::isGooglebot() && (! wfCrawl::verifyCrawlerPTR($this->googlePattern, $IP) )){
 					wordfence::status(2, 'info', "Blocking fake Googlebot at IP $IP");
 					$this->blockIP($IP, "Fake Google crawler automatically blocked");
 				}
@@ -219,7 +222,7 @@ class wfLog {
 		return $results;
 	}
 	public function getLockedOutIPs(){
-		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->lockOutTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
+		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->lockOutTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('loginSec_lockoutMins'), wfConfig::get('loginSec_lockoutMins'));
 		$results = array();
 		while($elem = mysql_fetch_assoc($res)){			
 			$elem['lastAttemptAgo'] = $elem['lastAttempt'] ? wfUtils::makeTimeAgo($elem['lastAttemptAgo']) : '';
@@ -573,11 +576,16 @@ class wfLog {
 			} else if($nb == 'neverBlockUA' || $nb == 'neverBlockVerified'){
 				if(wfCrawl::isGoogleCrawler()){ //Check the UA using regex
 					if($nb == 'neverBlockVerified'){
-						if(wfCrawl::verifyCrawlerPTR($this->googlePattern, wfUtils::getIP())){ //UA check passed, now verify using PTR if configured to
-							self::$gbSafeCache[$cacheKey] = false; //This is a verified Google crawler, so no we can't block it
-						} else {
-							self::$gbSafeCache[$cacheKey] = true; //This is a crawler claiming to be Google but it did not verify
+						if(wfCrawl::isGooglebot()){ //UA is the one, the only, the original Googlebot
+							if(wfCrawl::verifyCrawlerPTR($this->googlePattern, wfUtils::getIP())){ //UA check passed, now verify using PTR if configured to
+								self::$gbSafeCache[$cacheKey] = false; //This is a verified Google crawler, so no we can't block it
+							} else {
+								self::$gbSafeCache[$cacheKey] = true; //This is a crawler claiming to be Google but it did not verify
+							}
+						} else { //UA isGoogleCrawler, but is not Googlebot itself. E.g. feedreader, google-site-verification, etc.
+							self::$gbSafeCache[$cacheKey] = false; //This is a crawler with a google UA, but it's not Googlebot, so we don't block for safety. We can't verify these because they don't have a PTR record. e.g. Feedreader.
 						}
+							
 					} else { //neverBlockUA
 						self::$gbSafeCache[$cacheKey] = false; //User configured us to only do a UA check and this claims to be google so don't block
 					}

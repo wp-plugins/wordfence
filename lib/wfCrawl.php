@@ -70,6 +70,13 @@ class wfCrawl {
 '@^msnbot/1\\.0.*$@',
 '@^msnbot/1\\.1.*$@'
 	);
+	public static function isGooglebot(){
+		$UA = $_SERVER['HTTP_USER_AGENT'];
+		if(preg_match('/Googlebot\/\d\.\d/', $UA)){ // UA: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html) or (rarely used): Googlebot/2.1 (+http://www.google.com/bot.html)
+			return true;
+		}
+		return false;
+	}
 	public static function isGoogleCrawler(){
 		$UA = $_SERVER['HTTP_USER_AGENT'];
 		foreach(self::$googPat as $pat){
