@@ -25,6 +25,7 @@ class wfScanEngine {
 	private $malwareScanEnabled = false;
 	private $pluginScanEnabled = false;
 	private $coreScanEnabled = false;
+	private $publicScanEnabled = false;
 	private $themeScanEnabled = false;
 	private $unknownFiles = "";
 	private $fileContentsResults = false;
@@ -41,7 +42,7 @@ class wfScanEngine {
 	private $userPasswdQueue = "";
 	private $passwdHasIssues = false;
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
-		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
+		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'publicScanEnabled', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
 	}
 	public function __construct(){
 		$this->startTime = time();
@@ -53,6 +54,7 @@ class wfScanEngine {
 		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
+		$this->jobList[] = 'publicSite';
 		foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = 'knownFiles_' . $op; };
 		foreach(array('fileContents', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
 			if(wfConfig::get('scansEnabled_' . $scanType)){
@@ -126,6 +128,30 @@ class wfScanEngine {
 	}
 	public function getCurrentJob(){
 		return $this->jobList[0];
+	}
+	private function scan_publicSite(){
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('scansEnabled_public')){
+				$this->publicScanEnabled = true;
+				$this->statusIDX['public'] = wordfence::statusStart("Doing Remote Scan of public site for problems");
+				$result = $this->api->call('scan_public_site', array(), array(
+					'siteURL' => site_url()
+					));
+				$haveIssues = false;
+				if($result['haveIssues'] && is_array($result['issues']) ){
+					foreach($result['issues'] as $issue){
+						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+						$haveIssues = true;
+					}
+				}
+				wordfence::statusEnd($this->statusIDX['public'], $haveIssues);
+			} else {
+				wordfence::statusDisabled("Skipping remote scan of public site for problems");
+			}
+		} else {
+			wordfence::statusPaidOnly("Remote scan of public facing site only available to paid members");
+			sleep(2); //enough time to read the message before it scrolls off.
+		}
 	}
 	private function scan_knownFiles_init(){
 		$this->status(1, 'info', "Contacting Wordfence to initiate scan");
