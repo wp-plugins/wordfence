@@ -52,6 +52,7 @@
 						$debugOn = wfConfig::get('debugOn', false);
 						$newestItem = 0;
 						$sumEvents = array();
+						$timeOffset = 3600 * get_option('gmt_offset');
 						foreach($events as $e){
 							if(strpos($e['msg'], 'SUM_') !== 0){
 								if( $debugOn || $e['level'] < 4){
@@ -59,7 +60,7 @@
 									if($debugOn){
 										$typeClass = ' wf' . $e['type'];
 									}
-									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime'] + $timeOffset) . ']&nbsp;' . $e['msg'] . '</div>';
 								}
 							}
 							$newestItem = $e['ctime'];
@@ -503,6 +504,74 @@
 </div>
 </div>
 </script>
+<script type="text/x-jquery-template" id="issueTmpl_pubBadURLs">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreC' }}These bad URLs will be ignored until they change.{{/if}}
+			{{if status == 'ignoreP' }}These bad URLs will be permanently ignored.{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+	{{if status == 'new'}}
+		<strong>Resolve:</strong> 
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreC'); return false;">Ignore these URLs until they change.</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore these URLs permanently</a>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
+
+
+<script type="text/x-jquery-template" id="issueTmpl_pubDomainRedir">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreC' }}This redirect will be ignored until it changes.{{/if}}
+			{{if status == 'ignoreP' }}This redirect is permanently ignored.{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+	{{if status == 'new'}}
+		<strong>Resolve:</strong> 
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreC'); return false;">Ignore this redirect until it changes</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore any redirect like this permanently</a>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
+
+
+
+
 <script type="text/x-jquery-template" id="wfNoScanYetTmpl">
 <div>
 	<table class="wfSummaryParent" cellpadding="0" cellspacing="0">

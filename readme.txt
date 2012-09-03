@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.1
-Stable tag: 3.2.4
+Stable tag: 3.2.7
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -153,6 +153,19 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+= 3.2.7 =
+* Fixed dates and times in activity log alert emails and other emails to be in site's local timezone.
+* Added advanced country blocking options which allow bypass if a special URL is hit.
+* Added warning in options page if alert email is not configured under alert checkboxes.
+* Modified scan times to be within 60 minute window after scheduled time to prevent stampede at the top of the hour on our scanning server.
+* Fixed bug on Godaddy and a few other hosts where viewing list of files not in the repo caused error. This was caused by posix functions not being supported on Godaddy and some other hosts. 
+
+= 3.2.6 =
+* Paid feature: Remote site vulnerability and infection scanning.
+
+= 3.2.5 =
+* Moved all attack signatures out of the plugin to prevent Wordfence being detected as malicious in a false positive.
+
 = 3.2.4 =
 * Improved country blocking to make bulk adding/deleting of countries much easier.
 * Fixed bug that caused Google feed fetcher and other Google UA bots to get blocked if blocking of unverified Googlebots was enabled.
