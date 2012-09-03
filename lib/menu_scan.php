@@ -52,6 +52,7 @@
 						$debugOn = wfConfig::get('debugOn', false);
 						$newestItem = 0;
 						$sumEvents = array();
+						$timeOffset = 3600 * get_option('gmt_offset');
 						foreach($events as $e){
 							if(strpos($e['msg'], 'SUM_') !== 0){
 								if( $debugOn || $e['level'] < 4){
@@ -59,7 +60,7 @@
 									if($debugOn){
 										$typeClass = ' wf' . $e['type'];
 									}
-									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime']) . ']&nbsp;' . $e['msg'] . '</div>';
+									echo '<div class="wfActivityLine' . $typeClass . '">[' . date('M d H:i:s', $e['ctime'] + $timeOffset) . ']&nbsp;' . $e['msg'] . '</div>';
 								}
 							}
 							$newestItem = $e['ctime'];

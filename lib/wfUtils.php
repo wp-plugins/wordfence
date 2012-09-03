@@ -452,6 +452,9 @@ class wfUtils {
 		$URL = rtrim($URL, '/') . '/';
 		return $URL;
 	}
+	public static function localHumanDate(){
+		return date('l jS \of F Y \a\t h:i:s A', time() + (3600 * get_option('gmt_offset')));
+	}
 
 }
 

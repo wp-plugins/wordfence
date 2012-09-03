@@ -50,6 +50,12 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<div id="wfConfigAdvanced">
 	<table class="wfConfigForm">
 	<tr><td colspan="2"><h3 class="wfConfigHeading">Alerts</h3></td></tr>
+	<?php
+		$emails = wfConfig::getAlertEmails();
+                if(sizeof($emails) < 1){ 
+			echo "<tr><th colspan=\"2\" style=\"color: #F00;\">You have not configured an email to receive alerts yet. Set this up under \"Basic Options\" above.</th></tr>\n";
+		}
+	?>
 	<tr><th>Alert on critical problems</th><td><input type="checkbox" id="alertOn_critical" class="wfConfigElem" name="alertOn_critical" value="1" <?php $w->cb('alertOn_critical'); ?>/></td></tr>
 	<tr><th>Alert on warnings</th><td><input type="checkbox" id="alertOn_warnings" class="wfConfigElem" name="alertOn_warnings" value="1" <?php $w->cb('alertOn_warnings'); ?>/></td></tr>
 	<tr><th>Alert when an IP address is blocked</th><td><input type="checkbox" id="alertOn_block" class="wfConfigElem" name="alertOn_block" value="1" <?php $w->cb('alertOn_block'); ?>/></td></tr>
