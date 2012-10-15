@@ -150,7 +150,7 @@ window['wordfenceAdmin'] = {
 			pointerWidth: 400,
 			position: {
 				edge: edge,
-				align: align,
+				align: align
 				}
 			};
 		this.currentPointer = jQuery('#' + elemID).pointer(options).pointer('open');
@@ -269,9 +269,17 @@ window['wordfenceAdmin'] = {
 			var msg = item.msg.replace('SUM_ENDBAD:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Problems found.');
 			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDFAILED') != -1){
+			var msg = item.msg.replace('SUM_ENDFAILED:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Failed.');
+			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDOK') != -1){
 			var msg = item.msg.replace('SUM_ENDOK:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Secure.');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDSUCCESS') != -1){
+			var msg = item.msg.replace('SUM_ENDSUCCESS:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Success.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDERR') != -1){
 			var msg = item.msg.replace('SUM_ENDERR:', '');

@@ -1,5 +1,5 @@
 <?php
-define('WORDFENCE_API_VERSION', '2.3');
+define('WORDFENCE_API_VERSION', '2.4');
 define('WORDFENCE_API_URL_SEC', 'https://noc1.wordfence.com/');
 define('WORDFENCE_API_URL_NONSEC', 'http://noc1.wordfence.com/');
 define('WORDFENCE_MAX_SCAN_TIME', 600);

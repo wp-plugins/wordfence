@@ -229,6 +229,8 @@ class wordfence {
 		$db->queryIgnoreError("alter table $prefix"."wfBlocks modify column blockedTime bigint signed NOT NULL");
 		//3.2.1 to 3.2.2
 		$db->queryIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
+		$db->queryIgnoreError("drop table if exists $prefix"."wfFileQueue");
+		$db->queryIgnoreError("drop table if exists $prefix"."wfFileChanges");
 
 		//Must be the final line
 	}
@@ -1289,7 +1291,7 @@ class wordfence {
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
-		if(preg_match('/^Wordfence/', @$_GET['page'])){
+		if(isset($_GET['page']) && preg_match('/^Wordfence/', @$_GET['page']) ){
 			wp_enqueue_style('wp-pointer');
 			wp_enqueue_script('wp-pointer');
 			wp_enqueue_style('wordfence-main-style', wfUtils::getBaseURL() . 'css/main.css', '', WORDFENCE_VERSION);
@@ -1481,12 +1483,20 @@ class wordfence {
 		self::status(10, 'info', 'SUM_START:' . $msg);
 		return sizeof($statusStartMsgs) - 1;
 	}
-	public static function statusEnd($idx, $haveIssues){
+	public static function statusEnd($idx, $haveIssues, $successFailed = false){
 		$statusStartMsgs = wfConfig::get_ser('wfStatusStartMsgs', array());
 		if($haveIssues){
-			self::status(10, 'info', 'SUM_ENDBAD:' . $statusStartMsgs[$idx]);
+			if($successFailed){
+				self::status(10, 'info', 'SUM_ENDFAILED:' . $statusStartMsgs[$idx]);
+			} else {
+				self::status(10, 'info', 'SUM_ENDBAD:' . $statusStartMsgs[$idx]);
+			}
 		} else {
-			self::status(10, 'info', 'SUM_ENDOK:' . $statusStartMsgs[$idx]);
+			if($successFailed){
+				self::status(10, 'info', 'SUM_ENDSUCCESS:' . $statusStartMsgs[$idx]);
+			} else {
+				self::status(10, 'info', 'SUM_ENDOK:' . $statusStartMsgs[$idx]);
+			}
 		}
 		$statusStartMsgs[$idx] = '';
 		wfConfig::set_ser('wfStatusStartMsgs', $statusStartMsgs);

@@ -13,6 +13,9 @@ class wfAPI {
 		$this->APIKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 	}
+	public function getStaticURL($url){ // In the form '/something.bin' without quotes
+		return $this->getURL($this->getAPIURL() . $url);
+	}
 	public function call($action, $getParams = array(), $postParams = array()){
 		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
 			array_merge(
@@ -45,7 +48,7 @@ class wfAPI {
 			$this->curlDataWritten = 0;
 			$this->curlContent = "";
 			$curl = curl_init($url);
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt ($curl, CURLOPT_HEADER, 0);
@@ -106,7 +109,7 @@ class wfAPI {
 		$url = $this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		if(function_exists('curl_init')){
 			$curl = curl_init($url);
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 			//curl_setopt($curl, CURLOPT_VERBOSE, true);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);

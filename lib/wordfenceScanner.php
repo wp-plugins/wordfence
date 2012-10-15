@@ -5,7 +5,6 @@ require_once('wordfenceURLHoover.php');
 class wordfenceScanner {
 	//serialized:
 	protected $path = '';
-	protected $fileList = array();
 	protected $results = array(); 
 	public $errorMsg = false;
 	private $apiKey = false;
@@ -15,15 +14,14 @@ class wordfenceScanner {
 	private $lastStatusTime = false;
 	private $patterns = "";
 	public function __sleep(){
-		return array('path', 'fileList', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover', 'totalFilesScanned', 'startTime', 'lastStatusTime', 'patterns');
+		return array('path', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover', 'totalFilesScanned', 'startTime', 'lastStatusTime', 'patterns');
 	}
 	public function __wakeup(){
 	}
-	public function __construct($apiKey, $wordpressVersion, $fileList, $path){
+	public function __construct($apiKey, $wordpressVersion, $path){
 		$this->apiKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 		$this->api = new wfAPI($this->apiKey, $this->wordpressVersion);
-		$this->fileList = $fileList; //A long string of <2 byte network order short showing filename length><filename>
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
@@ -51,16 +49,12 @@ class wordfenceScanner {
 		if(! $this->lastStatusTime){
 			$this->lastStatusTime = microtime(true);
 		}
-		while(strlen($this->fileList) > 0){
-			$filenameLen = unpack('n', substr($this->fileList, 0, 2));
-			$filenameLen = $filenameLen[1];
-			if($filenameLen > 1000 || $filenameLen < 1){
-				wordfence::status(1, 'error', "wordfenceScanner got bad data from the Wordfence API with a filename length of: " . $filenameLen);
-				exit();
-			}
-				
-			$file = substr($this->fileList, 2, $filenameLen);
-			$this->fileList = substr($this->fileList, 2 + $filenameLen);
+		$db = new wfDB();
+		$res1 = $db->query("select filename, filenameMD5, hex(newMD5) as newMD5 from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0");
+		while($rec1 = mysql_fetch_assoc($res1)){
+			$db->query("update " . $db->prefix() . "wfFileMods set oldMD5 = newMD5 where filenameMD5='%s'", $rec1['filenameMD5']); //A way to mark as scanned so that if we come back from a sleep we don't rescan this one.
+			$file = $rec1['filename'];
+			$fileSum = $rec1['newMD5'];
 
 			if(! file_exists($this->path . $file)){
 				continue;
@@ -96,11 +90,6 @@ class wordfenceScanner {
                        }
 
 			$stime = microtime(true);
-			$fileSum = @md5_file($this->path . $file);
-			if(! $fileSum){
-				//usually permission denied
-				continue;
-			}
 			$fh = @fopen($this->path . $file, 'r');
 			if(! $fh){
 				continue;
@@ -250,7 +239,7 @@ class wordfenceScanner {
 		return $this->results;
 	}
 	private function writeScanningStatus(){
-		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " files at a rate of " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " files per second");
+		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " unrecognized files at " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " per second");
 	}
 	private function addEncIssue($ignoreP, $ignoreC, $encoding, $file){
 		$this->addResult(array(
