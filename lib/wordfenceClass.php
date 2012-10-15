@@ -229,6 +229,8 @@ class wordfence {
 		$db->queryIgnoreError("alter table $prefix"."wfBlocks modify column blockedTime bigint signed NOT NULL");
 		//3.2.1 to 3.2.2
 		$db->queryIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
+		$db->queryIgnoreError("drop table if exists $prefix"."wfFileQueue");
+		$db->queryIgnoreError("drop table if exists $prefix"."wfFileChanges");
 
 		//Must be the final line
 	}
@@ -617,6 +619,7 @@ class wordfence {
 						$secondsInFuture += (86400 * 7); //Add a week
 					}
 					$futureTime = time() - (time() % 3600) + $secondsInFuture; //Modulo rounds down to top of the hour
+					$futureTime += rand(0,3600); //Prevent a stampede of scans on our scanning server
 					wordfence::status(4, 'info', "Scheduled time for day $scheduledDay hour $scheduledHour is: " . date('l jS \of F Y h:i:s A', $futureTime));
 					self::scheduleSingleScan($futureTime);
 				}
@@ -650,6 +653,9 @@ class wordfence {
 		wfConfig::set('cbl_redirURL', $_POST['redirURL']);
 		wfConfig::set('cbl_loggedInBlocked', $_POST['loggedInBlocked']);
 		wfConfig::set('cbl_loginFormBlocked', $_POST['loginFormBlocked']);
+		wfConfig::set('cbl_bypassRedirURL', $_POST['bypassRedirURL']);
+		wfConfig::set('cbl_bypassRedirDest', $_POST['bypassRedirDest']);
+		wfConfig::set('cbl_bypassViewURL', $_POST['bypassViewURL']);
 		return array('ok' => 1);
 	}
 	public static function ajax_sendActivityLog_callback(){
@@ -658,11 +664,12 @@ class wordfence {
 		global $wpdb;
 		$p = $wpdb->base_prefix;
 		$q = $wfdb->query("select ctime, level, type, msg from $p"."wfStatus order by ctime desc limit 10000");
+		$timeOffset = 3600 * get_option('gmt_offset');
 		while($r = mysql_fetch_assoc($q)){
 			if($r['type'] == 'error'){
 				$content .= "\n";
 			}
-			$content .= date(DATE_RFC822, $r['ctime']) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . $r['msg'] . "\n";
+			$content .= date(DATE_RFC822, $r['ctime'] + $timeOffset) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . $r['msg'] . "\n";
 		}
 		$content .= "\n\n";
 		
@@ -1270,7 +1277,7 @@ class wordfence {
 		$wp->add_query_var('_wfsf');
 		//add_rewrite_rule('wfStaticFunc/([a-zA-Z0-9]+)/?$', 'index.php?wfStaticFunc=' . $matches[1], 'top');
 		$cookieName = 'wfvt_' . crc32(site_url());
-		$c = isset($_COOKIES[$cookieName]) ? isset($_COOKIES[$cookieName]) : false;
+		$c = isset($_COOKIE[$cookieName]) ? isset($_COOKIE[$cookieName]) : false;
 		if($c){
 			self::$newVisit = false;
 		} else {
@@ -1284,7 +1291,7 @@ class wordfence {
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
-		if(preg_match('/^Wordfence/', @$_GET['page'])){
+		if(isset($_GET['page']) && preg_match('/^Wordfence/', @$_GET['page']) ){
 			wp_enqueue_style('wp-pointer');
 			wp_enqueue_script('wp-pointer');
 			wp_enqueue_style('wordfence-main-style', wfUtils::getBaseURL() . 'css/main.css', '', WORDFENCE_VERSION);
@@ -1447,7 +1454,7 @@ class wordfence {
 			'blogName' => get_bloginfo('name', 'raw'),
 			'alertMsg' => $alertMsg,
 			'IPMsg' => $IPMsg,
-			'date' => date('l jS \of F Y \a\t h:i:s A'),
+			'date' => wfUtils::localHumanDate(),
 			'myHomeURL' => self::getMyHomeURL(),
 			'myOptionsURL' => self::getMyOptionsURL()
 			));
@@ -1476,12 +1483,20 @@ class wordfence {
 		self::status(10, 'info', 'SUM_START:' . $msg);
 		return sizeof($statusStartMsgs) - 1;
 	}
-	public static function statusEnd($idx, $haveIssues){
+	public static function statusEnd($idx, $haveIssues, $successFailed = false){
 		$statusStartMsgs = wfConfig::get_ser('wfStatusStartMsgs', array());
 		if($haveIssues){
-			self::status(10, 'info', 'SUM_ENDBAD:' . $statusStartMsgs[$idx]);
+			if($successFailed){
+				self::status(10, 'info', 'SUM_ENDFAILED:' . $statusStartMsgs[$idx]);
+			} else {
+				self::status(10, 'info', 'SUM_ENDBAD:' . $statusStartMsgs[$idx]);
+			}
 		} else {
-			self::status(10, 'info', 'SUM_ENDOK:' . $statusStartMsgs[$idx]);
+			if($successFailed){
+				self::status(10, 'info', 'SUM_ENDSUCCESS:' . $statusStartMsgs[$idx]);
+			} else {
+				self::status(10, 'info', 'SUM_ENDOK:' . $statusStartMsgs[$idx]);
+			}
 		}
 		$statusStartMsgs[$idx] = '';
 		wfConfig::set_ser('wfStatusStartMsgs', $statusStartMsgs);

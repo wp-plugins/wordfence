@@ -22,6 +22,8 @@
 			You can go to the Settings/General menu to change your timezone.
 			Use the links provided as shortcuts to select scan times. Try clicking 
 			the links several times to advance the time. You can also manually select scan start times for each day.
+			<br /><br />
+			NOTE: Scans run within 1 hour after scheduled time. E.g. A scan scheduled for 1pm will run between 1pm and 2pm. This prevents a stampede on our scanning server at the top of the hour.
 		</p>
 		<p>
 			<strong>Scan mode:</strong><select id="schedMode" onchange="WFAD.sched_modeChange();">

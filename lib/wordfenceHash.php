@@ -1,13 +1,6 @@
 <?php
 require_once('wordfenceClass.php');
 class wordfenceHash {
-	private $apiKey = false;
-	private $wp_version = false;
-	private $api = false;
-	private $db = false;
-	private $table = false;
-	private $fileQ = array();
-
 	//Begin serialized vars
 	private $whitespace = array("\n","\r","\t"," ");
 	public $totalData = 0; //To do a sanity check, don't use 'du' because it gets sparse files wrong and reports blocks used on disk. Use : find . -type f -ls | awk '{total += $7} END {print total}'
@@ -16,33 +9,72 @@ class wordfenceHash {
 	public $linesOfPHP = 0;
 	public $linesOfJCH = 0; //lines of HTML, CSS and javascript
 	public $striplen = 0;
-	private $hashPacket = "";
-	public $hashStorageID = false;
-	private $hashingStartTime = false;
-	private $lastStatusTime = false;
-	public function __sleep(){ //same order as above
-		if(sizeof($this->fileQ) > 0){
-			throw new Exception("Sanity fail. fileQ is not empty. Has: " . sizeof($this->fileQ));
-		}
-		return array('whitespace', 'totalData', 'totalFiles', 'totalDirs', 'linesOfPHP', 'linesOfJCH', 'striplen', 'hashPacket', 'hashStorageID', 'hashingStartTime', 'lastStatusTime');
-	}
+	private $engine = false;
+	private $db = false;
+	private $coreEnabled = false;
+	private $themesEnabled = false;
+	private $pluginsEnabled = false;
+	private $malwareEnabled = false;
+	private $malwareData = "";
+	private $possibleMalware = array();
+	private $status = array();
+	private $haveIssues = array();
 	public function __construct($striplen){
 		$this->striplen = $striplen;
-		$this->db = new wfDB();
-		$this->table = $this->db->prefix() . 'wfFileQueue';
-		$this->apiKey = wfConfig::get('apiKey');
-		$this->wp_version = wfUtils::getWPVersion();
-		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 	}
-	public function __wakeup(){
+	public function run($path, $only, $themes, $plugins, $engine){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
+		$this->engine = $engine;
+		if(wfConfig::get('scansEnabled_core')){
+			$this->coreEnabled = true;
+		}
+		if(wfConfig::get('scansEnabled_plugins')){
+			$this->pluginsEnabled = true;
+		}
+		if(wfConfig::get('scansEnabled_themes')){
+			$this->themesEnabled = true;
+		}
+		if(wfConfig::get('scansEnabled_malware')){
+			$this->malwareEnabled = true;
+		}
 		$this->db = new wfDB();
-		$this->table = $this->db->prefix() . 'wfFileQueue';
-		$this->apiKey = wfConfig::get('apiKey');
-		$this->wp_version = wfUtils::getWPVersion();
-		$this->api = new wfAPI($this->apiKey, $this->wp_version);
-	}
-	public function buildFileQueue($path, $only = array()){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
-		$this->db->truncate($this->table);
+
+		//Doing a delete for now. Later we can optimize this to only scan modified files.
+		//$this->db->query("update " . $this->db->prefix() . "wfFileMods set oldMD5 = newMD5");
+		$this->db->query("delete from " . $this->db->prefix() . "wfFileMods");
+		$fetchCoreHashesStatus = wordfence::statusStart("Fetching core, theme and plugin file signatures from Wordfence");	
+		$dataArr = $engine->api->binCall('get_known_files', json_encode(array(
+				'plugins' => $plugins,
+				'themes' => $themes
+				)) );
+		if($dataArr['code'] != 200){
+			wordfence::statusEndErr();
+			throw new Exception("Got error response from Wordfence servers: " . $dataArr['code']);
+		}
+		$this->knownFiles = @json_decode($dataArr['data'], true);
+		if(! is_array($this->knownFiles)){
+			wordfence::statusEndErr();
+			throw new Exception("Invaid response from Wordfence servers.");
+		}
+		wordfence::statusEnd($fetchCoreHashesStatus, false, true);
+
+		if($this->malwareEnabled){
+			$malwarePrefixStatus = wordfence::statusStart("Fetching list of known malware files from Wordfence");
+			$malwareData = $engine->api->getStaticURL('/malwarePrefixes.bin');
+			if(! $malwareData){
+				wordfence::statusEndErr();
+				throw new Exception("Could not fetch malware signatures from Wordfence servers.");
+			}
+			if(strlen($malwareData) % 4 != 0){
+				wordfence::statusEndErr();
+				throw new Exception("Malware data received from Wordfence servers was not valid.");
+			}
+			$this->malwareData = array();
+			for($i = 0; $i < strlen($malwareData); $i += 4){
+				$this->malwareData[substr($malwareData, $i, 4)] = '1';
+			}
+			wordfence::statusEnd($malwarePrefixStatus, false, true);
+		}
+
 		if($path[strlen($path) - 1] != '/'){
 			$path .= '/';
 		}
@@ -51,6 +83,16 @@ class wordfenceHash {
 			exit();
 		}
 		$files = scandir($path);
+		$this->haveIssues = array(
+			'core' => false,
+			'themes' => false,
+			'plugins' => false,
+			'malware' => false
+			);
+		if($this->coreEnabled){ $this->status['core'] = wordfence::statusStart("Comparing core WordPress files against originals in repository"); } else { wordfence::statusDisabled("Skipping core scan"); }
+		if($this->themesEnabled){ $this->status['themes'] = wordfence::statusStart("Comparing open source themes against WordPress.org originals"); } else { wordfence::statusDisabled("Skipping theme scan"); }
+		if($this->pluginsEnabled){ $this->status['plugins'] = wordfence::statusStart("Comparing plugins against WordPress.org originals"); } else { wordfence::statusDisabled("Skipping plugin scan"); }
+		if($this->malwareEnabled){ $this->status['malware'] = wordfence::statusStart("Scanning for known malware files"); } else { wordfence::statusDisabled("Skipping malware scan"); }
 		foreach($files as $file){
 			if(sizeof($only) > 0 && (! in_array($file, $only))){
 				continue;
@@ -58,44 +100,43 @@ class wordfenceHash {
 			$file = $path . $file;
 			wordfence::status(4, 'info', "Hashing item in base dir: $file");
 			$this->_dirHash($file);
-		}	
-		$this->writeFileQueue(); //Final write to DB
-
-	}
-	public function genHashes($forkObj){
-		if(! $this->hashingStartTime){
-			$this->hashingStartTime = microtime(true);
 		}
-		if(! $this->lastStatusTime){
-			$this->lastStatusTime = microtime(true);
-		}
-		$haveMoreInDB = true;
-		while($haveMoreInDB){
-			$haveMoreInDB = false;
-			//This limit used to be 1000, but we changed it to 5 because forkIfNeeded needs to run frequently, but
-			// we still want to minimize the number of queries we do.
-			// So now we select, process and delete 5 from teh queue and then check forkIfNeeded()
-			// So this assumes that processing 5 files won't take longer than wfScanEngine::$maxExecTime (which was 10 at the time of writing, which is 2 secs per file)
-			$res = $this->db->query("select id, filename from " . $this->table . " limit 5");
-			$ids = array();
-			while($rec = mysql_fetch_row($res)){
-				$this->processFile($rec[1]);
-				array_push($ids, $rec[0]);
-				$haveMoreInDB = true;
+		wordfence::status(2, 'info', "Analyzed " . $this->totalFiles . " files containing " . wfUtils::formatBytes($this->totalData) . " of data.");
+		if($this->coreEnabled){ wordfence::statusEnd($this->status['core'], $this->haveIssues['core']); }
+		if($this->themesEnabled){ wordfence::statusEnd($this->status['themes'], $this->haveIssues['themes']); }
+		if($this->pluginsEnabled){ wordfence::statusEnd($this->status['plugins'], $this->haveIssues['plugins']); }
+		if(sizeof($this->possibleMalware) > 0){
+			$malwareResp = $engine->api->binCall('check_possible_malware', json_encode($this->possibleMalware));
+			if($malwareResp['code'] != 200){
+				wordfence::statusEndErr();
+				throw new Exception("Invalid response from Wordfence API during check_possible_malware");
 			}
-			if(sizeof($ids) > 0){
-				$this->db->query("delete from " . $this->table . " where id IN (" . implode(',', $ids) . ")");
+			$malwareList = json_decode($malwareResp['data'], true);
+			if(is_array($malwareList) && sizeof($malwareList) > 0){
+				for($i = 0; $i < sizeof($malwareList); $i++){ 
+					$file = $malwareList[$i][0];
+					$md5 = $malwareList[$i][1];
+					$name = $malwareList[$i][2];
+					$this->haveIssues['malware'] = true;
+					$this->engine->addIssue(
+						'file', 
+						1, 
+						$path . $file, 
+						$md5,
+						'This file is suspected malware: ' . $file,
+						"This file's signature matches a known malware file. The title of the malware is '" . $name . "'. Immediately inspect this file using the 'View' option below and consider deleting it from your server.",
+						array(
+							'file' => $file,
+							'cType' => 'unknown',
+							'canDiff' => false,
+							'canFix' => false,
+							'canDelete' => true
+							)
+						);
+				}
 			}
-			$forkObj->forkIfNeeded();	
 		}
-		//Will only reach here if we empty file queue. fork may cause exit
-		$this->sendHashPacket();
-		$this->db->truncate($this->table); //Also resets id autoincrement to 1
-		$this->writeHashingStatus();
-	}
-	private function writeHashingStatus(){
-		$this->lastStatusTime = microtime(true);
-		wordfence::status(2, 'info', "Scanned " . $this->totalFiles . " files at a rate of " . sprintf('%.2f', ($this->totalFiles / (microtime(true) - $this->hashingStartTime))) . " files per second.");
+		if($this->malwareEnabled){ wordfence::statusEnd($this->status['malware'], $this->haveIssues['malware']); }
 	}
 	private function _dirHash($path){
 		if(substr($path, -3, 3) == '/..' || substr($path, -2, 2) == '/.'){
@@ -112,95 +153,139 @@ class wordfenceHash {
 				if($cont[$i] == '.' || $cont[$i] == '..'){ continue; }
 				$file = $path . $cont[$i];
 				if(is_file($file)){
-					$this->qFile($file);
+					$this->processFile($file);
 				} else if(is_dir($file)) {
 					$this->_dirHash($file);
 				}
 			}
 		} else {
 			if(is_file($path)){
-				$this->qFile($path);
+				$this->processFile($path);
 			}
 		}
 	}
-	private function qFile($file){
-		$this->fileQ[] = $file;
-		if(sizeof($this->fileQ) > 1000){
-			$this->writeFileQueue();
-		}
-	}
-	private function writeFileQueue(){
-		$sql = "insert into " . $this->table . " (filename) values ";
-		$added = false;
-		foreach($this->fileQ as $val){
-			$added = true;
-			$sql .= "('" . mysql_real_escape_string($val) . "'),";
-		}
-		if($added){
-			$sql = rtrim($sql, ',');
-			$this->db->query($sql);
-		}
-		$this->fileQ = array();
-	}
-	private function processFile($file){
-		if(wfUtils::fileTooBig($file)){
-			wordfence::status(4, 'info', "Skipping file larger than max size: $file");
+	private function processFile($realFile){
+		$file = substr($realFile, $this->striplen);
+		if(wfUtils::fileTooBig($realFile)){
+			wordfence::status(4, 'info', "Skipping file larger than max size: $realFile");
 			return;
 		}
 		if(function_exists('memory_get_usage')){
-                       wordfence::status(4, 'info', "Scanning: $file (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+                       wordfence::status(4, 'info', "Scanning: $realFile (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
 		} else {
-                       wordfence::status(4, 'info', "Scanning: $file");
+                       wordfence::status(4, 'info', "Scanning: $realFile");
 		}
-		$wfHash = $this->wfHash($file); 
+		$wfHash = $this->wfHash($realFile); 
 		if($wfHash){
-			$packetFile = substr($file, $this->striplen);
-			$this->hashPacket .= $wfHash[0] . $wfHash[1] . pack('n', strlen($packetFile)) . $packetFile;  
-			if(strlen($this->hashPacket) > 500000){ //roughly 2 megs in string mem space
-				$this->writeHashingStatus();
-				$this->sendHashPacket();
+			$md5 = strtoupper($wfHash[0]);
+			$shac = strtoupper($wfHash[1]);
+			$knownFile = 0;
+			if($this->malwareEnabled && $this->isMalwarePrefix($md5)){
+				$this->possibleMalware[] = array($file, $md5);
 			}
+			if(isset($this->knownFiles['core'][$file])){
+				if(strtoupper($this->knownFiles['core'][$file]) == $shac){
+					$knownFile = 1;
+				} else {
+					if($this->coreEnabled){
+						$this->haveIssues['core'] = true;
+						$this->engine->addIssue(
+							'file', 
+							1, 
+							'coreModified' . $file . $md5, 
+							'coreModified' . $file,
+							'WordPress core file modified: ' . $file,
+							"This WordPress core file has been modified and differs from the original file distributed with this version of WordPress.",
+							array(
+								'file' => $file,
+								'cType' => 'core',
+								'canDiff' => true,
+								'canFix' => true,
+								'canDelete' => false
+								)
+							);
+					}
+				}
+			} else if(isset($this->knownFiles['plugins'][$file])){
+				if(in_array($shac, $this->knownFiles['plugins'][$file])){
+					$knownFile = 1;
+				} else {
+					if($this->pluginsEnabled){
+						$itemName = $this->knownFiles['plugins'][$file][0];
+						$itemVersion = $this->knownFiles['plugins'][$file][1];
+						$cKey = $this->knownFiles['plugins'][$file][2];
+						$this->haveIssues['plugins'] = true;
+						$this->engine->addIssue(
+							'file', 
+							2, 
+							'modifiedplugin' . $file . $md5, 
+							'modifiedplugin' . $file,
+							'Modified plugin file: ' . $file,
+							"This file belongs to plugin \"$itemName\" version \"$itemVersion\" and has been modified from the file that is distributed by WordPress.org for this version. Please use the link to see how the file has changed. If you have modified this file yourself, you can safely ignore this warning. If you see a lot of changed files in a plugin that have been made by the author, then try uninstalling and reinstalling the plugin to force an upgrade. Doing this is a workaround for plugin authors who don't manage their code correctly. [See our FAQ on www.wordfence.com for more info]",
+							array(
+								'file' => $file,
+								'cType' => 'plugin',
+								'canDiff' => true,
+								'canFix' => true,
+								'canDelete' => false,
+								'cName' => $itemName,
+								'cVersion' => $itemVersion,
+								'cKey' => $cKey 
+								)
+							);
+					}
+
+				}
+			} else if(isset($this->knownFiles['themes'][$file])){
+				if(in_array($shac, $this->knownFiles['themes'][$file])){
+					$knownFile = 1;
+				} else {
+					if($this->themesEnabled){
+						$itemName = $this->knownFiles['themes'][$file][0];
+						$itemVersion = $this->knownFiles['themes'][$file][1];
+						$cKey = $this->knownFiles['themes'][$file][2];
+						$this->haveIssues['themes'] = true;
+						$this->engine->addIssue(
+							'file', 
+							2, 
+							'modifiedtheme' . $file . $md5, 
+							'modifiedtheme' . $file,
+							'Modified theme file: ' . $file,
+							"This file belongs to theme \"$itemName\" version \"$itemVersion\" and has been modified from the original distribution. It is common for site owners to modify their theme files, so if you have modified this file yourself you can safely ignore this warning.",
+							array(
+								'file' => $file,
+								'cType' => 'theme',
+								'canDiff' => true,
+								'canFix' => true,
+								'canDelete' => false,
+								'cName' => $itemName,
+								'cVersion' => $itemVersion,
+								'cKey' => $cKey 
+								)
+							);
+					}
+
+				}
+			}
+			// knownFile means that the file is both part of core or a known plugin or theme AND that we recognize the file's hash. 
+			// we could split this into files who's path we recognize and file's who's path we recognize AND who have a valid sig.
+			// But because we want to scan files who's sig we don't recognize, regardless of known path or not, we only need one "knownFile" field.
+			$this->db->query("insert into " . $this->db->prefix() . "wfFileMods (filename, filenameMD5, knownFile, oldMD5, newMD5) values ('%s', unhex(md5('%s')), %d, '', unhex('%s')) ON DUPLICATE KEY UPDATE newMD5=unhex('%s'), knownFile=%d", $file, $file, $knownFile, $md5, $md5, $knownFile);
 
 			//Now that we know we can open the file, lets update stats
-			if(preg_match('/\.(?:js|html|htm|css)$/i', $file)){
-				$this->linesOfJCH += sizeof(file($file));
-			} else if(preg_match('/\.php$/i', $file)){
-				$this->linesOfPHP += sizeof(file($file));
+			if(preg_match('/\.(?:js|html|htm|css)$/i', $realFile)){
+				$this->linesOfJCH += sizeof(file($realFile));
+			} else if(preg_match('/\.php$/i', $realFile)){
+				$this->linesOfPHP += sizeof(file($realFile));
 			}
 			$this->totalFiles++;
-			$this->totalData += filesize($file); //We already checked if file overflows int in the fileTooBig routine above
-			if(microtime(true) - $this->lastStatusTime > 1){
-				$this->writeHashingStatus();
+			$this->totalData += filesize($realFile); //We already checked if file overflows int in the fileTooBig routine above
+			if($this->totalFiles % 100 === 0){
+				wordfence::status(2, 'info', "Analyzed " . $this->totalFiles . " files containing " . wfUtils::formatBytes($this->totalData) . " of data so far");
 			}
 		} else {
-			wordfence::status(2, 'error', "Could not gen hash for file (probably because we don't have permission to access the file): $file");
+			//wordfence::status(2, 'error', "Could not gen hash for file (probably because we don't have permission to access the file): $realFile");
 		}
-	}
-	private function sendHashPacket(){
-		wordfence::status(4, 'info', "Sending packet of hash data to Wordfence scanning servers");
-		if(strlen($this->hashPacket) < 1){
-			return;
-		}
-		if($this->hashStorageID){
-			$dataArr = $this->api->binCall('add_hash_chunk', "WFID:" . pack('N', $this->hashStorageID) . $this->hashPacket);
-			$this->hashPacket = "";
-			if(is_array($dataArr) && isset($dataArr['data']) && $dataArr['data'] == $this->hashStorageID){
-				//keep going
-			} else {
-				throw new Exception("Could not store an additional chunk of hash data on Wordfence servers with ID: " . $this->hashStorageID);
-			}
-		} else {
-			$dataArr = $this->api->binCall('add_hash_chunk', "WFST:" . $this->hashPacket);
-			$this->hashPacket = "";
-			if(is_array($dataArr) && isset($dataArr['data']) && preg_match('/^\d+$/', $dataArr['data'])){
-				$this->hashStorageID = $dataArr['data'];
-			} else {
-				throw new Exception("Could not store hash data on Wordfence servers. Got response: " . var_export($dataArr, true));
-			}
-		}
-	}
-	public function getHashStorageID(){
-		return $this->hashStorageID;
 	}
 	public function wfHash($file){
 		wfUtils::errorsOff();
@@ -218,6 +303,13 @@ class wordfenceHash {
 		}
 		$shac = hash_final($ctx, false);
 		return array($md5, $shac);
+	}
+	private function isMalwarePrefix($hexMD5){
+		$binPrefix = pack("H*", substr($hexMD5, 0, 8));
+		if(isset($this->malwareData[$binPrefix])){
+			return true;
+		}
+		return false;
 	}
 }
 ?>

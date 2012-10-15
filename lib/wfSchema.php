@@ -143,9 +143,12 @@ class wfSchema {
 	hostKey binary(4),
 	KEY k2(hostKey)
 ) default charset=utf8",
-'wfFileQueue' => "(
-	id int UNSIGNED NOT NULL auto_increment PRIMARY KEY,
-	filename text
+'wfFileMods' => "(
+	filenameMD5 binary(16) NOT NULL PRIMARY KEY,
+	filename varchar(1000) NOT NULL,
+	knownFile tinyint UNSIGNED NOT NULL,
+	oldMD5 binary(16) NOT NULL,
+	newMD5 binary(16) NOT NULL
 ) default charset=utf8"
 );
 	private $db = false;
