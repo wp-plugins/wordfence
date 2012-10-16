@@ -639,8 +639,10 @@ class wordfence {
 		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Unschedule legacy scans without args
 
 		$schedArgs = wfConfig::get_ser('schedScanArgs', array());
-		foreach($schedArgs as $futureTime){
-			wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
+		if(is_array($schedArgs)){
+			foreach($schedArgs as $futureTime){
+				wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
+			}
 		}
 		wfConfig::set_ser('schedScanArgs', array());
 	}

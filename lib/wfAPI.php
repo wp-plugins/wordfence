@@ -17,7 +17,7 @@ class wfAPI {
 		return $this->getURL($this->getAPIURL() . $url);
 	}
 	public function call($action, $getParams = array(), $postParams = array()){
-		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
+		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . self::buildQuery(
 			array_merge(
 				array('action' => $action),
 				$getParams	
@@ -157,11 +157,18 @@ class wfAPI {
 		if(function_exists('get_bloginfo')){
 			$siteurl = get_bloginfo('siteurl');
 		}
-		return http_build_query(array(
+		return self::buildQuery(array(
 			'v' => $this->wordpressVersion, 
 			's' => $siteurl, 
 			'k' => $this->APIKey
 			));
+	}
+	private function buildQuery($data){
+		if(version_compare(phpversion(), '5.1.2', '>=')){
+			return http_build_query($data, '', '&'); //arg_separator parameter was only added in PHP 5.1.2. We do this because some PHP.ini's have arg_separator.output set to '&amp;'
+		} else {
+			return http_build_query($data);
+		}
 	}
 	private function getAPIURL(){
 		$ssl_supported = false;
