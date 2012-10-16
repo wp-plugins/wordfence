@@ -1122,9 +1122,9 @@ class wordfence {
 	}
 	private static function wfFunc_testtime(){
 		header('Content-Type: text/plain');
-		ini_set('max_execution_time', 1800); //30 mins
+		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		@error_reporting(E_ALL);
-		@ini_set('display_errors','On');
+		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
 
 		echo "Wordfence process duration benchmarking utility version " . WORDFENCE_VERSION . ".\n";
@@ -1144,7 +1144,7 @@ class wordfence {
 	private static function wfFunc_testmem(){
 		header('Content-Type: text/plain');
 		@error_reporting(E_ALL);
-		@ini_set('display_errors','On');
+		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
 
 		echo "Wordfence Memory benchmarking utility version " . WORDFENCE_VERSION . ".\n";
@@ -1152,7 +1152,7 @@ class wordfence {
 		echo "Current maximum memory configured in php.ini: " . ini_get('memory_limit') . "\n";
 		echo "Current memory usage: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "M\n";
 		echo "Setting max memory to 90M.\n";
-		ini_set('memory_limit', '90M');
+		wfUtils::iniSet('memory_limit', '90M');
 		echo "Starting memory benchmark. Seeing an error after this line is not unusual. Read the error carefully\nto determine how much memory your host allows. We have requested 90 megabytes.\n";
 		if(memory_get_usage(true) < 1){
 			echo "Exiting test because memory_get_usage() returned a negative number\n";
@@ -1322,30 +1322,28 @@ class wordfence {
 			'tourClosed' => wfConfig::get('tourClosed', 0)
 			));
 	}
-	public static function configure_warning(){
-		if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
-			$numRun = wfConfig::get('alertEmailMsgCount', 0);
-			if($numRun <= 3){
-				echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please set up an email address to receive Wordfence security alerts</strong> on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a>. This message will appear ' . (3 - $numRun) . ' more times.</p></div>';
-				wfConfig::set('alertEmailMsgCount', ++$numRun);
-			}
-
+	public static function activation_warning(){
+		$activationError = get_option('wf_plugin_act_error', '');
+		if(strlen($activationError) > 400){
+			$activationError = substr($activationError, 0, 400) . '...[output truncated]';
 		}
+		if($activationError){
+			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. Please report this on <a href="http://www.wordfence.com/forums/" target="_blank">our support forum</a>. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
+		}
+		delete_option('wf_plugin_act_error');
 	}
 	public static function noKeyError(){
 		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence could not get an API key from the Wordfence scanning servers when it activated.</strong> You can try to fix this by going to the Wordfence "options" page and hitting "Save Changes". This will cause Wordfence to retry fetching an API key for you. If you keep seeing this error it usually means your WordPress server can\'t connect to our scanning servers. You can try asking your WordPress host to allow your WordPress server to connect to noc1.wordfence.com.</p></div>';
 	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
-		/* Removed this because we now have the tour.
-		if(! wfConfig::get('alertEmails')){
+		if(get_option('wf_plugin_act_error', false)){
 			if(wfUtils::isAdminPageMU()){
-				add_action('network_admin_notices', 'wordfence::configure_warning');
+				add_action('network_admin_notices', 'wordfence::activation_warning');
 			} else {
-				add_action('admin_notices', 'wordfence::configure_warning');
+				add_action('admin_notices', 'wordfence::activation_warning');
 			}
 		}
-		*/
 		if(! wfConfig::get('apiKey')){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::noKeyError');

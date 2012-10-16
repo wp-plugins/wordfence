@@ -106,7 +106,7 @@ class wfUtils {
 			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
 			$possible = array();
 			foreach($_SERVER as $key => $val){
-				if(preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
+				if(is_string($val) && preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
 					if($val != '127.0.0.1'){
 						$possible[$key] = $val;
 					}
@@ -119,7 +119,6 @@ class wfUtils {
 				}
 			}
 			wordfence::status(1, 'error', $msg);
-			error_log($msg);
 			return false;
 		}
 	}
@@ -230,7 +229,7 @@ class wfUtils {
 			$maxMem = 256;
 		}
 		if( function_exists('memory_get_usage') && ( (int) @ini_get('memory_limit') < $maxMem ) ){
-			@ini_set('memory_limit', $maxMem . 'M');
+			self::iniSet('memory_limit', $maxMem . 'M');
 		}
 	}
 	public static function isAdmin(){
@@ -384,12 +383,12 @@ class wfUtils {
 		self::$lastErrorReporting = @ini_get('error_reporting');
 		@error_reporting(0);
 		self::$lastDisplayErrors = @ini_get('display_errors');
-		@ini_set('display_errors', 0);
+		self::iniSet('display_errors', 0);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = false; }
 	}
 	public static function errorsOn(){
 		@error_reporting(self::$lastErrorReporting);
-		@ini_set('display_errors', self::$lastDisplayErrors);
+		self::iniSet('display_errors', self::$lastDisplayErrors);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
 	public static function fileTooBig($file){ //Deals with files > 2 gigs on 32 bit systems which are reported with the wrong size due to integer overflow
@@ -455,7 +454,19 @@ class wfUtils {
 	public static function localHumanDate(){
 		return date('l jS \of F Y \a\t h:i:s A', time() + (3600 * get_option('gmt_offset')));
 	}
-
+	public static function funcEnabled($func){
+		if(! function_exists($func)){ return false; }
+		$disabled = explode(',', ini_get('disable_functions'));
+		foreach($disabled as $f){
+			if($func == $f){ return false; }
+		}
+		return true;
+	}
+	public static function iniSet($key, $val){
+		if(self::funcEnabled('ini_set')){
+			@ini_set($key, $val);
+		}
+	}
 }
 
 

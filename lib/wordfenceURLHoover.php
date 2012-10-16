@@ -47,11 +47,17 @@ class wordfenceURLHoover {
 		}
 		try {
 			@preg_replace("/(?<=^|[^a-zA-Z0-9\-])((?:[a-zA-Z0-9\-]+\.)+)(" . $this->dRegex . ")((?:$|[^a-zA-Z0-9\-\.\'\"])[^\r\n\s\t\"\'\$\{\}<>]*)/ie", "\$this->" . "addHost(\$id, '$1$2', '$3')", $data);
-		} catch(Exception $e){ error_log("Regex error 1: $e"); }
+		} catch(Exception $e){ 
+			//error_log("Regex error 1: $e"); 
+		}
 		@preg_replace("/(?<=[^\d]|^)(\d{8,10}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})([^\d\'\"][^\r\n\s\t\"\'\$\{\}<>]*)/e", "\$this->" . "addIP(\$id, \"$1\",\"$2\")", $data);
 		$this->writeHosts();
 	}
-	private function dbg($msg){ if($this->debug){ error_log("DEBUG: $msg\n"); } }
+	private function dbg($msg){ 
+		if($this->debug){ 
+			//error_log("DEBUG: $msg\n"); 
+		} 
+	}
 	public function addHost($id, $host, $path){
 		if(strpos($path, '/') !== 0){
 			$path = '/';

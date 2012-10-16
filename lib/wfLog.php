@@ -565,7 +565,7 @@ class wfLog {
 		if($this->googleSafetyCheckOK()){
 			$action = wfConfig::get($configVar . '_action');
 			if(! $action){
-				error_log("Wordfence action missing for configVar: $configVar");
+				//error_log("Wordfence action missing for configVar: $configVar");
 				return;
 			}
 			$secsToGo = 0;
@@ -628,12 +628,12 @@ class wfLog {
 					self::$gbSafeCache[$cacheKey] = true; //This isn't a Google UA, so it's OK to block
 				}
 			} else {
-				error_log("Wordfence error: neverBlockBG option is not set.");
+				//error_log("Wordfence error: neverBlockBG option is not set.");
 				self::$gbSafeCache[$cacheKey] = false; //Oops the config option is not set. This should never happen because it's set on install. So we return false to indicate it's not OK to block just for safety.
 			}
 		}
 		if(! isset(self::$gbSafeCache[$cacheKey])){
-			error_log("Wordfence assertion fail in googleSafetyCheckOK: cached value is not set.");
+			//error_log("Wordfence assertion fail in googleSafetyCheckOK: cached value is not set.");
 			return false; //for safety
 		}
 		return self::$gbSafeCache[$cacheKey]; //return cached value
