@@ -1,6 +1,8 @@
 Either you or someone else at IP address <b><?php echo $IP; ?></b> requesed instructions to<br />
 regain access to the website <a href="<?php echo wfUtils::getSiteBaseURL(); ?>"><b><?php echo $siteName; ?></b></a>.<br />
 <br />
+Request was generated at: <?php echo wfUtils::localHumanDate(); ?><br />
+<br />
 If you did not request these instructions then you can safely ignore them.<br />
 These instructions <b>will be valid for 30 minutes</b>
 from the time they were sent.

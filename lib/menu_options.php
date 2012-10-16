@@ -50,6 +50,12 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<div id="wfConfigAdvanced">
 	<table class="wfConfigForm">
 	<tr><td colspan="2"><h3 class="wfConfigHeading">Alerts</h3></td></tr>
+	<?php
+		$emails = wfConfig::getAlertEmails();
+                if(sizeof($emails) < 1){ 
+			echo "<tr><th colspan=\"2\" style=\"color: #F00;\">You have not configured an email to receive alerts yet. Set this up under \"Basic Options\" above.</th></tr>\n";
+		}
+	?>
 	<tr><th>Alert on critical problems</th><td><input type="checkbox" id="alertOn_critical" class="wfConfigElem" name="alertOn_critical" value="1" <?php $w->cb('alertOn_critical'); ?>/></td></tr>
 	<tr><th>Alert on warnings</th><td><input type="checkbox" id="alertOn_warnings" class="wfConfigElem" name="alertOn_warnings" value="1" <?php $w->cb('alertOn_warnings'); ?>/></td></tr>
 	<tr><th>Alert when an IP address is blocked</th><td><input type="checkbox" id="alertOn_block" class="wfConfigElem" name="alertOn_block" value="1" <?php $w->cb('alertOn_block'); ?>/></td></tr>
@@ -70,6 +76,11 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<div class="wfMarker" id="wfMarkerScansToInclude"></div>
 		<h3 class="wfConfigHeading">Scans to include</h3></td></tr>
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> /></td></tr>
+	<?php if(wfConfig::get('isPaid')){ ?>
+	<tr><th>Scan public facing site for vulnerabilities?</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" <?php $w->cb('scansEnabled_public'); ?></td></tr>
+	<?php } else { ?>
+	<tr><th style="color: #F00;">Scan public facing site for vulnerabilities? (<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid members only</a>)</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" DISABLED ?></td></tr>
+	<?php } ?>
 	<tr><th>Scan core files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_core" class="wfConfigElem" name="scansEnabled_core" value="1" <?php $w->cb('scansEnabled_core'); ?>/></td></tr>
 	
 	<tr><th>Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" <?php $w->cb('scansEnabled_themes'); ?>/></td></tr>

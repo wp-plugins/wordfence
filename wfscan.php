@@ -65,7 +65,7 @@ class wfScan {
 		}
 		/* --------- end cronkey check ---------- */
 
-		ini_set('max_execution_time', 1800); //30 mins
+		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		self::status(4, 'info', "Becoming admin for scan");
 		self::becomeAdmin();
 		self::status(4, 'info', "Done become admin");
@@ -87,7 +87,7 @@ class wfScan {
 			ob_start('wfScan::obHandler');
 		}
 		@error_reporting(E_ALL);
-		@ini_set('display_errors','On');
+		wfUtils::iniSet('display_errors','On');
 		self::status(4, 'info', "Setting up scanRunning and starting scan");
 		$scan = false;
 		if($isFork){
@@ -195,8 +195,12 @@ class wfScan {
 			//Last ditch attempt
 			$adminUserID = $db->querySingle("select user_id from " . $wpdb->usermeta . " where meta_key='" . $wpdb->base_prefix . "user_level' order by meta_value desc, user_id asc limit 1");
 			if(! $adminUserID){
-				self::status(1, 'error', "Could not get the administrator's user ID. Scan can't continue.");
-				exit();
+				//One final attempt for those who have changed their table prefixes but the meta_key is still wp_ prefixed...
+				$adminUserID = $db->querySingle("select user_id from " . $wpdb->usermeta . " where meta_key='wp_user_level' order by meta_value desc, user_id asc limit 1");
+				if(! $adminUserID){
+					self::status(1, 'error', "Could not get the administrator's user ID. Scan can't continue.");
+					exit();
+				}
 			}
 			$userSource = 'manual DB query';
 		}
