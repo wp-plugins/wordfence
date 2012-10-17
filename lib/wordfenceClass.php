@@ -229,6 +229,8 @@ class wordfence {
 		$db->queryIgnoreError("alter table $prefix"."wfBlocks modify column blockedTime bigint signed NOT NULL");
 		//3.2.1 to 3.2.2
 		$db->queryIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
+		$db->queryIgnoreError("drop table if exists $prefix"."wfFileQueue");
+		$db->queryIgnoreError("drop table if exists $prefix"."wfFileChanges");
 
 		//Must be the final line
 	}
@@ -617,6 +619,7 @@ class wordfence {
 						$secondsInFuture += (86400 * 7); //Add a week
 					}
 					$futureTime = time() - (time() % 3600) + $secondsInFuture; //Modulo rounds down to top of the hour
+					$futureTime += rand(0,3600); //Prevent a stampede of scans on our scanning server
 					wordfence::status(4, 'info', "Scheduled time for day $scheduledDay hour $scheduledHour is: " . date('l jS \of F Y h:i:s A', $futureTime));
 					self::scheduleSingleScan($futureTime);
 				}
@@ -636,8 +639,10 @@ class wordfence {
 		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Unschedule legacy scans without args
 
 		$schedArgs = wfConfig::get_ser('schedScanArgs', array());
-		foreach($schedArgs as $futureTime){
-			wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
+		if(is_array($schedArgs)){
+			foreach($schedArgs as $futureTime){
+				wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
+			}
 		}
 		wfConfig::set_ser('schedScanArgs', array());
 	}
@@ -650,6 +655,9 @@ class wordfence {
 		wfConfig::set('cbl_redirURL', $_POST['redirURL']);
 		wfConfig::set('cbl_loggedInBlocked', $_POST['loggedInBlocked']);
 		wfConfig::set('cbl_loginFormBlocked', $_POST['loginFormBlocked']);
+		wfConfig::set('cbl_bypassRedirURL', $_POST['bypassRedirURL']);
+		wfConfig::set('cbl_bypassRedirDest', $_POST['bypassRedirDest']);
+		wfConfig::set('cbl_bypassViewURL', $_POST['bypassViewURL']);
 		return array('ok' => 1);
 	}
 	public static function ajax_sendActivityLog_callback(){
@@ -658,11 +666,12 @@ class wordfence {
 		global $wpdb;
 		$p = $wpdb->base_prefix;
 		$q = $wfdb->query("select ctime, level, type, msg from $p"."wfStatus order by ctime desc limit 10000");
+		$timeOffset = 3600 * get_option('gmt_offset');
 		while($r = mysql_fetch_assoc($q)){
 			if($r['type'] == 'error'){
 				$content .= "\n";
 			}
-			$content .= date(DATE_RFC822, $r['ctime']) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . $r['msg'] . "\n";
+			$content .= date(DATE_RFC822, $r['ctime'] + $timeOffset) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . $r['msg'] . "\n";
 		}
 		$content .= "\n\n";
 		
@@ -1115,9 +1124,9 @@ class wordfence {
 	}
 	private static function wfFunc_testtime(){
 		header('Content-Type: text/plain');
-		ini_set('max_execution_time', 1800); //30 mins
+		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		@error_reporting(E_ALL);
-		@ini_set('display_errors','On');
+		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
 
 		echo "Wordfence process duration benchmarking utility version " . WORDFENCE_VERSION . ".\n";
@@ -1137,7 +1146,7 @@ class wordfence {
 	private static function wfFunc_testmem(){
 		header('Content-Type: text/plain');
 		@error_reporting(E_ALL);
-		@ini_set('display_errors','On');
+		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
 
 		echo "Wordfence Memory benchmarking utility version " . WORDFENCE_VERSION . ".\n";
@@ -1145,7 +1154,7 @@ class wordfence {
 		echo "Current maximum memory configured in php.ini: " . ini_get('memory_limit') . "\n";
 		echo "Current memory usage: " . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . "M\n";
 		echo "Setting max memory to 90M.\n";
-		ini_set('memory_limit', '90M');
+		wfUtils::iniSet('memory_limit', '90M');
 		echo "Starting memory benchmark. Seeing an error after this line is not unusual. Read the error carefully\nto determine how much memory your host allows. We have requested 90 megabytes.\n";
 		if(memory_get_usage(true) < 1){
 			echo "Exiting test because memory_get_usage() returned a negative number\n";
@@ -1270,7 +1279,7 @@ class wordfence {
 		$wp->add_query_var('_wfsf');
 		//add_rewrite_rule('wfStaticFunc/([a-zA-Z0-9]+)/?$', 'index.php?wfStaticFunc=' . $matches[1], 'top');
 		$cookieName = 'wfvt_' . crc32(site_url());
-		$c = isset($_COOKIES[$cookieName]) ? isset($_COOKIES[$cookieName]) : false;
+		$c = isset($_COOKIE[$cookieName]) ? isset($_COOKIE[$cookieName]) : false;
 		if($c){
 			self::$newVisit = false;
 		} else {
@@ -1284,7 +1293,7 @@ class wordfence {
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
-		if(preg_match('/^Wordfence/', @$_GET['page'])){
+		if(isset($_GET['page']) && preg_match('/^Wordfence/', @$_GET['page']) ){
 			wp_enqueue_style('wp-pointer');
 			wp_enqueue_script('wp-pointer');
 			wp_enqueue_style('wordfence-main-style', wfUtils::getBaseURL() . 'css/main.css', '', WORDFENCE_VERSION);
@@ -1315,30 +1324,28 @@ class wordfence {
 			'tourClosed' => wfConfig::get('tourClosed', 0)
 			));
 	}
-	public static function configure_warning(){
-		if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
-			$numRun = wfConfig::get('alertEmailMsgCount', 0);
-			if($numRun <= 3){
-				echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please set up an email address to receive Wordfence security alerts</strong> on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a>. This message will appear ' . (3 - $numRun) . ' more times.</p></div>';
-				wfConfig::set('alertEmailMsgCount', ++$numRun);
-			}
-
+	public static function activation_warning(){
+		$activationError = get_option('wf_plugin_act_error', '');
+		if(strlen($activationError) > 400){
+			$activationError = substr($activationError, 0, 400) . '...[output truncated]';
 		}
+		if($activationError){
+			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. Please report this on <a href="http://www.wordfence.com/forums/" target="_blank">our support forum</a>. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
+		}
+		delete_option('wf_plugin_act_error');
 	}
 	public static function noKeyError(){
 		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence could not get an API key from the Wordfence scanning servers when it activated.</strong> You can try to fix this by going to the Wordfence "options" page and hitting "Save Changes". This will cause Wordfence to retry fetching an API key for you. If you keep seeing this error it usually means your WordPress server can\'t connect to our scanning servers. You can try asking your WordPress host to allow your WordPress server to connect to noc1.wordfence.com.</p></div>';
 	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
-		/* Removed this because we now have the tour.
-		if(! wfConfig::get('alertEmails')){
+		if(get_option('wf_plugin_act_error', false)){
 			if(wfUtils::isAdminPageMU()){
-				add_action('network_admin_notices', 'wordfence::configure_warning');
+				add_action('network_admin_notices', 'wordfence::activation_warning');
 			} else {
-				add_action('admin_notices', 'wordfence::configure_warning');
+				add_action('admin_notices', 'wordfence::activation_warning');
 			}
 		}
-		*/
 		if(! wfConfig::get('apiKey')){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::noKeyError');
@@ -1447,7 +1454,7 @@ class wordfence {
 			'blogName' => get_bloginfo('name', 'raw'),
 			'alertMsg' => $alertMsg,
 			'IPMsg' => $IPMsg,
-			'date' => date('l jS \of F Y \a\t h:i:s A'),
+			'date' => wfUtils::localHumanDate(),
 			'myHomeURL' => self::getMyHomeURL(),
 			'myOptionsURL' => self::getMyOptionsURL()
 			));
@@ -1476,12 +1483,20 @@ class wordfence {
 		self::status(10, 'info', 'SUM_START:' . $msg);
 		return sizeof($statusStartMsgs) - 1;
 	}
-	public static function statusEnd($idx, $haveIssues){
+	public static function statusEnd($idx, $haveIssues, $successFailed = false){
 		$statusStartMsgs = wfConfig::get_ser('wfStatusStartMsgs', array());
 		if($haveIssues){
-			self::status(10, 'info', 'SUM_ENDBAD:' . $statusStartMsgs[$idx]);
+			if($successFailed){
+				self::status(10, 'info', 'SUM_ENDFAILED:' . $statusStartMsgs[$idx]);
+			} else {
+				self::status(10, 'info', 'SUM_ENDBAD:' . $statusStartMsgs[$idx]);
+			}
 		} else {
-			self::status(10, 'info', 'SUM_ENDOK:' . $statusStartMsgs[$idx]);
+			if($successFailed){
+				self::status(10, 'info', 'SUM_ENDSUCCESS:' . $statusStartMsgs[$idx]);
+			} else {
+				self::status(10, 'info', 'SUM_ENDOK:' . $statusStartMsgs[$idx]);
+			}
 		}
 		$statusStartMsgs[$idx] = '';
 		wfConfig::set_ser('wfStatusStartMsgs', $statusStartMsgs);

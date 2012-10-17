@@ -150,7 +150,7 @@ window['wordfenceAdmin'] = {
 			pointerWidth: 400,
 			position: {
 				edge: edge,
-				align: align,
+				align: align
 				}
 			};
 		this.currentPointer = jQuery('#' + elemID).pointer(options).pointer('open');
@@ -269,9 +269,17 @@ window['wordfenceAdmin'] = {
 			var msg = item.msg.replace('SUM_ENDBAD:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Problems found.');
 			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDFAILED') != -1){
+			var msg = item.msg.replace('SUM_ENDFAILED:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Failed.');
+			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDOK') != -1){
 			var msg = item.msg.replace('SUM_ENDOK:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Secure.');
+			summaryUpdated = true;
+		} else if(item.msg.indexOf('SUM_ENDSUCCESS') != -1){
+			var msg = item.msg.replace('SUM_ENDSUCCESS:', '');
+			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Success.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDERR') != -1){
 			var msg = item.msg.replace('SUM_ENDERR:', '');
@@ -959,10 +967,28 @@ window['wordfenceAdmin'] = {
 	saveCountryBlocking: function(){
 		var action = jQuery('#wfBlockAction').val();
 		var redirURL = jQuery('#wfRedirURL').val();
+		var bypassRedirURL = jQuery('#wfBypassRedirURL').val();
+		var bypassRedirDest = jQuery('#wfBypassRedirDest').val();
+		var bypassViewURL = jQuery('#wfBypassViewURL').val();
+
 		if(action == 'redir' && (! /^https?:\/\/[^\/]+/i.test(redirURL))){
 			this.colorbox('400px', "Please enter a URL for redirection", "You have chosen to redirect blocked countries to a specific page. You need to enter a URL in the text box provided that starts with http:// or https://");
 			return;
 		}
+		if( bypassRedirURL || bypassRedirDest ){
+			if(! (bypassRedirURL && bypassRedirDest)){
+				this.colorbox('400px', "Missing data from form", "If you want to set up a URL that will bypass country blocking, you must enter a URL that a visitor can hit and the destination they will be redirected to. You have only entered one of these components. Please enter both.");
+				return;
+			}
+			if(bypassRedirURL == bypassRedirDest){
+				this.colorbox('400px', "URLs are the same", "The URL that a user hits to bypass country blocking and the URL they are redirected to are the same. This would cause a circular redirect. Please fix this.");
+				return;
+			}
+		}
+		if(bypassRedirURL && (! /^(?:\/|http:\/\/)/.test(bypassRedirURL))){ this.invalidCountryURLMsg(bypassRedirURL); return; }
+		if(bypassRedirDest && (! /^(?:\/|http:\/\/)/.test(bypassRedirDest))){ this.invalidCountryURLMsg(bypassRedirDest); return; }
+		if(bypassViewURL && (! /^(?:\/|http:\/\/)/.test(bypassViewURL))){ this.invalidCountryURLMsg(bypassViewURL); return; }
+
 		var codesArr = [];
 		var ownCountryBlocked = false;
 		var self = this;
@@ -984,11 +1010,18 @@ window['wordfenceAdmin'] = {
 			this.confirmSaveCountryBlocking();
 		}
 	},
+	invalidCountryURLMsg: function(URL){
+		this.colorbox('400px', "Invalid URL", "URL's that you provide for bypassing country blocking must start with '/' or 'http://' without quotes. The URL that is invalid is: " + URL);
+		return;
+	},
 	confirmSaveCountryBlocking: function(){
 		var action = jQuery('#wfBlockAction').val();
 		var redirURL = jQuery('#wfRedirURL').val();
 		var loggedInBlocked = jQuery('#wfLoggedInBlocked').is(':checked') ? '1' : '0';
 		var loginFormBlocked = jQuery('#wfLoginFormBlocked').is(':checked') ? '1' : '0';
+		var bypassRedirURL = jQuery('#wfBypassRedirURL').val();
+		var bypassRedirDest = jQuery('#wfBypassRedirDest').val();
+		var bypassViewURL = jQuery('#wfBypassViewURL').val();
 
 		jQuery('.wfAjax24').show();
 		var self = this;
@@ -997,6 +1030,9 @@ window['wordfenceAdmin'] = {
 			redirURL: redirURL,
 			loggedInBlocked: loggedInBlocked,
 			loginFormBlocked: loginFormBlocked,
+			bypassRedirURL: bypassRedirURL,
+			bypassRedirDest: bypassRedirDest,
+			bypassViewURL: bypassViewURL,
 			codes: this.countryCodesToSave
 			}, function(res){ 
 				jQuery('.wfAjax24').hide();
