@@ -21,7 +21,7 @@ class wfScanEngine {
 	private $apiKey = false;
 	private $startTime = 0;
 	private $scanStep = 0;
-	private $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
+	public $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
 	private $publicScanEnabled = false;
 	private $fileContentsResults = false;
 	private $scanner = false;
@@ -50,8 +50,10 @@ class wfScanEngine {
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 		$this->jobList[] = 'publicSite';
-		$this->jobList[] = 'knownFiles';
-		foreach(array('fileContents', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
+		$this->jobList[] = 'knownFiles_init';
+		$this->jobList[] = 'knownFiles_main';
+		$this->jobList[] = 'knownFiles_finish';
+		foreach(array('knownFiles', 'fileContents', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
 			if(wfConfig::get('scansEnabled_' . $scanType)){
 				if(method_exists($this, 'scan_' . $scanType . '_init')){
 					foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = $scanType . '_' . $op; };
@@ -148,10 +150,9 @@ class wfScanEngine {
 			sleep(2); //enough time to read the message before it scrolls off.
 		}
 	}
-	private function scan_knownFiles(){
+	private function scan_knownFiles_init(){
 		$this->status(1, 'info', "Contacting Wordfence to initiate scan");
 		$this->api->call('log_scan', array(), array());
-		$this->hasher = new wordfenceHash(strlen(ABSPATH));
 		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
 		$baseContents = scandir(ABSPATH);
 		if(! is_array($baseContents)){
@@ -161,12 +162,13 @@ class wfScanEngine {
 		if($scanOutside){
 			wordfence::status(2, 'info', "Including files that are outside the WordPress installation in the scan.");
 		}
+		$includeInKnownFilesScan = array();
 		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
 			if($scanOutside){
-				$includeInScan[] = $file;
+				$includeInKnownFilesScan[] = $file;
 			} else if(in_array($file, $baseWPStuff) || (@is_file($fullFile) && @is_readable($fullFile) && (! wfUtils::fileTooBig($fullFile)) ) ){
-				$includeInScan[] = $file;
+				$includeInKnownFilesScan[] = $file;
 			}
 		}
 
@@ -175,12 +177,12 @@ class wfScanEngine {
 		}
 		$this->status(2, 'info', "Getting plugin list from WordPress");
 		$pluginData = get_plugins();
-		$plugins = array();
+		$knownFilesPlugins = array();
 		foreach($pluginData as $key => $data){
 			if(preg_match('/^([^\/]+)\//', $key, $matches)){
 				$pluginDir = $matches[1];
 				$pluginFullDir = "wp-content/plugins/" . $pluginDir;
-				$plugins[$key] = array( 
+				$knownFilesPlugins[$key] = array( 
 					'Name' => $data['Name'], 
 					'Version' => $data['Version'],
 					'ShortDir' => $pluginDir,
@@ -189,20 +191,20 @@ class wfScanEngine {
 			}
 		}
 			
-		$this->status(2, 'info', "Found " . sizeof($plugins) . " plugins");
-		$this->i->updateSummaryItem('totalPlugins', sizeof($plugins));
+		$this->status(2, 'info', "Found " . sizeof($knownFilesPlugins) . " plugins");
+		$this->i->updateSummaryItem('totalPlugins', sizeof($knownFilesPlugins));
 
 		if(! function_exists( 'get_themes')){
 			require_once ABSPATH . '/wp-includes/theme.php';
 		}
 		$this->status(2, 'info', "Getting theme list from WordPress");
 		$themeData = get_themes();
-		$themes = array();
+		$knownFilesThemes = array();
 		foreach($themeData as $themeName => $themeData){
 			if(preg_match('/\/([^\/]+)$/', $themeData['Stylesheet Dir'], $matches)){
 				$shortDir = $matches[1]; //e.g. evo4cms
 				$fullDir = substr($themeData['Stylesheet Dir'], strlen(ABSPATH)); //e.g. wp-content/themes/evo4cms
-				$themes[$themeName] = array(
+				$knownFilesThemes[$themeName] = array(
 					'Name' => $themeData['Name'], 
 					'Version' => $themeData['Version'],
 					'ShortDir' => $shortDir,
@@ -210,15 +212,21 @@ class wfScanEngine {
 					);
 			}
 		}
-		$this->status(2, 'info', "Found " . sizeof($themes) . " themes");
-		$this->i->updateSummaryItem('totalThemes', sizeof($themes));
+		$this->status(2, 'info', "Found " . sizeof($knownFilesThemes) . " themes");
+		$this->i->updateSummaryItem('totalThemes', sizeof($knownFilesThemes));
 
-		$this->hasher->run(ABSPATH, $includeInScan, $themes, $plugins, $this); //Include this so we can call addIssue and ->api->
+		$this->hasher = new wordfenceHash(strlen(ABSPATH), ABSPATH, $includeInKnownFilesScan, $knownFilesThemes, $knownFilesPlugins, $this);
+	}
+	private function scan_knownFiles_main(){
+		$this->hasher->run($this); //Include this so we can call addIssue and ->api->
 		$this->i->updateSummaryItem('totalData', wfUtils::formatBytes($this->hasher->totalData));
 		$this->i->updateSummaryItem('totalFiles', $this->hasher->totalFiles);
 		$this->i->updateSummaryItem('totalDirs', $this->hasher->totalDirs);
 		$this->i->updateSummaryItem('linesOfPHP', $this->hasher->linesOfPHP);
 		$this->i->updateSummaryItem('linesOfJCH', $this->hasher->linesOfJCH);
+		$this->hasher = false;
+	}
+	private function scan_knownFiles_finish(){
 	}
 	private function scan_fileContents_init(){
 		$this->statusIDX['infect'] = wordfence::statusStart('Scanning file contents for infections and vulnerabilities');

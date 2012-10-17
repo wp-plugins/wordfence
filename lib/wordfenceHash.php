@@ -1,29 +1,39 @@
 <?php
 require_once('wordfenceClass.php');
 class wordfenceHash {
-	//Begin serialized vars
 	private $whitespace = array("\n","\r","\t"," ");
-	public $totalData = 0; //To do a sanity check, don't use 'du' because it gets sparse files wrong and reports blocks used on disk. Use : find . -type f -ls | awk '{total += $7} END {print total}'
-	public $totalFiles = 0;
-	public $totalDirs = 0;
-	public $linesOfPHP = 0;
-	public $linesOfJCH = 0; //lines of HTML, CSS and javascript
-	public $striplen = 0;
 	private $engine = false;
 	private $db = false;
+	private $startTime = false;
+
+	//Begin serialized vars
+	public $striplen = 0;
+	public $totalFiles = 0;
+	public $totalDirs = 0;
+	public $totalData = 0; //To do a sanity check, don't use 'du' because it gets sparse files wrong and reports blocks used on disk. Use : find . -type f -ls | awk '{total += $7} END {print total}'
+	public $linesOfPHP = 0;
+	public $linesOfJCH = 0; //lines of HTML, CSS and javascript
+	public $stoppedOnFile = false;
 	private $coreEnabled = false;
-	private $themesEnabled = false;
 	private $pluginsEnabled = false;
+	private $themesEnabled = false;
 	private $malwareEnabled = false;
+	private $knownFiles = false;
 	private $malwareData = "";
-	private $possibleMalware = array();
-	private $status = array();
 	private $haveIssues = array();
-	public function __construct($striplen){
+	private $status = array();
+	private $possibleMalware = array();
+	private $path = false;
+	private $only = false;
+	private $totalForks = 0;
+
+	public function __construct($striplen, $path, $only, $themes, $plugins, $engine){
 		$this->striplen = $striplen;
-	}
-	public function run($path, $only, $themes, $plugins, $engine){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
-		$this->engine = $engine;
+		$this->path = $path;
+		$this->only = $only;
+		
+		$this->startTime = microtime(true);
+
 		if(wfConfig::get('scansEnabled_core')){
 			$this->coreEnabled = true;
 		}
@@ -39,7 +49,7 @@ class wordfenceHash {
 		$this->db = new wfDB();
 
 		//Doing a delete for now. Later we can optimize this to only scan modified files.
-		//$this->db->query("update " . $this->db->prefix() . "wfFileMods set oldMD5 = newMD5");
+		//$this->db->query("update " . $this->db->prefix() . "wfFileMods set oldMD5 = newMD5");			
 		$this->db->query("delete from " . $this->db->prefix() . "wfFileMods");
 		$fetchCoreHashesStatus = wordfence::statusStart("Fetching core, theme and plugin file signatures from Wordfence");	
 		$dataArr = $engine->api->binCall('get_known_files', json_encode(array(
@@ -75,14 +85,13 @@ class wordfenceHash {
 			wordfence::statusEnd($malwarePrefixStatus, false, true);
 		}
 
-		if($path[strlen($path) - 1] != '/'){
-			$path .= '/';
+		if($this->path[strlen($this->path) - 1] != '/'){
+			$this->path .= '/';
 		}
 		if(! is_readable($path)){
-			throw new Exception("Could not read directory $path to do scan.");
+			throw new Exception("Could not read directory " . $this->path . " to do scan.");
 			exit();
 		}
-		$files = scandir($path);
 		$this->haveIssues = array(
 			'core' => false,
 			'themes' => false,
@@ -93,11 +102,26 @@ class wordfenceHash {
 		if($this->themesEnabled){ $this->status['themes'] = wordfence::statusStart("Comparing open source themes against WordPress.org originals"); } else { wordfence::statusDisabled("Skipping theme scan"); }
 		if($this->pluginsEnabled){ $this->status['plugins'] = wordfence::statusStart("Comparing plugins against WordPress.org originals"); } else { wordfence::statusDisabled("Skipping plugin scan"); }
 		if($this->malwareEnabled){ $this->status['malware'] = wordfence::statusStart("Scanning for known malware files"); } else { wordfence::statusDisabled("Skipping malware scan"); }
+	}
+	public function __sleep(){
+		return array('striplen', 'totalFiles', 'totalDirs', 'totalData', 'linesOfPHP', 'linesOfJCH', 'stoppedOnFile', 'coreEnabled', 'pluginsEnabled', 'themesEnabled', 'malwareEnabled', 'knownFiles', 'malwareData', 'haveIssues', 'status', 'possibleMalware', 'path', 'only', 'totalForks');
+	}
+	public function __wakeup(){
+		$this->db = new wfDB();
+		$this->startTime = microtime(true);
+		$this->totalForks++;
+	}
+	public function run($engine){ //base path and 'only' is a list of files and dirs in the bast that are the only ones that should be processed. Everything else in base is ignored. If only is empty then everything is processed.
+		if($this->totalForks > 1000){
+			throw new Exception("Wordfence file scanner detected a possible infinite loop. Exiting on file: " . $this->stoppedOnFile);
+		}
+		$this->engine = $engine;
+		$files = scandir($this->path);
 		foreach($files as $file){
-			if(sizeof($only) > 0 && (! in_array($file, $only))){
+			if(sizeof($this->only) > 0 && (! in_array($file, $this->only))){
 				continue;
 			}
-			$file = $path . $file;
+			$file = $this->path . $file;
 			wordfence::status(4, 'info', "Hashing item in base dir: $file");
 			$this->_dirHash($file);
 		}
@@ -121,7 +145,7 @@ class wordfenceHash {
 					$this->engine->addIssue(
 						'file', 
 						1, 
-						$path . $file, 
+						$this->path . $file, 
 						$md5,
 						'This file is suspected malware: ' . $file,
 						"This file's signature matches a known malware file. The title of the malware is '" . $name . "'. Immediately inspect this file using the 'View' option below and consider deleting it from your server.",
@@ -166,6 +190,19 @@ class wordfenceHash {
 	}
 	private function processFile($realFile){
 		$file = substr($realFile, $this->striplen);
+		if( (! $this->stoppedOnFile) && microtime(true) - $this->startTime > $this->engine->maxExecTime){ //max X seconds but don't allow fork if we're looking for the file we stopped on. Search mode is VERY fast.
+			$this->stoppedOnFile = $file;
+			$this->engine->fork();
+			//exits
+		}
+
+		//Put this after the fork, that way we will at least scan one more file after we fork if it takes us more than 10 seconds to search for the stoppedOnFile
+		if($this->stoppedOnFile && $file != $this->stoppedOnFile){
+			return;
+		} else if($this->stoppedOnFile && $file == $this->stoppedOnFile){
+			$this->stoppedOnFile = false; //Continue scanning
+		}
+
 		if(wfUtils::fileTooBig($realFile)){
 			wordfence::status(4, 'info', "Skipping file larger than max size: $realFile");
 			return;
