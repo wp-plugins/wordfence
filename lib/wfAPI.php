@@ -13,8 +13,11 @@ class wfAPI {
 		$this->APIKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 	}
+	public function getStaticURL($url){ // In the form '/something.bin' without quotes
+		return $this->getURL($this->getAPIURL() . $url);
+	}
 	public function call($action, $getParams = array(), $postParams = array()){
-		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . http_build_query(
+		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . self::buildQuery(
 			array_merge(
 				array('action' => $action),
 				$getParams	
@@ -45,7 +48,7 @@ class wfAPI {
 			$this->curlDataWritten = 0;
 			$this->curlContent = "";
 			$curl = curl_init($url);
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt ($curl, CURLOPT_HEADER, 0);
@@ -106,7 +109,7 @@ class wfAPI {
 		$url = $this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		if(function_exists('curl_init')){
 			$curl = curl_init($url);
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 300);
+			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 			//curl_setopt($curl, CURLOPT_VERBOSE, true);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
@@ -154,11 +157,18 @@ class wfAPI {
 		if(function_exists('get_bloginfo')){
 			$siteurl = get_bloginfo('siteurl');
 		}
-		return http_build_query(array(
+		return self::buildQuery(array(
 			'v' => $this->wordpressVersion, 
 			's' => $siteurl, 
 			'k' => $this->APIKey
 			));
+	}
+	private function buildQuery($data){
+		if(version_compare(phpversion(), '5.1.2', '>=')){
+			return http_build_query($data, '', '&'); //arg_separator parameter was only added in PHP 5.1.2. We do this because some PHP.ini's have arg_separator.output set to '&amp;'
+		} else {
+			return http_build_query($data);
+		}
 	}
 	private function getAPIURL(){
 		$ssl_supported = false;

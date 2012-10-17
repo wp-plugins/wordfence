@@ -8,7 +8,7 @@ require_once('wfDB.php');
 require_once('wfUtils.php');
 class wfScanEngine {
 	private static $cronTestFailedURLs = array();
-	private $api = false;
+	public $api = false;
 	private $dictWords = array();
 	private $forkRequested = false;
 
@@ -21,12 +21,8 @@ class wfScanEngine {
 	private $apiKey = false;
 	private $startTime = 0;
 	private $scanStep = 0;
-	private $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
-	private $malwareScanEnabled = false;
-	private $pluginScanEnabled = false;
-	private $coreScanEnabled = false;
-	private $themeScanEnabled = false;
-	private $unknownFiles = "";
+	public $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
+	private $publicScanEnabled = false;
 	private $fileContentsResults = false;
 	private $scanner = false;
 	private $scanQueue = array();
@@ -41,7 +37,7 @@ class wfScanEngine {
 	private $userPasswdQueue = "";
 	private $passwdHasIssues = false;
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
-		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'malwareScanEnabled', 'pluginScanEnabled', 'coreScanEnabled', 'themeScanEnabled', 'unknownFiles', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
+		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'publicScanEnabled', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
 	}
 	public function __construct(){
 		$this->startTime = time();
@@ -53,8 +49,11 @@ class wfScanEngine {
 		$this->api = new wfAPI($this->apiKey, $this->wp_version);
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
-		foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = 'knownFiles_' . $op; };
-		foreach(array('fileContents', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
+		$this->jobList[] = 'publicSite';
+		$this->jobList[] = 'knownFiles_init';
+		$this->jobList[] = 'knownFiles_main';
+		$this->jobList[] = 'knownFiles_finish';
+		foreach(array('knownFiles', 'fileContents', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
 			if(wfConfig::get('scansEnabled_' . $scanType)){
 				if(method_exists($this, 'scan_' . $scanType . '_init')){
 					foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = $scanType . '_' . $op; };
@@ -127,48 +126,33 @@ class wfScanEngine {
 	public function getCurrentJob(){
 		return $this->jobList[0];
 	}
+	private function scan_publicSite(){
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('scansEnabled_public')){
+				$this->publicScanEnabled = true;
+				$this->statusIDX['public'] = wordfence::statusStart("Doing Remote Scan of public site for problems");
+				$result = $this->api->call('scan_public_site', array(), array(
+					'siteURL' => site_url()
+					));
+				$haveIssues = false;
+				if($result['haveIssues'] && is_array($result['issues']) ){
+					foreach($result['issues'] as $issue){
+						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+						$haveIssues = true;
+					}
+				}
+				wordfence::statusEnd($this->statusIDX['public'], $haveIssues);
+			} else {
+				wordfence::statusDisabled("Skipping remote scan of public site for problems");
+			}
+		} else {
+			wordfence::statusPaidOnly("Remote scan of public facing site only available to paid members");
+			sleep(2); //enough time to read the message before it scrolls off.
+		}
+	}
 	private function scan_knownFiles_init(){
 		$this->status(1, 'info', "Contacting Wordfence to initiate scan");
 		$this->api->call('log_scan', array(), array());
-		if(wfConfig::get('scansEnabled_core')){
-			$this->coreScanEnabled = true;
-			$this->statusIDX['core'] = wordfence::statusStart("Comparing core WordPress files against originals in repository");
-		} else {
-			wordfence::statusDisabled("Skipping core scan");
-		}
-
-		//These are both now available to free customers
-		if(wfConfig::get('scansEnabled_plugins')){
-			$this->pluginScanEnabled = true;
-			$this->statusIDX['plugin'] = wordfence::statusStart("Comparing open source plugins against WordPress.org originals");
-		} else {
-			wordfence::statusDisabled("Skipping comparing plugin files against originals in repository");
-		}
-		
-		if(wfConfig::get('scansEnabled_themes')){
-			$this->themeScanEnabled = true;
-			$this->statusIDX['theme'] = wordfence::statusStart("Comparing open source themes against WordPress.org originals");
-		} else {
-			wordfence::statusDisabled("Skipping comparing theme files against originals in repository");
-		}
-		//End new section available to free customers
-
-		if(wfConfig::get('scansEnabled_malware')){
-			$this->statusIDX['unknown'] = wordfence::statusStart("Scanning for known malware files");
-			$this->malwareScanEnabled = true;
-		} else {
-			wordfence::statusDisabled("Skipping malware scan");
-			$this->status(2, 'info', "Skipping malware scan because it's disabled.");
-		}
-		if((! $this->i->summaryUpdateRequired()) && (! ($this->coreScanEnabled || $this->pluginScanEnabled || $this->themeScanEnabled || $this->malwareScanEnabled))){
-			$this->status(2, 'info', "Finishing this stage because we don't have to do a summary update and we don't need to do a core, plugin, theme or malware scan.");
-			//Remove main and finish routines because they rely on $this->hasher being created
-			array_shift($this->jobList);
-			array_shift($this->jobList);
-			return array();
-		}
-		//CORE SCAN
-		$this->hasher = new wordfenceHash(strlen(ABSPATH));
 		$baseWPStuff = array( '.htaccess', 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-admin', 'wp-app.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-content', 'wp-cron.php', 'wp-includes', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-pass.php', 'wp-register.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php');
 		$baseContents = scandir(ABSPATH);
 		if(! is_array($baseContents)){
@@ -178,115 +162,76 @@ class wfScanEngine {
 		if($scanOutside){
 			wordfence::status(2, 'info', "Including files that are outside the WordPress installation in the scan.");
 		}
+		$includeInKnownFilesScan = array();
 		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
 			if($scanOutside){
-				$includeInScan[] = $file;
+				$includeInKnownFilesScan[] = $file;
 			} else if(in_array($file, $baseWPStuff) || (@is_file($fullFile) && @is_readable($fullFile) && (! wfUtils::fileTooBig($fullFile)) ) ){
-				$includeInScan[] = $file;
+				$includeInKnownFilesScan[] = $file;
 			}
 		}
-		$this->status(2, 'info', "Hashing your WordPress files for comparison against originals.");
-		$this->hasher->buildFileQueue(ABSPATH, $includeInScan);
-	}
-	private function scan_knownFiles_main(){
-		$this->hasher->genHashes($this);
-	}
-	private function scan_knownFiles_finish(){
-		$this->status(2, 'info', "Done hash. Updating summary items.");
-		$this->i->updateSummaryItem('totalData', wfUtils::formatBytes($this->hasher->totalData));
-		$this->i->updateSummaryItem('totalFiles', $this->hasher->totalFiles);
-		$this->i->updateSummaryItem('totalDirs', $this->hasher->totalDirs);
-		$this->i->updateSummaryItem('linesOfPHP', $this->hasher->linesOfPHP);
-		$this->i->updateSummaryItem('linesOfJCH', $this->hasher->linesOfJCH);
 
 		if(! function_exists( 'get_plugins')){
 			require_once ABSPATH . '/wp-admin/includes/plugin.php';
 		}
 		$this->status(2, 'info', "Getting plugin list from WordPress");
-		$plugins = get_plugins();
-		$this->status(2, 'info', "Found " . sizeof($plugins) . " plugins");
-		$this->i->updateSummaryItem('totalPlugins', sizeof($plugins));
+		$pluginData = get_plugins();
+		$knownFilesPlugins = array();
+		foreach($pluginData as $key => $data){
+			if(preg_match('/^([^\/]+)\//', $key, $matches)){
+				$pluginDir = $matches[1];
+				$pluginFullDir = "wp-content/plugins/" . $pluginDir;
+				$knownFilesPlugins[$key] = array( 
+					'Name' => $data['Name'], 
+					'Version' => $data['Version'],
+					'ShortDir' => $pluginDir,
+					'FullDir' => $pluginFullDir
+					);
+			}
+		}
+			
+		$this->status(2, 'info', "Found " . sizeof($knownFilesPlugins) . " plugins");
+		$this->i->updateSummaryItem('totalPlugins', sizeof($knownFilesPlugins));
+
 		if(! function_exists( 'get_themes')){
 			require_once ABSPATH . '/wp-includes/theme.php';
 		}
 		$this->status(2, 'info', "Getting theme list from WordPress");
-		$themes = get_themes();
-		$this->status(2, 'info', "Found " . sizeof($themes) . " themes");
-		$this->i->updateSummaryItem('totalThemes', sizeof($themes));
-		//Return now because we needed to do a summary update but don't have any other work to do.
-		if(! ($this->coreScanEnabled || $this->pluginScanEnabled || $this->themeScanEnabled || $this->malwareScanEnabled)){
-			$this->status(2, 'info', "Finishing up because we have done our required summary update and don't need to do a core, plugin, theme or malware scan.");
-			return array();
-		}
-		$this->status(2, 'info', "Reading theme information from each theme's style.css file");
-		foreach($themes as $themeName => $themeData){
-			$cssFile = $themeData['Stylesheet Dir'] . '/style.css';
-			$cssData = @file_get_contents($cssFile);
-			if($cssData){
-				if(preg_match('/Theme URI:\s*([^\r\n]+)/', $cssData, $matches)){ $themes[$themeName]['Theme URI'] = $matches[1]; }
-				if(preg_match('/License:\s*([^\r\n]+)/', $cssData, $matches)){ $themes[$themeName]['License'] = $matches[1]; }
-				if(preg_match('/License URI:\s*([^\r\n]+)/', $cssData, $matches)){ $themes[$themeName]['License URI'] = $matches[1]; }
+		$themeData = get_themes();
+		$knownFilesThemes = array();
+		foreach($themeData as $themeName => $themeData){
+			if(preg_match('/\/([^\/]+)$/', $themeData['Stylesheet Dir'], $matches)){
+				$shortDir = $matches[1]; //e.g. evo4cms
+				$fullDir = substr($themeData['Stylesheet Dir'], strlen(ABSPATH)); //e.g. wp-content/themes/evo4cms
+				$knownFilesThemes[$themeName] = array(
+					'Name' => $themeData['Name'], 
+					'Version' => $themeData['Version'],
+					'ShortDir' => $shortDir,
+					'FullDir' => $fullDir
+					);
 			}
 		}
-		$this->status(2, 'info', "Sending request to Wordfence servers to do main scan.");
+		$this->status(2, 'info', "Found " . sizeof($knownFilesThemes) . " themes");
+		$this->i->updateSummaryItem('totalThemes', sizeof($knownFilesThemes));
 
-		$scanData = array(
-			'pluginScanEnabled' => $this->pluginScanEnabled,
-			'themeScanEnabled' => $this->themeScanEnabled,
-			'coreScanEnabled' => $this->coreScanEnabled,
-			'malwareScanEnabled' => $this->malwareScanEnabled,
-			'plugins' => $plugins,
-			'themes' => $themes,
-			'hashStorageID' => $this->hasher->getHashStorageID()
-			);
-		$content = json_encode($scanData);
-		try {
-			$dataArr = $this->api->binCall('main_scan', $content);
-		} catch(Exception $e){
-			wordfence::statusEndErr();
-			throw $e;
-		}
-		if(! is_array($dataArr)){
-			wordfence::statusEndErr();
-			throw new Exception("We received an empty response from the Wordfence server when scanning core, plugin and theme files.");
-		}
-		//Data is an encoded string of <4 bytes of total length including these 4 bytes><2 bytes of filename length><filename>
-		$totalUStrLen = unpack('N', substr($dataArr['data'], 0, 4));
-		$totalUStrLen = $totalUStrLen[1];
-		$this->unknownFiles = substr($dataArr['data'], 4, ($totalUStrLen - 4)); //subtruct the first 4 bytes which is an INT that is the total length of unknown string including the 4 bytes
-		wfConfig::set('lastUnknownFileList', $this->unknownFiles);
-		$resultArr = json_decode(substr($dataArr['data'], $totalUStrLen), true);
-		if(! (is_array($resultArr) && isset($resultArr['results'])) ){
-			wordfence::statusEndErr();
-			throw new Exception("We received an incorrect response from the Wordfence server when scanning core, plugin and theme files.");
-		}
-		
-		$this->status(2, 'info', "Processing scan results");
-		$haveIssues = array(
-			'core' => false,
-			'plugin' => false,
-			'theme' => false,
-			'unknown' => false
-			);
-		foreach($resultArr['results'] as $issue){
-			$this->status(2, 'info', "Adding issue: " . $issue['shortMsg']);
-			if($this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data'])){
-				$haveIssues[$issue['data']['cType']] = true;
-			}
-		}
-		foreach($haveIssues as $type => $have){
-			if($this->statusIDX[$type] !== false){
-				wordfence::statusEnd($this->statusIDX[$type], $have);
-			}
-		}
-
+		$this->hasher = new wordfenceHash(strlen(ABSPATH), ABSPATH, $includeInKnownFilesScan, $knownFilesThemes, $knownFilesPlugins, $this);
+	}
+	private function scan_knownFiles_main(){
+		$this->hasher->run($this); //Include this so we can call addIssue and ->api->
+		$this->i->updateSummaryItem('totalData', wfUtils::formatBytes($this->hasher->totalData));
+		$this->i->updateSummaryItem('totalFiles', $this->hasher->totalFiles);
+		$this->i->updateSummaryItem('totalDirs', $this->hasher->totalDirs);
+		$this->i->updateSummaryItem('linesOfPHP', $this->hasher->linesOfPHP);
+		$this->i->updateSummaryItem('linesOfJCH', $this->hasher->linesOfJCH);
+		$this->hasher = false;
+	}
+	private function scan_knownFiles_finish(){
 	}
 	private function scan_fileContents_init(){
 		$this->statusIDX['infect'] = wordfence::statusStart('Scanning file contents for infections and vulnerabilities');
 		$this->statusIDX['GSB'] = wordfence::statusStart('Scanning files for URLs in Google\'s Safe Browsing List');
-		$this->scanner = new wordfenceScanner($this->apiKey, $this->wp_version, $this->unknownFiles, ABSPATH);
-		$this->unknownFiles = false;
+		$this->scanner = new wordfenceScanner($this->apiKey, $this->wp_version, ABSPATH);
 		$this->status(2, 'info', "Starting scan of file contents");
 	}
 	private function scan_fileContents_main(){
@@ -892,7 +837,7 @@ class wfScanEngine {
 	public function status($level, $type, $msg){
 		wordfence::status($level, $type, $msg);
 	}
-	private function addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData){
+	public function addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData){
 		return $this->i->addIssue($type, $severity, $ignoreP, $ignoreC, $shortMsg, $longMsg, $templateData);
 	}
 	public static function requestKill(){

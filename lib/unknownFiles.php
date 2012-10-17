@@ -76,10 +76,18 @@ if($fileList){
 		//  http://test3.com/?_wfsf=view&nonce=c1ad72bcbd&file=wp-content%2Fplugins%2Fwordfence%2Flib%2Fmenu_options.php
 		$viewLink = wfUtils::siteURLRelative() . '?_wfsf=view&nonce=' . wp_create_nonce('wp-ajax') . '&file=' . urlencode($file);
 		$stat = stat($fullFile);
-		$owner = posix_getpwuid($stat['uid']);
-		$owner = $owner['name'];
-		$group = posix_getgrgid($stat['gid']);
-		$group = $group['name'];
+		if(function_exists('posix_getpwuid')){
+			$owner = posix_getpwuid($stat['uid']);
+			$owner = $owner['name'];
+		} else {
+			$owner = "unknown";
+		}
+		if(function_exists('posix_getgrgid')){
+			$group = posix_getgrgid($stat['gid']);
+			$group = $group['name'];
+		} else {
+			$group = 'unknown';
+		}
 		$perms = substr(sprintf('%o', fileperms($fullFile)), -4);
 		$files[] = array($file, $fullFile, $stat['size'], $stat['mtime'], $viewLink, $owner, $group, $perms);
 	}

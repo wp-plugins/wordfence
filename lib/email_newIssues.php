@@ -1,5 +1,7 @@
 Wordfence found the following new issues on "<?php echo get_bloginfo('name', 'raw'); ?>".
 
+Alert generated at <?php echo wfUtils::localHumanDate(); ?>
+
 <?php if($totalCriticalIssues > 0){ ?>
 Critical Problems:
 

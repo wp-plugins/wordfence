@@ -14,9 +14,10 @@ global $wpdb;
 $debugOn = wfConfig::get('debugOn', 0);
 $table = $wpdb->base_prefix . 'wfStatus';
 $q = $db->query("select ctime, level, type, msg from $table order by ctime desc");
+$timeOffset = 3600 * get_option('gmt_offset');
 while($r = mysql_fetch_assoc($q)){
 	if($r['level'] < 4 || $debugOn){
-		echo '<div' . ($r['type'] == 'error' ? ' class="error"' : '') . '>[' . date('M d H:i:s', $r['ctime']) . ':' . $r['ctime'] . ':' . $r['level'] . ':' . $r['type'] . ']&nbsp;' . htmlspecialchars($r['msg']) . "</div>\n";
+		echo '<div' . ($r['type'] == 'error' ? ' class="error"' : '') . '>[' . date('M d H:i:s', $r['ctime'] + $timeOffset) . ':' . $r['ctime'] . ':' . $r['level'] . ':' . $r['type'] . ']&nbsp;' . htmlspecialchars($r['msg']) . "</div>\n";
 	}
 }
 ?>

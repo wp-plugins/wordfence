@@ -104,7 +104,7 @@ class wfDB {
 				mysql_real_escape_string(1), 
 				mysql_real_escape_string('error'), 
 				mysql_real_escape_string($msg)), $this->dbh);
-			error_log($msg);
+			//error_log($msg);
 			return;
 		}
 	}
