@@ -486,7 +486,25 @@ class wfLog {
 	}
 	public function firewallBadIPs(){
 		$blockedCountries = wfConfig::get('cbl_countries', false);
-		if($blockedCountries && wfConfig::get('isPaid')){
+		$bareRequestURI = wfUtils::extractBareURI($_SERVER['REQUEST_URI']);
+		$bareBypassRedirURI = wfUtils::extractBareURI(wfConfig::get('cbl_bypassRedirURL', ''));
+		$skipCountryBlocking = false;
+
+		if($bareBypassRedirURI && $bareRequestURI == $bareBypassRedirURI){ //Run this before country blocking because even if the user isn't blocked we need to set the bypass cookie so they can bypass future blocks.
+			$bypassRedirDest = wfConfig::get('cbl_bypassRedirDest', '');
+			if($bypassRedirDest){
+				self::setCBLCookieBypass();
+				$this->redirect($bypassRedirDest); //exits
+			}
+		}
+		$bareBypassViewURI = wfUtils::extractBareURI(wfConfig::get('cbl_bypassViewURL', ''));
+		if($bareBypassViewURI && $bareBypassViewURI == $bareRequestURI){
+			self::setCBLCookieBypass();
+			$skipCountryBlocking = true;
+		}
+			
+
+		if((! $skipCountryBlocking) && $blockedCountries && wfConfig::get('isPaid') && (! self::isCBLBypassCookieSet()) ){
 			if(is_user_logged_in() && (! wfConfig::get('cbl_loggedInBlocked', false)) ){ //User is logged in and we're allowing logins
 				//Do nothing
 			} else if(strpos($_SERVER['REQUEST_URI'], '/wp-login.php') !== false && (! wfConfig::get('cbl_loginFormBlocked', false))  ){ //It's the login form and we're allowing that
@@ -494,10 +512,10 @@ class wfLog {
 			} else {
 				if($country = wfUtils::IP2Country(wfUtils::getIP()) ){
 					foreach(explode(',', $blockedCountries) as $blocked){
-						if(strtoupper($blocked) == strtoupper($country)){
+						if(strtoupper($blocked) == strtoupper($country)){ //At this point we know the user has been blocked
 							if(wfConfig::get('cbl_action') == 'redir'){
 								$redirURL = wfConfig::get('cbl_redirURL');
-								if(wfUtils::extractBareURI($redirURL) == wfUtils::extractBareURI($_SERVER['REQUEST_URI'])){ //Is this the URI we want to redirect to, then don't block it
+								if(wfUtils::extractBareURI($redirURL) == $bareRequestURI){ //Is this the URI we want to redirect to, then don't block it
 									//Do nothing
 								/* Uncomment the following if page components aren't loading for the page we redirect to.
 								   Uncommenting is not recommended because it means that anyone from a blocked country
@@ -526,11 +544,28 @@ class wfLog {
 			$this->do503($secsToGo, $rec['reason']); 
 		}
 	}
+	public function getCBLCookieVal(){
+		$val = wfConfig::get('cbl_cookieVal', false);
+		if(! $val){
+			$val = uniqid();
+			wfConfig::set('cbl_cookieVal', $val);
+		}
+		return $val;
+	}
+	public function setCBLCookieBypass(){
+		@setcookie('wfCBLBypass', self::getCBLCookieVal(), time() + (86400 * 365), '/');
+	}
+	public function isCBLBypassCookieSet(){
+		if(isset($_COOKIE['wfCBLBypass']) && $_COOKIE['wfCBLBypass'] == wfConfig::get('cbl_cookieVal')){
+			return true;
+		}
+		return false;
+	}
 	private function takeBlockingAction($configVar, $reason){
 		if($this->googleSafetyCheckOK()){
 			$action = wfConfig::get($configVar . '_action');
 			if(! $action){
-				error_log("Wordfence action missing for configVar: $configVar");
+				//error_log("Wordfence action missing for configVar: $configVar");
 				return;
 			}
 			$secsToGo = 0;
@@ -593,12 +628,12 @@ class wfLog {
 					self::$gbSafeCache[$cacheKey] = true; //This isn't a Google UA, so it's OK to block
 				}
 			} else {
-				error_log("Wordfence error: neverBlockBG option is not set.");
+				//error_log("Wordfence error: neverBlockBG option is not set.");
 				self::$gbSafeCache[$cacheKey] = false; //Oops the config option is not set. This should never happen because it's set on install. So we return false to indicate it's not OK to block just for safety.
 			}
 		}
 		if(! isset(self::$gbSafeCache[$cacheKey])){
-			error_log("Wordfence assertion fail in googleSafetyCheckOK: cached value is not set.");
+			//error_log("Wordfence assertion fail in googleSafetyCheckOK: cached value is not set.");
 			return false; //for safety
 		}
 		return self::$gbSafeCache[$cacheKey]; //return cached value
@@ -617,9 +652,10 @@ class wfLog {
 		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where ctime > %f order by ctime asc", $lastCtime);
 		$results = array();
 		$lastTime = false;
+		$timeOffset = 3600 * get_option('gmt_offset');
 		while($rec = mysql_fetch_assoc($res)){
 			//$rec['timeAgo'] = wfUtils::makeTimeAgo(time() - $rec['ctime']);
-			$rec['date'] = date('M d H:i:s', $rec['ctime']);
+			$rec['date'] = date('M d H:i:s', $rec['ctime'] + $timeOffset);
 			array_push($results, $rec);
 		}
 		return $results;
@@ -628,8 +664,9 @@ class wfLog {
 		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100");
 		$results = array();
 		$lastTime = false;
+		$timeOffset = 3600 * get_option('gmt_offset');
 		while($rec = mysql_fetch_assoc($res)){
-			$rec['date'] = date('M d H:i:s', $rec['ctime']);
+			$rec['date'] = date('M d H:i:s', $rec['ctime'] + $timeOffset);
 			array_push($results, $rec);
 			if(strpos($rec['msg'], 'SUM_PREP:') === 0){
 				break;
