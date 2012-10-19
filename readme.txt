@@ -153,6 +153,11 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.3.6 =
+* Upgrade immediately. Fixes possible XSS vulnerability in Wordfence "firewall unlock" form.
+* Also added rate limiting to max of 10 requests per second to the unlock form.
+
 = 3.3.5 =
 * Re-releasing to try and fix an issue with the WordPress plugin distro system.
 

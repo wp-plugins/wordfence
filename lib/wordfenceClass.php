@@ -348,6 +348,14 @@ class wordfence {
 	public static function veryFirstAction(){
 		$wfFunc = @$_GET['_wfsf'];
 		if($wfFunc == 'unlockEmail'){
+			$numTries = get_transient('wordfenceUnlockTries');
+			if($numTries > 10){
+				echo "<html><body><h1>Please wait 3 minutes and try again</h1><p>You have used this form too much. Please wait 3 minutes and try again.</p></body></html>";
+				exit();
+			}
+			if(! $numTries){ $numTries = 1; } else { $numTries = $numTries + 1; }
+			set_transient('wordfenceUnlockTries', $numTries, 180);
+
 			$email = trim($_POST['email']);
 			global $wpdb;
 			$ws = $wpdb->get_results("SELECT ID, user_login FROM $wpdb->users");
@@ -382,7 +390,7 @@ class wordfence {
 					));
 				wp_mail($email, "Unlock email requested", $content, "Content-Type: text/html");
 			}
-			echo "<html><body><h1>Your request was received</h1><p>We received a request to email \"$email\" instructions to unlock their access. If that is the email address of a site administrator or someone on the Wordfence alert list, then they have been emailed instructions on how to regain access to this sytem. The instructions we sent will expire 30 minutes from now.</body></html>";
+			echo "<html><body><h1>Your request was received</h1><p>We received a request to email \"" . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . "\" instructions to unlock their access. If that is the email address of a site administrator or someone on the Wordfence alert list, then they have been emailed instructions on how to regain access to this sytem. The instructions we sent will expire 30 minutes from now.</body></html>";
 			exit();
 		} else if($wfFunc == 'unlockAccess'){
 			if(! preg_match('/^\d+\.\d+\.\d+\.\d+$/', get_transient('wfunlock_' . $_GET['key']))){
