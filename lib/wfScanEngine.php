@@ -21,7 +21,7 @@ class wfScanEngine {
 	private $apiKey = false;
 	private $startTime = 0;
 	private $scanStep = 0;
-	public $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
+	public $maxExecTime = false; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
 	private $publicScanEnabled = false;
 	private $fileContentsResults = false;
 	private $scanner = false;
@@ -41,6 +41,7 @@ class wfScanEngine {
 	}
 	public function __construct(){
 		$this->startTime = time();
+		$this->maxExecTime = self::getMaxExecutionTime() / 2;
 		$this->i = new wfIssues();
 		$this->i->deleteNew();
 		$this->cycleStartTime = time();
@@ -867,7 +868,7 @@ class wfScanEngine {
 		$URL = wfConfig::get('cronURL');
 		$sendHeader = wfConfig::get('cronSendHeader');
 		$opts = array(
-			'timeout' => 30, //Long timeout here which is fine because it should return immediately if there are no delays.
+			'timeout' => (self::getMaxExecutionTime() - 2), //Long timeout here which is fine because it should return immediately if there are no delays.
 			'blocking' => true,
 			'sslverify' => false
 			);
@@ -944,11 +945,8 @@ class wfScanEngine {
 			$headers['Host'] = self::getOwnHostname();
 		}
 		wordfence::status(4, 'info', "Starting wp_remote_post");
-		if($isFork){
-			$timeout = 8; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
-		} else {
-			$timeout = 3; //3 seconds if we're kicking off the scan so that the Ajax call returns quickly and UI isn't too slow
-		}
+		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
+
 		$result = wp_remote_post( $cronURL, array(
 			'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 			'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
@@ -960,6 +958,16 @@ class wfScanEngine {
 	}
 	public function processResponse($result){
 		return false;
+	}
+	public static function getMaxExecutionTime(){
+		$maxExecutionTime = wfConfig::get('maxExecutionTime');
+		if(! is_numeric($maxExecutionTime)){
+			$maxExecutionTime = @ini_get('max_execution_time');
+		}
+		if(! is_numeric($maxExecutionTime)){
+			$maxExecutionTime = 15;
+		}
+		return $maxExecutionTime;
 	}
 }
 

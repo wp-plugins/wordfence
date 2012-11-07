@@ -65,7 +65,6 @@ class wfScan {
 		}
 		/* --------- end cronkey check ---------- */
 
-		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		self::status(4, 'info', "Becoming admin for scan");
 		self::becomeAdmin();
 		self::status(4, 'info', "Done become admin");

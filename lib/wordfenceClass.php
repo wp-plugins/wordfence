@@ -1132,7 +1132,6 @@ class wordfence {
 	}
 	private static function wfFunc_testtime(){
 		header('Content-Type: text/plain');
-		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		@error_reporting(E_ALL);
 		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
