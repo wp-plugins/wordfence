@@ -863,11 +863,7 @@ class wfScanEngine {
 
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
-		if(is_multisite()){
-			$cronURL = network_admin_url('admin-ajax.php');
-		} else {
-			$cronURL = admin_url('admin-ajax.php');
-		}
+		$cronURL = admin_url('admin-ajax.php');
 		$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
 		wordfence::status(4, 'info', "Starting cron at URL $cronURL");
 		$headers = array();
