@@ -218,7 +218,6 @@ class wordfence {
 		}
 
 		@chmod(dirname(__FILE__) . '/../wfscan.php', 0755);
-		@chmod(dirname(__FILE__) . '/../visitor.php', 0755);
 
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
@@ -244,6 +243,10 @@ class wordfence {
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
 		}
+		//User may be logged in or not, so register both handlers
+		add_action('wp_ajax_nopriv_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+		add_action('wp_ajax_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+
 		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
@@ -278,6 +281,18 @@ class wordfence {
 				add_action('admin_menu', 'wordfence::admin_menus');
 			}
 		}
+	}
+	public static function ajax_logHuman_callback(){
+		$hid = $_GET['hid'];
+		$hid = wfUtils::decrypt($hid);
+		if(! preg_match('/^\d+$/', $hid)){ exit(); }
+		$db = new wfDB();
+		global $wpdb; $p = $wpdb->base_prefix;
+		$db->query("update $p"."wfHits set jsRun=1 where id=%d", $hid);
+		if(! headers_sent()){ //suppress content-type warning in chrome
+			header('Content-type: image/gif');
+		}
+		die("");
 	}
 	public static function ajaxReceiver(){
 		if(! wfUtils::isAdmin()){
@@ -1187,7 +1202,9 @@ class wordfence {
 		exit();
 	}
 	public static function wp_head(){
-		echo '<script type="text/javascript">var src="' . wfUtils::getBaseURL() . 'visitor.php?hid=' . wfUtils::encrypt(self::$hitID) . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
+		$URL = admin_url('admin-ajax.php');
+		$URL .= '?action=wordfence_logHuman&hid=' . wfUtils::encrypt(self::$hitID);
+		echo '<script type="text/javascript">var src="' . $URL . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
 	}
 	public static function shutdownAction(){
 	}
