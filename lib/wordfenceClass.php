@@ -217,8 +217,6 @@ class wordfence {
 			wfConfig::set('alertEmailMsgCount', 0);
 		}
 
-		@chmod(dirname(__FILE__) . '/../wfscan.php', 0755);
-
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
 		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
@@ -246,6 +244,9 @@ class wordfence {
 		//User may be logged in or not, so register both handlers
 		add_action('wp_ajax_nopriv_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
 		add_action('wp_ajax_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+		add_action('wp_ajax_nopriv_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+		add_action('wp_ajax_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+
 
 		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
@@ -282,6 +283,15 @@ class wordfence {
 			}
 		}
 	}
+	public static function ajax_doScan_callback(){
+		ignore_user_abort(true);
+		$wordfence_wp_version = false;
+		require(ABSPATH . 'wp-includes/version.php');
+		$wordfence_wp_version = $wp_version;
+		require('wfScan.php');
+		wfScan::wfScanMain();
+
+	} //END doScan
 	public static function ajax_logHuman_callback(){
 		$hid = $_GET['hid'];
 		$hid = wfUtils::decrypt($hid);
