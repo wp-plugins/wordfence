@@ -136,7 +136,12 @@ class wfUtils {
 		return false;
 	}
 	public static function getRequestedURL(){
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+		if(isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST']){
+			$host = $_SERVER['HTTP_HOST'];
+		} else {
+			$host = $_SERVER['SERVER_NAME'];
+		}
+		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){
