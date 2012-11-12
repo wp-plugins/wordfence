@@ -96,6 +96,15 @@ class wfUtils {
 					break;
 				}
 			}
+		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
+			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
+			foreach($parts as $part){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+					$IP = trim($part);
+					break;
+				}
+			}
+			
 		}
 		if(preg_match('/:\d+$/', $IP)){
 			$IP = preg_replace('/:\d+$/', '', $IP);
