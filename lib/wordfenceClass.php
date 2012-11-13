@@ -217,9 +217,6 @@ class wordfence {
 			wfConfig::set('alertEmailMsgCount', 0);
 		}
 
-		@chmod(dirname(__FILE__) . '/../wfscan.php', 0755);
-		@chmod(dirname(__FILE__) . '/../visitor.php', 0755);
-
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
 		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
@@ -244,6 +241,13 @@ class wordfence {
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
 		}
+		//User may be logged in or not, so register both handlers
+		add_action('wp_ajax_nopriv_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+		add_action('wp_ajax_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+		add_action('wp_ajax_nopriv_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+		add_action('wp_ajax_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+
+
 		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
@@ -278,6 +282,27 @@ class wordfence {
 				add_action('admin_menu', 'wordfence::admin_menus');
 			}
 		}
+	}
+	public static function ajax_doScan_callback(){
+		ignore_user_abort(true);
+		$wordfence_wp_version = false;
+		require(ABSPATH . 'wp-includes/version.php');
+		$wordfence_wp_version = $wp_version;
+		require('wfScan.php');
+		wfScan::wfScanMain();
+
+	} //END doScan
+	public static function ajax_logHuman_callback(){
+		$hid = $_GET['hid'];
+		$hid = wfUtils::decrypt($hid);
+		if(! preg_match('/^\d+$/', $hid)){ exit(); }
+		$db = new wfDB();
+		global $wpdb; $p = $wpdb->base_prefix;
+		$db->query("update $p"."wfHits set jsRun=1 where id=%d", $hid);
+		if(! headers_sent()){ //suppress content-type warning in chrome
+			header('Content-type: image/gif');
+		}
+		die("");
 	}
 	public static function ajaxReceiver(){
 		if(! wfUtils::isAdmin()){
@@ -1132,7 +1157,6 @@ class wordfence {
 	}
 	private static function wfFunc_testtime(){
 		header('Content-Type: text/plain');
-		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		@error_reporting(E_ALL);
 		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
@@ -1188,7 +1212,9 @@ class wordfence {
 		exit();
 	}
 	public static function wp_head(){
-		echo '<script type="text/javascript">var src="' . wfUtils::getBaseURL() . 'visitor.php?hid=' . wfUtils::encrypt(self::$hitID) . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
+		$URL = admin_url('admin-ajax.php');
+		$URL .= '?action=wordfence_logHuman&hid=' . wfUtils::encrypt(self::$hitID);
+		echo '<script type="text/javascript">var src="' . $URL . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
 	}
 	public static function shutdownAction(){
 	}
@@ -1427,8 +1453,12 @@ class wordfence {
 		
 		if(($approved == 1 || $approved == 0) && wfConfig::get('other_scanComments')){
 			$wf = new wfScanEngine();
-			if($wf->isBadComment($cData['comment_author'], $cData['comment_author_email'], $cData['comment_author_url'],  $cData['comment_author_IP'], $cData['comment_content'])){
-				return 'spam';
+			try {
+				if($wf->isBadComment($cData['comment_author'], $cData['comment_author_email'], $cData['comment_author_url'],  $cData['comment_author_IP'], $cData['comment_content'])){
+					return 'spam';
+				}
+			} catch(Exception $e){
+				//This will most likely be an API exception because we can't contact the API, so we ignore it and let the normal comment mechanisms run.
 			}
 		}
 		return $approved;
