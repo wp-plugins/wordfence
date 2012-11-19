@@ -13,6 +13,7 @@ require_once('wfConfig.php');
 require_once('wfSchema.php');
 class wordfence {
 	public static $printStatus = false;
+	public static $wordfence_wp_version = false;
 	protected static $lastURLError = false;
 	protected static $curlContent = "";
 	protected static $curlDataWritten = 0;
@@ -246,6 +247,8 @@ class wordfence {
 		add_action('wp_ajax_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
 		add_action('wp_ajax_nopriv_wordfence_doScan', 'wordfence::ajax_doScan_callback');
 		add_action('wp_ajax_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+		add_action('wp_ajax_nopriv_wordfence_testAjax', 'wordfence::ajax_testAjax_callback');
+		add_action('wp_ajax_wordfence_testAjax', 'wordfence::ajax_testAjax_callback');
 
 
 		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
@@ -283,11 +286,14 @@ class wordfence {
 			}
 		}
 	}
+	public static function ajax_testAjax_callback(){
+		die("WFSCANTESTOK");
+	}
 	public static function ajax_doScan_callback(){
 		ignore_user_abort(true);
-		$wordfence_wp_version = false;
+		self::$wordfence_wp_version = false;
 		require(ABSPATH . 'wp-includes/version.php');
-		$wordfence_wp_version = $wp_version;
+		self::$wordfence_wp_version = $wp_version;
 		require('wfScan.php');
 		wfScan::wfScanMain();
 

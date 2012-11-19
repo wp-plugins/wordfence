@@ -17,7 +17,6 @@ class wfScanEngine {
 	private $hashes = false;
 	private $jobList = array();
 	private $i = false;
-	private $wp_version = false;
 	private $apiKey = false;
 	private $startTime = 0;
 	private $scanStep = 0;
@@ -41,7 +40,7 @@ class wfScanEngine {
 	}
 	public function __construct(){
 		$this->startTime = time();
-		$this->maxExecTime = self::getMaxExecutionTime() / 2;
+		$this->maxExecTime = self::getMaxExecutionTime();
 		$this->i = new wfIssues();
 		$this->i->deleteNew();
 		$this->cycleStartTime = time();
@@ -93,7 +92,9 @@ class wfScanEngine {
 		}
 	}
 	public function fork(){
+		wordfence::status(4, 'info', "Entered fork()");
 		if(wfConfig::set_ser('wfsd_engine', $this, true)){
+			wordfence::status(4, 'info', "Calling startScan(true)");
 			self::startScan(true);
 		} //Otherwise there was an error so don't start another scan.
 		exit(0);
@@ -860,37 +861,65 @@ class wfScanEngine {
 				return "A scan is already running. Use the kill link if you would like to terminate the current scan.";
 			}
 		}
-
+		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
+		$testURL = admin_url('admin-ajax.php') . '?action=wordfence_testAjax';
+		$testResult = wp_remote_post($testURL, array(
+			'timeout' => $timeout,
+			'blocking' => true,
+			'sslverify' => false,
+			'headers' => array()
+			));
+		
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
-		$cronURL = admin_url('admin-ajax.php');
-		$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
-		wordfence::status(4, 'info', "Starting cron at URL $cronURL");
-		$headers = array();
-		wordfence::status(4, 'info', "Starting wp_remote_post");
-		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
-
-		$result = wp_remote_post( $cronURL, array(
-			'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
-			'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
-			'sslverify' => false,
-			'headers' => $headers 
-			) );
-		wordfence::status(4, 'info', "Scan process ended after forking.");
+		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
+			//ajax requests can be sent by the server to itself
+			$cronURL = admin_url('admin-ajax.php');
+			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+			$headers = array();
+			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
+			$result = wp_remote_post( $cronURL, array(
+				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
+				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
+				'sslverify' => false,
+				'headers' => $headers 
+				) );
+			wordfence::status(4, 'info', "Scan process ended after forking.");
+		} else {
+			$cronURL = admin_url('admin-ajax.php');
+			$cronURL = preg_replace('/^(https?:\/\/)/i', '$1noc1.wordfence.com/scanp/', $cronURL);
+			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+			$headers = array();
+			wordfence::status(4, 'info', "Starting cron via proxy at URL $cronURL");
+			$result = wp_remote_post( $cronURL, array(
+				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
+				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
+				'sslverify' => false,
+				'headers' => $headers 
+				) );
+			wordfence::status(4, 'info', "Scan process ended after forking.");
+		}
 		return false; //No error
 	}
 	public function processResponse($result){
 		return false;
 	}
 	public static function getMaxExecutionTime(){
-		$maxExecutionTime = wfConfig::get('maxExecutionTime');
-		if(! is_numeric($maxExecutionTime)){
-			$maxExecutionTime = @ini_get('max_execution_time');
+		$config = wfConfig::get('maxExecutionTime');
+		wordfence::status(4, 'info', "Got value from wf config maxExecutionTime: $config");
+		if(is_numeric($config) && $config >= 10){
+			wordfence::status(4, 'info', "getMaxExecutionTime() returning config value: $config");
+			return $config;
 		}
-		if(! is_numeric($maxExecutionTime)){
-			$maxExecutionTime = 15;
+		$ini = @ini_get('max_execution_time');
+		wordfence::status(4, 'info', "Got max_execution_time value from ini: $ini");
+		if(is_numeric($ini) && $ini >= 10){
+			$ini = floor($ini / 2);
+			wordfence::status(4, 'info', "getMaxExecutionTime() returning half ini value: $ini");
+			return $ini;
 		}
-		return $maxExecutionTime;
+		wordfence::status(4, 'info', "getMaxExecutionTime() returning default of: 15");
+		return 15;
 	}
 }
 

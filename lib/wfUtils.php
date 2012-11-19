@@ -197,11 +197,10 @@ class wfUtils {
 		error_log("Caller for " . $caller['file'] . " line " . $caller['line'] . " is " . $c2['file'] . ' line ' . $c2['line']);
 	}
 	public static function getWPVersion(){
-		global $wp_version;
-		global $wordfence_wp_version;
-		if(isset($wordfence_wp_version)){
-			return $wordfence_wp_version;
+		if(wordfence::$wordfence_wp_version){
+			return wordfence::$wordfence_wp_version;
 		} else {
+			global $wp_version;
 			return $wp_version;
 		}
 	}
@@ -305,7 +304,6 @@ class wfUtils {
 		}
 		$toResolve = array();
 		$db = new wfDB();
-		global $wp_version;
 		global $wpdb;
 		$locsTable = $wpdb->base_prefix . 'wfLocs';
 		$IPLocs = array();
@@ -332,7 +330,7 @@ class wfUtils {
 			}
 		}
 		if(sizeof($toResolve) > 0){
-			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version); 
+			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion()); 
 			try {
 				$freshIPs = $api->call('resolve_ips', array(), array(
 					'ips' => implode(',', $toResolve)
