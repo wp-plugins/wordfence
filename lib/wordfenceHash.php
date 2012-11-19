@@ -192,6 +192,7 @@ class wordfenceHash {
 		$file = substr($realFile, $this->striplen);
 		if( (! $this->stoppedOnFile) && microtime(true) - $this->startTime > $this->engine->maxExecTime){ //max X seconds but don't allow fork if we're looking for the file we stopped on. Search mode is VERY fast.
 			$this->stoppedOnFile = $file;
+			wordfence::status(4, 'info', "Calling fork() from wordfenceHash::processFile with maxExecTime: " . $this->engine->maxExecTime);
 			$this->engine->fork();
 			//exits
 		}

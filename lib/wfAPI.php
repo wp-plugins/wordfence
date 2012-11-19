@@ -155,7 +155,12 @@ class wfAPI {
 	public function makeAPIQueryString(){
 		$siteurl = '';
 		if(function_exists('get_bloginfo')){
-			$siteurl = get_bloginfo('siteurl');
+			if(is_multisite()){
+				$siteurl = network_home_url();
+				$siteurl = rtrim($siteurl, '/'); //Because previously we used get_bloginfo and it returns http://example.com without a '/' char.
+			} else {
+				$siteurl = get_bloginfo('siteurl');
+			}
 		}
 		return self::buildQuery(array(
 			'v' => $this->wordpressVersion, 
