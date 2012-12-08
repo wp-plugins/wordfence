@@ -1122,7 +1122,6 @@ window['wordfenceAdmin'] = {
 				self.pulse('.wfSaveMsg');
 				});
 	}
-
 };
 window['WFAD'] = window['wordfenceAdmin'];
 }

@@ -159,7 +159,7 @@ class wfAPI {
 				$siteurl = network_home_url();
 				$siteurl = rtrim($siteurl, '/'); //Because previously we used get_bloginfo and it returns http://example.com without a '/' char.
 			} else {
-				$siteurl = get_bloginfo('siteurl');
+				$siteurl = home_url();
 			}
 		}
 		return self::buildQuery(array(
