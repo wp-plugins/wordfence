@@ -17,11 +17,10 @@ class wfScanEngine {
 	private $hashes = false;
 	private $jobList = array();
 	private $i = false;
-	private $wp_version = false;
 	private $apiKey = false;
 	private $startTime = 0;
 	private $scanStep = 0;
-	public $maxExecTime = 10; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
+	public $maxExecTime = false; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
 	private $publicScanEnabled = false;
 	private $fileContentsResults = false;
 	private $scanner = false;
@@ -41,6 +40,7 @@ class wfScanEngine {
 	}
 	public function __construct(){
 		$this->startTime = time();
+		$this->maxExecTime = self::getMaxExecutionTime();
 		$this->i = new wfIssues();
 		$this->i->deleteNew();
 		$this->cycleStartTime = time();
@@ -92,7 +92,9 @@ class wfScanEngine {
 		}
 	}
 	public function fork(){
+		wordfence::status(4, 'info', "Entered fork()");
 		if(wfConfig::set_ser('wfsd_engine', $this, true)){
+			wordfence::status(4, 'info', "Calling startScan(true)");
 			self::startScan(true);
 		} //Otherwise there was an error so don't start another scan.
 		exit(0);
@@ -851,72 +853,6 @@ class wfScanEngine {
 			throw new Exception("Scan was killed on administrator request.");
 		}
 	}
-	private static function getOwnHostname(){
-		if(preg_match('/https?:\/\/([^\/]+)/i', site_url(), $matches)){
-			$host = $matches[1];
-		} else {
-			wordfence::status(2, 'error', "Warning: Could not extract hostname from site URL: " . site_url());
-			$host = site_url();
-		}
-		return $host;
-	}
-	private static function tryCronURL(){
-		if(! wfConfig::get('cronTestID')){
-			wfConfig::set('cronTestID', wfUtils::bigRandomHex());
-		}
-		$URL = wfConfig::get('cronURL');
-		$sendHeader = wfConfig::get('cronSendHeader');
-		$opts = array(
-			'timeout' => 30, //Long timeout here which is fine because it should return immediately if there are no delays.
-			'blocking' => true,
-			'sslverify' => false
-			);
-		if($sendHeader){ 
-			$host = self::getOwnHostname();
-			$opts['headers'] = array( 'Host' => $host); 
-		}
-		$testURL = $URL . '?test=1';
-		wordfence::status(4, 'info', "Testing cron URL: $testURL");
-		$result = wp_remote_post($testURL, $opts);
-		if( is_array($result) && isset($result['body']) && preg_match('/WFCRONTESTOK:' . wfConfig::get('cronTestID') . '/', $result['body'])){
-			wordfence::status(4, 'info', "Cron URL test success with: $testURL");
-			return true;
-		} else {
-			wordfence::status(4, 'info', "Cron URL test fail with: $testURL");
-			self::$cronTestFailedURLs[] = $testURL;
-		}
-		return false;
-	}
-	private static function detectCronURL(){
-		$URL = wfConfig::get('cronURL');
-		if($URL){
-			if(self::tryCronURL()){
-				return true;
-			}
-		}
-
-		$host = self::getOwnHostname();
-		$URLS = array();
-		$URLS[] = array(false, plugins_url('wordfence/wfscan.php'));
-		$URLS[] = array(true, preg_replace('/^https?:\/\/[^\/]+/i', 'http://127.0.0.1', $URLS[0][1]));
-		$URLS[] = array(true, preg_replace('/^https?:\/\/[^\/]+/i', 'https://127.0.0.1', $URLS[0][1]));
-		$withHostInsecure = 'http://' . $host . '/wp-content/plugins/wordfence/wfscan.php';
-		$withHostSecure = 'https://' . $host . '/wp-content/plugins/wordfence/wfscan.php';
-		if($URLS[0][1] != $withHostInsecure){
-			$URLS[] = array(false, $withHostInsecure);
-		}
-		if($URLS[0][1] != $withHostSecure){
-			$URLS[] = array(false, $withHostSecure);
-		}
-		foreach($URLS as $elem){
-			wfConfig::set('cronSendHeader', $elem[0] ? 1 : 0);
-			wfConfig::set('cronURL', $elem[1]);
-			if(self::tryCronURL()){
-				return true;
-			}
-		}
-		return false;
-	}
 	public static function startScan($isFork = false){
 		if(! $isFork){ //beginning of scan
 			wfConfig::set('wfKillRequested', 0);
@@ -924,42 +860,66 @@ class wfScanEngine {
 			if(wfUtils::isScanRunning()){
 				return "A scan is already running. Use the kill link if you would like to terminate the current scan.";
 			}
-			if(! self::detectCronURL()){
-				$msg = 'We could not determine how this WordPress server connects to itself. Please read <a href="http://www.wordfence.com/docs/wordfence-server-cant-connect-to-itself-error/" target="_blank">the documentation we provide on this page</a> which may help with this error. For your info, this machine\'s hostname is: ' . self::getOwnHostname();
-				$msg .= "<br /><br />We tried the following URLs:<ul>";
-				foreach(self::$cronTestFailedURLs as $URL){
-					$msg .= '<li><a href="' . $URL . '" target="_blank">' . $URL . '</a></li>';
-				}
-				$msg .= '</ul>';
-				return $msg;
-			}
 		}
-
+		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
+		$testURL = admin_url('admin-ajax.php') . '?action=wordfence_testAjax';
+		$testResult = wp_remote_post($testURL, array(
+			'timeout' => $timeout,
+			'blocking' => true,
+			'sslverify' => false,
+			'headers' => array()
+			));
+		
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
-		$cronURL = wfConfig::get('cronURL') . '?isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
-		wordfence::status(4, 'info', "Starting cron at URL $cronURL");
-		$headers = array();
-		if(wfConfig::get('cronSendHeader')){
-			$headers['Host'] = self::getOwnHostname();
-		}
-		wordfence::status(4, 'info', "Starting wp_remote_post");
-		if($isFork){
-			$timeout = 8; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
+		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
+			//ajax requests can be sent by the server to itself
+			$cronURL = admin_url('admin-ajax.php');
+			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+			$headers = array();
+			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
+			$result = wp_remote_post( $cronURL, array(
+				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
+				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
+				'sslverify' => false,
+				'headers' => $headers 
+				) );
+			wordfence::status(4, 'info', "Scan process ended after forking.");
 		} else {
-			$timeout = 3; //3 seconds if we're kicking off the scan so that the Ajax call returns quickly and UI isn't too slow
+			$cronURL = admin_url('admin-ajax.php');
+			$cronURL = preg_replace('/^(https?:\/\/)/i', '$1noc1.wordfence.com/scanp/', $cronURL);
+			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+			$headers = array();
+			wordfence::status(4, 'info', "Starting cron via proxy at URL $cronURL");
+			$result = wp_remote_post( $cronURL, array(
+				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
+				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
+				'sslverify' => false,
+				'headers' => $headers 
+				) );
+			wordfence::status(4, 'info', "Scan process ended after forking.");
 		}
-		$result = wp_remote_post( $cronURL, array(
-			'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
-			'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
-			'sslverify' => false,
-			'headers' => $headers 
-			) );
-		wordfence::status(4, 'info', "Scan process ended after forking.");
 		return false; //No error
 	}
 	public function processResponse($result){
 		return false;
+	}
+	public static function getMaxExecutionTime(){
+		$config = wfConfig::get('maxExecutionTime');
+		wordfence::status(4, 'info', "Got value from wf config maxExecutionTime: $config");
+		if(is_numeric($config) && $config >= 10){
+			wordfence::status(4, 'info', "getMaxExecutionTime() returning config value: $config");
+			return $config;
+		}
+		$ini = @ini_get('max_execution_time');
+		wordfence::status(4, 'info', "Got max_execution_time value from ini: $ini");
+		if(is_numeric($ini) && $ini >= 10){
+			$ini = floor($ini / 2);
+			wordfence::status(4, 'info', "getMaxExecutionTime() returning half ini value: $ini");
+			return $ini;
+		}
+		wordfence::status(4, 'info', "getMaxExecutionTime() returning default of: 15");
+		return 15;
 	}
 }
 

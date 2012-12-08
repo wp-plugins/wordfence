@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.4.2
-Stable tag: 3.3.7
+Stable tag: 3.4.5
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -153,6 +153,29 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.4.5 =
+* Fixed security issue of being able to list wordfence's own virtual dir on some server configurations.
+* Fixed issue of WF using deprecated function which caused warnings or errors on install.
+* Added link to security alert mailing list on "Scan" page next to manual start scan button and in tour.
+
+= 3.4.4 =
+* Fixed issue that caused scans to not complete.
+* Fixed issue that caused scans to launch a large number of child processes due to very short scan timeout.
+* Fixed issue that caused websites that don't know their own hostname to not be able to scan.
+* Added workaround for a bug in Better WP Security breaking Wordfence due to their code overwriting the WP version.
+* Optimized the way we calculate max execution time for each process while scanning.
+
+= 3.4.1 =
+* Removed wfscan.php script and now using pseudo-ajax calls to fire off scans. Much more reliable.
+* Removed visitor.php script and now using pseudo-ajax calls to log human visits.
+* Added config option to allow admin to specify max execution time (advanced only!!).
+* Fixed issue that caused API calls to fail on MultiSite installs.
+* Fixed issue that caused comments to break on MultiSite installs under certain conditions.
+* Fixed issue that caused incorrect domain to be shown in live traffic view on multi-site installs.
+* Fixed issue where some proxies/firewalls send space delimited IP addresses in HTTP headers and Wordfence now handles that.
+* Fixed issue that caused Wordfence to capture activation errors of other plugins. 
+* Geo IP database update to November 7th edition.
 
 = 3.3.7 =
 * Upgrade immediately. Fixes possible XSS vulnerability in Wordfence "firewall unlock" form.
