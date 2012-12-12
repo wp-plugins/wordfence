@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
-Tested up to: 3.4.2
-Stable tag: 3.4.5
+Tested up to: 3.5
+Stable tag: 3.5.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -153,6 +153,11 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.5.1 =
+* Fixed issue with twentyten, twentyeleven, twentytwelve themes showing up as modified in 3.5.
+* Fixed issue with wpdb->prepare throwing warnings. WordPress changed their code and we have now caught up.
+* Fixed issue of files containing "silence is golden" showing up as being changed with no executable content. 
 
 = 3.4.5 =
 * Fixed security issue of being able to list wordfence's own virtual dir on some server configurations.

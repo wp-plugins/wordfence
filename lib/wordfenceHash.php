@@ -226,22 +226,27 @@ class wordfenceHash {
 					$knownFile = 1;
 				} else {
 					if($this->coreEnabled){
-						$this->haveIssues['core'] = true;
-						$this->engine->addIssue(
-							'file', 
-							1, 
-							'coreModified' . $file . $md5, 
-							'coreModified' . $file,
-							'WordPress core file modified: ' . $file,
-							"This WordPress core file has been modified and differs from the original file distributed with this version of WordPress.",
-							array(
-								'file' => $file,
-								'cType' => 'core',
-								'canDiff' => true,
-								'canFix' => true,
-								'canDelete' => false
-								)
-							);
+						$localFile = ABSPATH . '/' . preg_replace('/^[\.\/]+/', '', $file);
+						$fileContents = @file_get_contents($localFile);
+						if($fileContents && (! preg_match('/<\?' . 'php[\r\n\s\t]*\/\/[\r\n\s\t]*Silence is golden\.[\r\n\s\t]*(?:\?>)?[\r\n\s\t]*$/s', $fileContents))){
+								
+							$this->haveIssues['core'] = true;
+							$this->engine->addIssue(
+								'file', 
+								1, 
+								'coreModified' . $file . $md5, 
+								'coreModified' . $file,
+								'WordPress core file modified: ' . $file,
+								"This WordPress core file has been modified and differs from the original file distributed with this version of WordPress.",
+								array(
+									'file' => $file,
+									'cType' => 'core',
+									'canDiff' => true,
+									'canFix' => true,
+									'canDelete' => false
+									)
+								);
+						}
 					}
 				}
 			} else if(isset($this->knownFiles['plugins'][$file])){
