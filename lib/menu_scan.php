@@ -11,7 +11,7 @@
 				</td>
 				<td>
 					<div style="border: 1px solid #CCC; padding: 4px;">
-						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a> or <a target="_blank" href="http://www.wordfence.com/forums/">visit our support forums for help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a>. Spreading the word helps us keep the best features free.
+						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://www.wordfence.com/forums/">visit our support forums for help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a>. Spreading the word helps us keep the best features free.
 					</div>
 				</td>
 			</tr>
