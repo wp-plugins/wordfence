@@ -337,16 +337,12 @@ window['wordfenceAdmin'] = {
 	},
 	handleTickerReturn: function(res){
 		this.tickerUpdatePending = false;
-		var statusMsgChanged = false;
 		var newMsg = "";
-		var oldMsg = jQuery('#wfLiveStatus').html();
+		var oldMsg = jQuery('#wfLiveStatus').text();
 		if( res.msg ){ 
 			newMsg = res.msg;
 		} else {
 			newMsg = "Idle";
-		}
-		if(newMsg && oldMsg && newMsg != oldMsg){
-			statusMsgChanged = true;
 		}
 		if(newMsg && newMsg != oldMsg){
 			jQuery('#wfLiveStatus').hide().html(newMsg).fadeIn(200);
@@ -354,9 +350,6 @@ window['wordfenceAdmin'] = {
 
 		if(this.mode == 'activity'){
 			if(res.alsoGet != 'logList_' + this.activityMode){ return; } //user switched panels since ajax request started
-			if(/^(?:topScanners|topLeechers)$/.test(this.activityMode)){
-				if(statusMsgChanged){ this.updateTicker(true); } return;
-			}
 			if(res.events.length > 0){
 				this.newestActivityTime = res.events[0]['ctime'];
 			}
@@ -393,7 +386,6 @@ window['wordfenceAdmin'] = {
 				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
 				});
 		}
-		if(statusMsgChanged){ this.updateTicker(true); } return;
 	},
 	reverseLookupIPs: function(){
 		var ips = [];
@@ -932,7 +924,7 @@ window['wordfenceAdmin'] = {
 			}
 		}
 		for(var k in WFSLevels[level].otherParams){
-			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem)$/.test(k)){
+			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem|maxExecutionTime)$/.test(k)){
 				jQuery('#' + k).val(WFSLevels[level].otherParams[k]);
 			}
 		}
@@ -1122,7 +1114,6 @@ window['wordfenceAdmin'] = {
 				self.pulse('.wfSaveMsg');
 				});
 	}
-
 };
 window['WFAD'] = window['wordfenceAdmin'];
 }

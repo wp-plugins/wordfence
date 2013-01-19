@@ -217,16 +217,16 @@ class wfIssues {
 	private function updateSummaryItems(){
 		global $wpdb;
 		$dat = array();
-		$users = $wpdb->get_col($wpdb->prepare("SELECT $wpdb->users.ID FROM $wpdb->users"));
+		$users = $wpdb->get_col("SELECT $wpdb->users.ID FROM $wpdb->users");
 		$dat['totalUsers'] = sizeof($users);
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->posts where post_type='page' and post_status NOT IN ('auto-draft')")); $dat['totalPages'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->posts where post_type='post' and post_status NOT IN ('auto-draft')")); $dat['totalPosts'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->comments")); $dat['totalComments'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->term_taxonomy where taxonomy='category'")); $dat['totalCategories'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("show tables")); $dat['totalTables'] = sizeof($res1);
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->posts where post_type='page' and post_status NOT IN ('auto-draft')"); $dat['totalPages'] = $res1['0'];
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->posts where post_type='post' and post_status NOT IN ('auto-draft')"); $dat['totalPosts'] = $res1['0'];
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->comments"); $dat['totalComments'] = $res1['0'];
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->term_taxonomy where taxonomy='category'"); $dat['totalCategories'] = $res1['0'];
+		$res1 = $wpdb->get_col("show tables"); $dat['totalTables'] = sizeof($res1);
 		$totalRows = 0;
 		foreach($res1 as $table){
-			$res2 = $wpdb->get_col($wpdb->prepare("select count(*) from $table"));
+			$res2 = $wpdb->get_col("select count(*) from $table");
 			if(isset($res2[0]) ){
 				$totalRows += $res2[0];
 			}

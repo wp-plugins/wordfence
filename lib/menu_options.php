@@ -36,7 +36,18 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 			<option value="CUSTOM"<?php $w->sel('securityLevel', 'CUSTOM'); ?>>Custom settings</option>
 		</select>
 		</td></tr>
-
+	<?php if(! wfConfig::get('howGetIPs', false)){ ?>
+	<tr><td colspan="2" style="color: #F00;"><strong>Please set this now to avoid spoofing attacks:</strong></td></tr>
+	<?php } ?>
+	<tr><th>How does Wordfence get IPs:</td><td>
+		<select id="howGetIPs" name="howGetIPs">
+			<option value="">This is not set. We STRONGLY recommend you set this by choosing an option and hitting "Save" for a more secure site.</option>
+			<option value="REMOTE_ADDR"<?php $w->sel('howGetIPs', 'REMOTE_ADDR'); ?>>Use PHP's built in REMOTE_ADDR. Use this if you're not using Nginx or any separate front-end proxy or firewall. Try this first.</option>
+			<option value="HTTP_X_REAL_IP"<?php $w->sel('howGetIPs', 'HTTP_X_REAL_IP'); ?>>Use the X-Real-IP HTTP header which my Nginx, firewall or front-end proxy is setting. Try this next.</option>
+			<option value="HTTP_X_FORWARDED_FOR"<?php $w->sel('howGetIPs', 'HTTP_X_FORWARDED_FOR'); ?>>Use the X-Forwarded-For HTTP header which my Nginx, firewall or front-end proxy is setting.</option>
+			<option value="HTTP_CF_CONNECTING_IP"<?php $w->sel('howGetIPs', 'HTTP_CF_CONNECTING_IP'); ?>>I'm using Cloudflare so use the "CF-Connecting-IP" HTTP header to get a visitor IP</option>
+		</select><br /><span style="color: #999;">Check the status messages at the top of this page and your "Live Traffic" view to verify this is set correctly.</span>
+		</td></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	<div class="wfMarker" id="wfMarkerBasicOptions"></div>
@@ -220,6 +231,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
+	<tr><th>Maximum execution time for each scan stage</th><td><input type="text" id="maxExecutionTime" name="maxExecutionTime" value="<?php $w->f('maxExecutionTime'); ?>" size="4" />Blank for default. Must be greater than 9.</td></tr>
 	<tr><th>Enable debugging mode (increases database load)</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
 	<tr><th>Delete Wordfence tables and data on deactivation?</th><td><input type="checkbox" id="deleteTablesOnDeact" class="wfConfigElem" name="deleteTablesOnDeact" value="1" <?php $w->cb('deleteTablesOnDeact'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>

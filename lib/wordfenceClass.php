@@ -13,6 +13,7 @@ require_once('wfConfig.php');
 require_once('wfSchema.php');
 class wordfence {
 	public static $printStatus = false;
+	public static $wordfence_wp_version = false;
 	protected static $lastURLError = false;
 	protected static $curlContent = "";
 	protected static $curlDataWritten = 0;
@@ -217,9 +218,6 @@ class wordfence {
 			wfConfig::set('alertEmailMsgCount', 0);
 		}
 
-		@chmod(dirname(__FILE__) . '/../wfscan.php', 0755);
-		@chmod(dirname(__FILE__) . '/../visitor.php', 0755);
-
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
 		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
@@ -244,6 +242,15 @@ class wordfence {
 			global $blog_id;
 			if($blog_id == 1 && get_option('wordfenceActivated') != 1){ return; } //Because the plugin is active once installed, even before it's network activated, for site 1 (WordPress team, why?!)
 		}
+		//User may be logged in or not, so register both handlers
+		add_action('wp_ajax_nopriv_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+		add_action('wp_ajax_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
+		add_action('wp_ajax_nopriv_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+		add_action('wp_ajax_wordfence_doScan', 'wordfence::ajax_doScan_callback');
+		add_action('wp_ajax_nopriv_wordfence_testAjax', 'wordfence::ajax_testAjax_callback');
+		add_action('wp_ajax_wordfence_testAjax', 'wordfence::ajax_testAjax_callback');
+
+
 		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
@@ -278,6 +285,30 @@ class wordfence {
 				add_action('admin_menu', 'wordfence::admin_menus');
 			}
 		}
+	}
+	public static function ajax_testAjax_callback(){
+		die("WFSCANTESTOK");
+	}
+	public static function ajax_doScan_callback(){
+		ignore_user_abort(true);
+		self::$wordfence_wp_version = false;
+		require(ABSPATH . 'wp-includes/version.php');
+		self::$wordfence_wp_version = $wp_version;
+		require('wfScan.php');
+		wfScan::wfScanMain();
+
+	} //END doScan
+	public static function ajax_logHuman_callback(){
+		$hid = $_GET['hid'];
+		$hid = wfUtils::decrypt($hid);
+		if(! preg_match('/^\d+$/', $hid)){ exit(); }
+		$db = new wfDB();
+		global $wpdb; $p = $wpdb->base_prefix;
+		$db->query("update $p"."wfHits set jsRun=1 where id=%d", $hid);
+		if(! headers_sent()){ //suppress content-type warning in chrome
+			header('Content-type: image/gif');
+		}
+		die("");
 	}
 	public static function ajaxReceiver(){
 		if(! wfUtils::isAdmin()){
@@ -702,6 +733,7 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_saveConfig_callback(){
+		$reload = '';
 		$opts = wfConfig::parseOptions();
 		$emails = array();
 		foreach(explode(',', preg_replace('/[\r\n\s\t]+/', '', $opts['alertEmails'])) as $email){
@@ -797,13 +829,17 @@ class wordfence {
 			$p = $wpdb->base_prefix;
 			$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
 		}
+		if($opts['howGetIPs'] != wfConfig::get('howGetIPs', '')){
+			$reload = 'reload';
+		}
+
+
 		foreach($opts as $key => $val){
 			if($key != 'apiKey'){ //Don't save API key yet
 				wfConfig::set($key, $val);
 			}
 		}
 		
-		$reload = '';
 		$paidKeyMsg = false;
 
 
@@ -839,9 +875,6 @@ class wordfence {
 				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . $e->getMessage());
 			}
 		}
-
-
-
 		//Clears next scan if scans are disabled. Schedules next scan if enabled.
 		if($err){
 			return array('errorMsg' => $err);
@@ -1132,7 +1165,6 @@ class wordfence {
 	}
 	private static function wfFunc_testtime(){
 		header('Content-Type: text/plain');
-		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		@error_reporting(E_ALL);
 		wfUtils::iniSet('display_errors','On');
 		set_error_handler('wordfence::memtest_error_handler', E_ALL);
@@ -1188,7 +1220,9 @@ class wordfence {
 		exit();
 	}
 	public static function wp_head(){
-		echo '<script type="text/javascript">var src="' . wfUtils::getBaseURL() . 'visitor.php?hid=' . wfUtils::encrypt(self::$hitID) . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
+		$URL = admin_url('admin-ajax.php');
+		$URL .= '?action=wordfence_logHuman&hid=' . wfUtils::encrypt(self::$hitID);
+		echo '<script type="text/javascript">var src="' . $URL . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
 	}
 	public static function shutdownAction(){
 	}
@@ -1332,6 +1366,10 @@ class wordfence {
 			'tourClosed' => wfConfig::get('tourClosed', 0)
 			));
 	}
+	public static function noHowGetIPWarning(){
+		echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please go to the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a> and set the option that tells Wordfence how your site gets visitor IP addresses.</strong> This is important to avoid IP spoofing attacks.</p></div>';
+	}
+
 	public static function activation_warning(){
 		$activationError = get_option('wf_plugin_act_error', '');
 		if(strlen($activationError) > 400){
@@ -1347,12 +1385,14 @@ class wordfence {
 	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
+		$warningAdded = false;
 		if(get_option('wf_plugin_act_error', false)){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::activation_warning');
 			} else {
 				add_action('admin_notices', 'wordfence::activation_warning');
 			}
+			$warningAdded = true;
 		}
 		if(! wfConfig::get('apiKey')){
 			if(wfUtils::isAdminPageMU()){
@@ -1360,7 +1400,18 @@ class wordfence {
 			} else {
 				add_action('admin_notices', 'wordfence::noKeyError');
 			}
+			$warningAdded = true;
 		}
+		if( (! $warningAdded) && (! wfConfig::get('howGetIPs', false)) ){
+			if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
+				if(wfUtils::isAdminPageMU()){
+					add_action('network_admin_notices', 'wordfence::noHowGetIPWarning');
+				} else {
+					add_action('admin_notices', 'wordfence::noHowGetIPWarning');
+				}
+				$warningAdded = true;
+			}
+		}	
 		add_submenu_page("Wordfence", "Scan", "Scan", "activate_plugins", "Wordfence", 'wordfence::menu_scan');
 		add_menu_page('Wordfence', 'Wordfence', 'activate_plugins', 'Wordfence', 'wordfence::menu_scan', wfUtils::getBaseURL() . 'images/wordfence-logo-16x16.png'); 
 		if(wfConfig::get('liveTrafficEnabled')){
@@ -1427,8 +1478,12 @@ class wordfence {
 		
 		if(($approved == 1 || $approved == 0) && wfConfig::get('other_scanComments')){
 			$wf = new wfScanEngine();
-			if($wf->isBadComment($cData['comment_author'], $cData['comment_author_email'], $cData['comment_author_url'],  $cData['comment_author_IP'], $cData['comment_content'])){
-				return 'spam';
+			try {
+				if($wf->isBadComment($cData['comment_author'], $cData['comment_author_email'], $cData['comment_author_url'],  $cData['comment_author_IP'], $cData['comment_content'])){
+					return 'spam';
+				}
+			} catch(Exception $e){
+				//This will most likely be an API exception because we can't contact the API, so we ignore it and let the normal comment mechanisms run.
 			}
 		}
 		return $approved;

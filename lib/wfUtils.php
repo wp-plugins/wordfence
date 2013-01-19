@@ -74,7 +74,7 @@ class wfUtils {
 		return WP_CONTENT_DIR . '/plugins/';
 		//return ABSPATH . 'wp-content/plugins/';
 	}
-	public static function getIP(){
+	public static function defaultGetIP(){
 		$IP = 0;
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
@@ -88,6 +88,15 @@ class wfUtils {
 			$IP = $_SERVER['REMOTE_ADDR'];
 			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
 		}
+		return $IP;
+	}
+	public static function getIP(){
+		$howGet = wfConfig::get('howGetIPs', false);
+		if($howGet){
+			$IP = $_SERVER[$howGet];
+		} else {
+			$IP = wfUtils::defaultGetIP();
+		}
 		if(preg_match('/,/', $IP)){
 			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
 			foreach($parts as $part){
@@ -96,11 +105,28 @@ class wfUtils {
 					break;
 				}
 			}
+		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
+			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
+			foreach($parts as $part){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+					$IP = trim($part);
+					break;
+				}
+			}
+			
 		}
 		if(preg_match('/:\d+$/', $IP)){
 			$IP = preg_replace('/:\d+$/', '', $IP);
 		}
 		if(self::isValidIP($IP)){
+			if(wfConfig::get('IPGetFail', false)){
+				if(preg_match('/^(?:10\.|192\.168|127\.|172\.)/', $IP)){
+					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
+				} else {
+					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
+				}
+				wfConfig::set('IPGetFail', '');
+			}
 			return $IP;
 		} else {
 			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
@@ -119,6 +145,7 @@ class wfUtils {
 				}
 			}
 			wordfence::status(1, 'error', $msg);
+			wfConfig::set('IPGetFail', 1);
 			return false;
 		}
 	}
@@ -136,7 +163,12 @@ class wfUtils {
 		return false;
 	}
 	public static function getRequestedURL(){
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+		if(isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST']){
+			$host = $_SERVER['HTTP_HOST'];
+		} else {
+			$host = $_SERVER['SERVER_NAME'];
+		}
+		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){
@@ -183,11 +215,10 @@ class wfUtils {
 		error_log("Caller for " . $caller['file'] . " line " . $caller['line'] . " is " . $c2['file'] . ' line ' . $c2['line']);
 	}
 	public static function getWPVersion(){
-		global $wp_version;
-		global $wordfence_wp_version;
-		if(isset($wordfence_wp_version)){
-			return $wordfence_wp_version;
+		if(wordfence::$wordfence_wp_version){
+			return wordfence::$wordfence_wp_version;
 		} else {
+			global $wp_version;
 			return $wp_version;
 		}
 	}
@@ -291,7 +322,6 @@ class wfUtils {
 		}
 		$toResolve = array();
 		$db = new wfDB();
-		global $wp_version;
 		global $wpdb;
 		$locsTable = $wpdb->base_prefix . 'wfLocs';
 		$IPLocs = array();
@@ -318,7 +348,7 @@ class wfUtils {
 			}
 		}
 		if(sizeof($toResolve) > 0){
-			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version); 
+			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion()); 
 			try {
 				$freshIPs = $api->call('resolve_ips', array(), array(
 					'ips' => implode(',', $toResolve)
