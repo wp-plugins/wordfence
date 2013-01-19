@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.5
-Stable tag: 3.5.1
+Stable tag: 3.5.2
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -153,6 +153,13 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.5.2 =
+* IP detection is now much more robust. Admins must specify how their site gets IP addresses.
+* Fixed issue that would throw Ajax ticker into a hard loop and put load on a server if user is on "options" page and WF can't detect IPs.
+* Added support for Cloudflare proxies when getting client's real IP address.
+* If we fail to get an IP and then get an IP succesfully, we update the activity log.
+* Activity log update in case of successful IP acquisition will warn if we're getting internal RFC1918 IP's e.g. the IP of your firewall.
 
 = 3.5.1 =
 * Fixed issue with twentyten, twentyeleven, twentytwelve themes showing up as modified in 3.5.

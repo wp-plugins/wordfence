@@ -36,7 +36,18 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 			<option value="CUSTOM"<?php $w->sel('securityLevel', 'CUSTOM'); ?>>Custom settings</option>
 		</select>
 		</td></tr>
-
+	<?php if(! wfConfig::get('howGetIPs', false)){ ?>
+	<tr><td colspan="2" style="color: #F00;"><strong>Please set this now to avoid spoofing attacks:</strong></td></tr>
+	<?php } ?>
+	<tr><th>How does Wordfence get IPs:</td><td>
+		<select id="howGetIPs" name="howGetIPs">
+			<option value="">This is not set. We STRONGLY recommend you set this by choosing an option and hitting "Save" for a more secure site.</option>
+			<option value="REMOTE_ADDR"<?php $w->sel('howGetIPs', 'REMOTE_ADDR'); ?>>Use PHP's built in REMOTE_ADDR. Use this if you're not using Nginx or any separate front-end proxy or firewall. Try this first.</option>
+			<option value="HTTP_X_REAL_IP"<?php $w->sel('howGetIPs', 'HTTP_X_REAL_IP'); ?>>Use the X-Real-IP HTTP header which my Nginx, firewall or front-end proxy is setting. Try this next.</option>
+			<option value="HTTP_X_FORWARDED_FOR"<?php $w->sel('howGetIPs', 'HTTP_X_FORWARDED_FOR'); ?>>Use the X-Forwarded-For HTTP header which my Nginx, firewall or front-end proxy is setting.</option>
+			<option value="HTTP_CF_CONNECTING_IP"<?php $w->sel('howGetIPs', 'HTTP_CF_CONNECTING_IP'); ?>>I'm using Cloudflare so use the "CF-Connecting-IP" HTTP header to get a visitor IP</option>
+		</select><br /><span style="color: #999;">Check the status messages at the top of this page and your "Live Traffic" view to verify this is set correctly.</span>
+		</td></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	<div class="wfMarker" id="wfMarkerBasicOptions"></div>

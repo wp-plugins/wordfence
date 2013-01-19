@@ -733,6 +733,7 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_saveConfig_callback(){
+		$reload = '';
 		$opts = wfConfig::parseOptions();
 		$emails = array();
 		foreach(explode(',', preg_replace('/[\r\n\s\t]+/', '', $opts['alertEmails'])) as $email){
@@ -828,13 +829,17 @@ class wordfence {
 			$p = $wpdb->base_prefix;
 			$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
 		}
+		if($opts['howGetIPs'] != wfConfig::get('howGetIPs', '')){
+			$reload = 'reload';
+		}
+
+
 		foreach($opts as $key => $val){
 			if($key != 'apiKey'){ //Don't save API key yet
 				wfConfig::set($key, $val);
 			}
 		}
 		
-		$reload = '';
 		$paidKeyMsg = false;
 
 
@@ -870,9 +875,6 @@ class wordfence {
 				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . $e->getMessage());
 			}
 		}
-
-
-
 		//Clears next scan if scans are disabled. Schedules next scan if enabled.
 		if($err){
 			return array('errorMsg' => $err);
@@ -1364,6 +1366,10 @@ class wordfence {
 			'tourClosed' => wfConfig::get('tourClosed', 0)
 			));
 	}
+	public static function noHowGetIPWarning(){
+		echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please go to the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a> and set the option that tells Wordfence how your site gets visitor IP addresses.</strong> This is important to avoid IP spoofing attacks.</p></div>';
+	}
+
 	public static function activation_warning(){
 		$activationError = get_option('wf_plugin_act_error', '');
 		if(strlen($activationError) > 400){
@@ -1379,12 +1385,14 @@ class wordfence {
 	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
+		$warningAdded = false;
 		if(get_option('wf_plugin_act_error', false)){
 			if(wfUtils::isAdminPageMU()){
 				add_action('network_admin_notices', 'wordfence::activation_warning');
 			} else {
 				add_action('admin_notices', 'wordfence::activation_warning');
 			}
+			$warningAdded = true;
 		}
 		if(! wfConfig::get('apiKey')){
 			if(wfUtils::isAdminPageMU()){
@@ -1392,7 +1400,18 @@ class wordfence {
 			} else {
 				add_action('admin_notices', 'wordfence::noKeyError');
 			}
+			$warningAdded = true;
 		}
+		if( (! $warningAdded) && (! wfConfig::get('howGetIPs', false)) ){
+			if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
+				if(wfUtils::isAdminPageMU()){
+					add_action('network_admin_notices', 'wordfence::noHowGetIPWarning');
+				} else {
+					add_action('admin_notices', 'wordfence::noHowGetIPWarning');
+				}
+				$warningAdded = true;
+			}
+		}	
 		add_submenu_page("Wordfence", "Scan", "Scan", "activate_plugins", "Wordfence", 'wordfence::menu_scan');
 		add_menu_page('Wordfence', 'Wordfence', 'activate_plugins', 'Wordfence', 'wordfence::menu_scan', wfUtils::getBaseURL() . 'images/wordfence-logo-16x16.png'); 
 		if(wfConfig::get('liveTrafficEnabled')){

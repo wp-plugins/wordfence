@@ -74,7 +74,7 @@ class wfUtils {
 		return WP_CONTENT_DIR . '/plugins/';
 		//return ABSPATH . 'wp-content/plugins/';
 	}
-	public static function getIP(){
+	public static function defaultGetIP(){
 		$IP = 0;
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
@@ -87,6 +87,15 @@ class wfUtils {
 		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['REMOTE_ADDR'])){
 			$IP = $_SERVER['REMOTE_ADDR'];
 			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
+		}
+		return $IP;
+	}
+	public static function getIP(){
+		$howGet = wfConfig::get('howGetIPs', false);
+		if($howGet){
+			$IP = $_SERVER[$howGet];
+		} else {
+			$IP = wfUtils::defaultGetIP();
 		}
 		if(preg_match('/,/', $IP)){
 			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
@@ -110,6 +119,14 @@ class wfUtils {
 			$IP = preg_replace('/:\d+$/', '', $IP);
 		}
 		if(self::isValidIP($IP)){
+			if(wfConfig::get('IPGetFail', false)){
+				if(preg_match('/^(?:10\.|192\.168|127\.|172\.)/', $IP)){
+					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
+				} else {
+					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
+				}
+				wfConfig::set('IPGetFail', '');
+			}
 			return $IP;
 		} else {
 			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
@@ -128,6 +145,7 @@ class wfUtils {
 				}
 			}
 			wordfence::status(1, 'error', $msg);
+			wfConfig::set('IPGetFail', 1);
 			return false;
 		}
 	}
