@@ -154,6 +154,10 @@ or a theme, because often these have been updated to fix a security hole.
 
 == Changelog ==
 
+= 3.5.3 =
+* This is the dev version. Stable is 3.5.2.
+* Added detection for "hacked by badi" hack. Check if wp_options has been changed to UTF-7.
+
 = 3.5.2 =
 * IP detection is now much more robust. Admins must specify how their site gets IP addresses.
 * Fixed issue that would throw Ajax ticker into a hard loop and put load on a server if user is on "options" page and WF can't detect IPs.

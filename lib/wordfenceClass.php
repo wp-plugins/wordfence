@@ -230,6 +230,11 @@ class wordfence {
 		$db->queryIgnoreError("drop table if exists $prefix"."wfFileQueue");
 		$db->queryIgnoreError("drop table if exists $prefix"."wfFileChanges");
 
+		$optScanEnabled = $db->querySingle("select val from $prefix"."wfConfig where name='scansEnabled_options'");
+		if($optScanEnabled != '0' && $optScanEnabled != '1'){
+			$db->query("update $prefix"."wfConfig set val='1' where name='scansEnabled_options'");
+		}
+		
 		//Must be the final line
 	}
 	public static function install_actions(){

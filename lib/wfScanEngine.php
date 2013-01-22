@@ -53,7 +53,7 @@ class wfScanEngine {
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
 		$this->jobList[] = 'knownFiles_finish';
-		foreach(array('knownFiles', 'fileContents', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
+		foreach(array('knownFiles', 'fileContents', 'posts', 'comments', 'passwds', 'options', 'dns', 'diskSpace', 'oldVersions') as $scanType){
 			if(wfConfig::get('scansEnabled_' . $scanType)){
 				if(method_exists($this, 'scan_' . $scanType . '_init')){
 					foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = $scanType . '_' . $op; };
@@ -676,6 +676,21 @@ class wfScanEngine {
 			wordfence::statusEnd($this->statusIDX['diskSpace'], true);
 		} else {
 			wordfence::statusEnd($this->statusIDX['diskSpace'], false);
+		}
+	}
+	private function scan_options(){
+		$blogsToScan = $this->getBlogsToScan('options');
+		$wfdb = new wfDB();
+		foreach($blogsToScan as $blog){
+			$charset = $wfdb->querySingle("select option_value from " . $blog['table'] . " where option_name='blog_charset'");
+			if(strtolower($charset) == 'utf-7'){
+				$this->addIssue('badOption', 1, $blog['blog_id'] . 'blog_charset', $blog['blog_id'] . 'blog_charset', "An option was found in your site that indicates it may have been hacked.", "The 'blog_charset' option in your database is set to '" . $charset . "' which indicates your site may have been hacked. If hackers can gain access to your database via phpMyAdmin for example, they will change this value in order to inject malicious code into other parts of your site or allow XSS attacks. The 'badi' hack does this.", array(
+					'isMultisite' => $blog['isMultisite'],
+					'domain' => $blog['domain'],
+					'path' => $blog['path'],
+					'blog_id' => $blog['blog_id']
+					));
+			}
 		}
 	}
 	private function scan_dns(){
