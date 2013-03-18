@@ -36,7 +36,15 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 			<option value="CUSTOM"<?php $w->sel('securityLevel', 'CUSTOM'); ?>>Custom settings</option>
 		</select>
 		</td></tr>
-
+	<tr><th>How does Wordfence get IPs:</th><td>
+		<select id="howGetIPs" name="howGetIPs">
+			<option value="">Set this option if you're seeing visitors from fake IP addresses or who appear to be from your internal network but aren't.</option>
+			<option value="REMOTE_ADDR"<?php $w->sel('howGetIPs', 'REMOTE_ADDR'); ?>>Use PHP's built in REMOTE_ADDR. Use this if you're not using Nginx or any separate front-end proxy or firewall. Try this first.</option>
+			<option value="HTTP_X_REAL_IP"<?php $w->sel('howGetIPs', 'HTTP_X_REAL_IP'); ?>>Use the X-Real-IP HTTP header which my Nginx, firewall or front-end proxy is setting. Try this next.</option>
+			<option value="HTTP_X_FORWARDED_FOR"<?php $w->sel('howGetIPs', 'HTTP_X_FORWARDED_FOR'); ?>>Use the X-Forwarded-For HTTP header which my Nginx, firewall or front-end proxy is setting.</option>
+			<option value="HTTP_CF_CONNECTING_IP"<?php $w->sel('howGetIPs', 'HTTP_CF_CONNECTING_IP'); ?>>I'm using Cloudflare so use the "CF-Connecting-IP" HTTP header to get a visitor IP</option>
+		</select>
+		</td></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	<div class="wfMarker" id="wfMarkerBasicOptions"></div>
@@ -91,6 +99,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Scan comments for known dangerous URLs and suspicious content</th><td><input type="checkbox" id="scansEnabled_comments" class="wfConfigElem" name="scansEnabled_comments" value="1" <?php $w->cb('scansEnabled_comments'); ?>/></td></tr>
 	<tr><th>Scan for out of date plugins, themes and WordPress versions</th><td><input type="checkbox" id="scansEnabled_oldVersions" class="wfConfigElem" name="scansEnabled_oldVersions" value="1" <?php $w->cb('scansEnabled_oldVersions'); ?>/></td></tr>
 	<tr><th>Check the strength of passwords</th><td><input type="checkbox" id="scansEnabled_passwds" class="wfConfigElem" name="scansEnabled_passwds" value="1" <?php $w->cb('scansEnabled_passwds'); ?>/></td></tr>
+	<tr><th>Scan options table</th><td><input type="checkbox" id="scansEnabled_options" class="wfConfigElem" name="scansEnabled_options" value="1" <?php $w->cb('scansEnabled_options'); ?>/></td></tr>
 	<tr><th>Monitor disk space</th><td><input type="checkbox" id="scansEnabled_diskSpace" class="wfConfigElem" name="scansEnabled_diskSpace" value="1" <?php $w->cb('scansEnabled_diskSpace'); ?>/></td></tr>
 	<tr><th>Scan for unauthorized DNS changes</th><td><input type="checkbox" id="scansEnabled_dns" class="wfConfigElem" name="scansEnabled_dns" value="1" <?php $w->cb('scansEnabled_dns'); ?>/></td></tr>
 	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
@@ -220,6 +229,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
 	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
+	<tr><th>Maximum execution time for each scan stage</th><td><input type="text" id="maxExecutionTime" name="maxExecutionTime" value="<?php $w->f('maxExecutionTime'); ?>" size="4" />Blank for default. Must be greater than 9.</td></tr>
 	<tr><th>Enable debugging mode (increases database load)</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
 	<tr><th>Delete Wordfence tables and data on deactivation?</th><td><input type="checkbox" id="deleteTablesOnDeact" class="wfConfigElem" name="deleteTablesOnDeact" value="1" <?php $w->cb('deleteTablesOnDeact'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>

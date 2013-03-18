@@ -22,6 +22,7 @@ class wfLog {
 		$this->scanTable = $wpdb->base_prefix . 'wfScanners';
 		$this->throttleTable = $wpdb->base_prefix . 'wfThrottleLog';
 		$this->statusTable = $wpdb->base_prefix . 'wfStatus';
+		$this->ipRangesTable = $wpdb->base_prefix . 'wfBlocksAdv';
 	}
 	public function logLogin($action, $fail, $username){
 		$user = get_user_by('login', $username);
@@ -50,21 +51,68 @@ class wfLog {
 		return $pagename;
 	}
 	public function logLeechAndBlock($type){ //404 or hit
-		$IP = wfUtils::getIP();
-		if($this->isWhitelisted($IP)){
-			return;
-		}
-		if($type == '404'){
-			$table = $this->scanTable;
-		} else if($type == 'hit'){
-			$table = $this->leechTable;
-		} else {
-			wordfence::status(1, 'error', "Invalid type to logLeechAndBlock(): $type");
-			return;
-		}
-		$this->getDB()->query("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
-		$hitsPerMinute = $this->getDB()->querySingle("select @wfcurrenthits");
 		if(wfConfig::get('firewallEnabled')){
+			//Moved the following block into the "is fw enabled section" for optimization. 
+			$IP = wfUtils::getIP();
+			$IPnum = wfUtils::inet_aton($IP);
+		//	if($this->isWhitelisted($IP)){
+		//		return;
+		//	}
+			if($type == '404'){
+				$table = $this->scanTable;
+			} else if($type == 'hit'){
+				$table = $this->leechTable;
+			} else {
+				wordfence::status(1, 'error', "Invalid type to logLeechAndBlock(): $type");
+				return;
+			}
+			$this->getDB()->query("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
+			$hitsPerMinute = $this->getDB()->querySingle("select @wfcurrenthits");
+			//end block moved into "is fw enabled" section
+
+			//New range and UA pattern blocking:
+			$r1 = $this->getDB()->query("select id, blockType, blockString from " . $this->ipRangesTable);
+			while($blockRec = mysql_fetch_assoc($r1)){
+				if($blockRec['blockType'] == 'IU'){
+					$ipRangeBlocked = false;
+					$uaPatternBlocked = false;
+
+					$bDat = explode('|', $blockRec['blockString']);
+					$ipRange = $bDat[0];
+					$uaPattern = $bDat[1];
+					if($ipRange){
+						$ips = explode('-', $ipRange);
+						if($IPnum >= $ips[0] && $IPnum <= $ips[1]){
+							$ipRangeBlocked = true;
+						}
+					}
+					if($uaPattern){
+						if(wfUtils::isUABlocked($uaPattern)){	
+							$uaPatternBlocked = true;
+						}
+					}
+					$rangeBlockReason = false;
+					if($uaPattern && $ipRange){
+						if($uaPatternBlocked && $ipRangeBlocked){
+							$rangeBlockReason = "Advanced pattern blocking in effect.";
+						}
+					} else if($uaPattern){
+						if($uaPatternBlocked){
+							$rangeBlockReason = "Advanced pattern blocking in effect.";
+						}
+					} else if($ipRange){
+						if($ipRangeBlocked){
+							$rangeBlockReason = "Advanced pattern blocking in effect.";
+						}
+					}
+					if($rangeBlockReason){
+						$this->getDB()->query("update " . $this->ipRangesTable . " set totalBlocked = totalBlocked + 1, lastBlocked = unix_timestamp() where id=%d", $blockRec['id']);
+						$this->do503(3600, $rangeBlockReason);
+					}
+				}
+			}
+			//End range/UA blocking
+
 			if(wfConfig::get('blockFakeBots')){
 				if(wfCrawl::isGooglebot() && (! wfCrawl::verifyCrawlerPTR($this->googlePattern, $IP) )){
 					wordfence::status(2, 'info', "Blocking fake Googlebot at IP $IP");
@@ -87,7 +135,7 @@ class wfLog {
 						$this->getDB()->query("insert IGNORE into $p"."wfVulnScanners (IP, ctime, hits) values (INET_ATON('%s'), unix_timestamp(), 1) ON DUPLICATE KEY UPDATE ctime = unix_timestamp, hits = hits + 1", $IP);
 						if(wfConfig::get('maxScanHits') != 'DISABLED'){
 							if( empty($_SERVER['HTTP_REFERER'] )){
-								$this->getDB()->query("insert into " . $this->badLeechersTable . " (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfblcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
+								$this->getDB()->query("insert into " . $this->badLeechersTable . " (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfblcurrenthits := hits + 1, hits + 1, hits + 1)", $IPnum); 
 								$BL_hitsPerMinute = $this->getDB()->querySingle("select @wfblcurrenthits");
 								if($BL_hitsPerMinute > wfConfig::get('maxScanHits')){
 									$this->takeBlockingAction('maxScanHits', "Exceeded the maximum number of 404 requests per minute for a known security vulnerability.");
@@ -159,6 +207,41 @@ class wfLog {
 	}
 	public function unblockIP($IP){
 		$this->getDB()->query("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
+	}
+	public function unblockRange($id){
+		$this->getDB()->query("delete from " . $this->ipRangesTable . " where id=%d", $id);
+	}
+	public function blockRange($blockType, $range, $reason){
+		$this->getDB()->query("insert IGNORE into " . $this->ipRangesTable . " (blockType, blockString, ctime, reason, totalBlocked, lastBlocked) values ('%s', '%s', unix_timestamp(), '%s', 0, 0)", $blockType, $range, $reason);
+		return true;
+	}
+	public function getRanges(){
+		$res = $this->getDB()->query("select id, blockType, blockString, unix_timestamp() - ctime as ctimeAgo, reason, totalBlocked, unix_timestamp() - lastBlocked as lastBlockedAgo, lastBlocked from " . $this->ipRangesTable . " order by ctime desc");
+		$results = array();
+		while($elem = mysql_fetch_assoc($res)){
+			if($elem['blockType'] != 'IU'){ continue; } //We only use IU type for now, but have this for future different block types.
+			$elem['ctimeAgo'] = wfUtils::makeTimeAgo($elem['ctimeAgo']);
+			if($elem['lastBlocked'] > 0){
+				$elem['lastBlockedAgo'] = wfUtils::makeTimeAgo($elem['lastBlockedAgo']);
+			} else {
+				$elem['lastBlockedAgo'] = 'Never';
+			}
+			$blockDat = explode('|', $elem['blockString']);
+			$elem['ipPattern'] = "";
+			if($blockDat[0]){
+				$ipDat = explode('-', $blockDat[0]);
+				$elem['ipPattern'] = "Block visitors with IP addresses in the range: " . wfUtils::inet_ntoa($ipDat[0]) . ' - ' . wfUtils::inet_ntoa($ipDat[1]);
+			} else {
+				$elem['ipPattern'] = 'Allow all IP addresses';
+			}
+			if($blockDat[1]){
+				$elem['browserPattern'] = "Block visitors whos browsers match the pattern: " . $blockDat[1];
+			} else {
+				$elem['browserPattern'] = 'Allow all browsers';
+			}
+			array_push($results, $elem);
+		}
+		return $results;
 	}
 	public function blockIP($IP, $reason, $wfsn = false, $permanent = false){ //wfsn indicates it comes from Wordfence secure network
 		if($this->isWhitelisted($IP)){ return false; }
@@ -241,14 +324,19 @@ class wfLog {
 		while($elem = mysql_fetch_assoc($res)){			
 			$lastHitAgo = 0;
 			$totalHits = 0;
-			$lastLeech = $this->getDB()->querySingleRec("select unix_timestamp() as serverTime, max(eMin) * 60 as lastHit, sum(hits) as totalHits from " . $this->leechTable . " where IP=%s", $elem['IP']);
-			if($lastLeech){ $totalHits += $lastLeech['totalHits']; $lastHitAgo = $lastLeech['serverTime'] - $lastLeech['lastHit']; }
-			$lastScan = $this->getDB()->querySingleRec("select unix_timestamp() as serverTime, max(eMin) * 60 as lastHit, sum(hits) as totalHits from " . $this->scanTable . " where IP=%s", $elem['IP']);
-			if($lastScan){ 
+			$serverTime = $this->getDB()->querySingle("select unix_timestamp()");
+			$lastLeech = $this->getDB()->querySingleRec("select max(eMin) * 60 as lastHit, sum(hits) as totalHits from " . $this->leechTable . " where IP=%s", $elem['IP']);
+			//$lastLeech will be true because we use aggregation functions, so check actual values
+			if($lastLeech['lastHit']){ 
+				$totalHits += $lastLeech['totalHits']; 
+				$lastHitAgo = $serverTime - $lastLeech['lastHit']; 
+			}
+			$lastScan = $this->getDB()->querySingleRec("select max(eMin) * 60 as lastHit, sum(hits) as totalHits from " . $this->scanTable . " where IP=%s", $elem['IP']);
+			if($lastScan['lastHit']){ //Checking actual value because we will get a row back from aggregation funcs
 				$totalHits += $lastScan['totalHits'];
-				$ago = $lastScan['serverTime'] - $lastScan['lastHit']; 
-				if($ago < $lastHitAgo){
-					$lastHitAgo = $ago;
+				$lastScanAgo = $serverTime - $lastScan['lastHit']; 
+				if($lastScanAgo < $lastHitAgo){
+					$lastHitAgo = $lastScanAgo;
 				}
 			}
 			$elem['totalHits'] = $totalHits;
@@ -589,6 +677,7 @@ class wfLog {
 		}
 	}
 	private function do503($secsToGo, $reason){
+		wfUtils::doNotCache();
 		header('HTTP/1.1 503 Service Temporarily Unavailable');
 		header('Status: 503 Service Temporarily Unavailable');
 		if($secsToGo){
