@@ -129,7 +129,11 @@ class wfUtils {
 			}
 			return $IP;
 		} else {
-			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
+			$xFor = "";
+			if(isset($_SERVER['HTTP_X_FORWARDED_FOR']) ){
+				$xFor = $_SERVER['HTTP_X_FORWARDED_FOR'];
+			}
+			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $xFor . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
 			$possible = array();
 			foreach($_SERVER as $key => $val){
 				if(is_string($val) && preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
@@ -496,6 +500,23 @@ class wfUtils {
 		if(self::funcEnabled('ini_set')){
 			@ini_set($key, $val);
 		}
+	}
+	public static function doNotCache(){
+		define('DONOTCACHEPAGE', true);
+		define('DONOTCACHEDB', true);
+		define('DONOTCDN', true);
+		define('DONOTCACHEOBJECT', true);
+	}
+	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
+		$uaPieces = explode('*', $uaPattern);
+		for($i = 0; $i < sizeof($uaPieces); $i++){
+			$uaPieces[$i] = preg_quote($uaPieces[$i]);
+		}
+		$uaPatternRegex = '/^' . implode('.*', $uaPieces) . '$/i';
+		if(preg_match($uaPatternRegex, $_SERVER['HTTP_USER_AGENT'])){
+			return true;
+		}
+		return false;
 	}
 }
 

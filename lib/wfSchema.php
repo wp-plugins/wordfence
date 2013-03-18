@@ -149,6 +149,15 @@ class wfSchema {
 	knownFile tinyint UNSIGNED NOT NULL,
 	oldMD5 binary(16) NOT NULL,
 	newMD5 binary(16) NOT NULL
+) default charset=utf8",
+'wfBlocksAdv' => "(
+	id int UNSIGNED NOT NULL auto_increment PRIMARY KEY,
+	blockType char(2) NOT NULL,
+	blockString varchar(255) NOT NULL,
+	ctime int UNSIGNED NOT NULL,
+	reason varchar(255) NOT NULL,
+	totalBlocked int UNSIGNED default 0,
+	lastBlocked int UNSIGNED default 0
 ) default charset=utf8"
 );
 	private $db = false;

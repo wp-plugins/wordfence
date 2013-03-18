@@ -157,6 +157,18 @@
 </td></tr>
 {{if browser && browser.browser != 'Default Browser'}}<tr><td><strong>Browser:</strong> ${browser.browser}{{if browser.version}} version ${browser.version}{{/if}}{{if browser.platform && browser.platform != 'unknown'}} running on ${browser.platform}{{/if}}</td></tr>{{/if}}
 <tr><td style="color: #AAA;">${UA}</td></tr>
+<tr><td>
+{{if blocked}}
+[<a href="#" onclick="WFAD.unblockIP('${IP}'); return false;">Unblock this IP</a>]
+{{else}}
+[<a href="#" onclick="WFAD.blockIP('${IP}', 'Manual block by administrator'); return false;">Block this IP</a>]
+{{/if}}
+&nbsp;&nbsp;&mdash;&nbsp;&nbsp;
+[<a href="admin.php?page=WordfenceWhois&whoisval=${IP}&wfnetworkblock=1">Block this network</a>]
+&nbsp;&nbsp;&mdash;&nbsp;&nbsp;
+[<a href="admin.php?page=WordfenceWhois&whoisval=${IP}">Run WHOIS on ${IP}</a>]
+&nbsp;&nbsp;&mdash;&nbsp;&nbsp;
+[<a href="#">See recent traffic</a>] 
 <tr><td></td></tr>
 </table>
 </div>
@@ -181,7 +193,8 @@
 <p>
 	Start by looking at "All Hits" because you may notice that a single IP address is generating most of your traffic.
 	This could be a denial of service attack, someone stealing your content or a hacker probing for weaknesses.
-	If you see a suspicious pattern, simply block that IP address.
+	If you see a suspicious pattern, simply block that IP address. If they attack from a different IP on the same network, simply block that network.
+	You can also run a WHOIS on any IP address to find the host and report abuse via email. 
 </p>
 <p>
 	If you don't see any clear patterns of attack, take a look at "Top 404s" which will show you IP addresses that are generating excessive page not found errors. 

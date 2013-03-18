@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
-Tested up to: 3.5
-Stable tag: 3.5.2
+Tested up to: 3.5.1
+Stable tag: 3.6.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -20,9 +20,8 @@ Wordfence is 100% free. We also offer a Premium API key that lets you block coun
 Wordfence:
 
 * Scans core files, themes and plugins against WordPress.org repository versions to check their integrity.
-* WordPress Multi-Site (or WordPress MU in the older parlance) compatible.
-* Wordfence Security for multi-site also scans all posts and comments across all blogs from one admin panel.
-* Premium users can also block countries and schedule scans for specific times and a higher frequency.
+* Includes a firewall to block common security threats like fake Googlebots, malicious scans from hackers and botnets.
+* Includes advanced IP and Domain WHOIS to report malicious IP's or networks and block entire networks using the firewall.
 * See how files have changed. Optionally repair changed files that are security threats.
 * Scans for signatures of over 44,000 known malware variants that are known security threats.
 * Scans for many known backdoors including C99, R57, RootShell, Crystal Shell, Matamu, Cybershell, W4cking, Sniper, Predator, Jackal, Phantasma, GFS, Dive, Dx and many many more.
@@ -30,7 +29,6 @@ Wordfence:
 * Scans for heuristics of backdoors, trojans,  suspicious code and other security issues.
 * Checks the strength of all user and admin passwords to enhance login security.
 * Monitor your DNS security for unauthorized DNS changes.
-* Includes a firewall to block common security threats like fake Googlebots, malicious scans from hackers and botnets.
 * Rate limit or block security threats like aggressive crawlers, scrapers and bots doing security scans for vulnerabilities in your site.
 * Choose whether you want to block or throttle users and robots who break your security rules.
 * Includes login security to lock out brute force hacks and to stop WordPress from revealing info that will compromise security.
@@ -38,6 +36,9 @@ Wordfence:
 * A real-time view of all traffic including automated bots that often constitute security threats that Javascript analytics packages never show you.
 * Real-time traffic includes reverse DNS and city-level geolocation. Know which geographic area security threats originate from.
 * Monitors disk space which is related to security because many DDoS attacks attempt to consume all disk space to create denial of service.
+* Wordfence Security for multi-site also scans all posts and comments across all blogs from one admin panel.
+* WordPress Multi-Site (or WordPress MU in the older parlance) compatible.
+* Premium users can also block countries and schedule scans for specific times and a higher frequency.
 * Our online forums are available 24/7 to answer your WordPress security questions. 
 
 Wordfence Security is full-featured and constantly updated by our team to incorporate the latest security features and to hunt for the 
@@ -153,6 +154,26 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.6.1 =
+* Major new release that includes the much asked for IP Range blocking with ISP blocking ability and browser blocking. 
+* Added feature: WHOIS for IP's and Domains. Supports all registries and local rWhois
+* Added feature: Advanced Blocking to block IP ranges and browser patterns.
+* Added feature: WHOIS on live traffic pages.
+* Added feature: network blocking links on live traffic pages. 
+* Fixed bug where W3 Total Cache and WP Super Cache cache blocked pages.
+* Added explanation of how caching affects live traffic logging if we detect a caching plugin.
+* Fixed AJAX loading to deal with multiple parallel ajax requests. 
+* Updated tour to include info on new WHOIS and Advanced Blocking features.
+* Changed manual IP blocks to be permanent by default.
+* Fixed issue that caused live traffic page not to reload when IP is unblocked.
+* Modified "How does your site get IP's" config to avoid confusing new users.
+* Changed 503 block message to be more helpful with link to FAQ on how to unblock.
+* Removed redundant code in wfAPI.php
+* Optimized code by moving firewall specific code to execute only if firewall is enabled.
+* Fixed issue that caused "last attempted access" to show over 500 months ago.
+* Fixed issue that was causing warning in getIP() code.
+* Upgraded to Wordfence API version 2.6.
 
 = 3.5.3 =
 * This is the dev version. Stable is 3.5.2.

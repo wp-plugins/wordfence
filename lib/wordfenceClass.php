@@ -213,11 +213,6 @@ class wordfence {
 		}
 		//End upgrade from 1.5.6
 
-		//Show an alert that user needs to enter an email address if user has not seen it before
-		if(! wfConfig::get('alertEmailMsgCount')){
-			wfConfig::set('alertEmailMsgCount', 0);
-		}
-
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
 		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
@@ -304,6 +299,7 @@ class wordfence {
 
 	} //END doScan
 	public static function ajax_logHuman_callback(){
+		wfUtils::doNotCache();
 		$hid = $_GET['hid'];
 		$hid = wfUtils::decrypt($hid);
 		if(! preg_match('/^\d+$/', $hid)){ exit(); }
@@ -927,8 +923,55 @@ class wordfence {
 		}
 		return array('ok' => 1, 'results' => $results);
 	}
+	public static function ajax_loadBlockRanges_callback(){
+		$results = self::getLog()->getRanges();
+		return array('ok' => 1, 'results' => $results);
+	}
+	public static function ajax_unblockRange_callback(){
+		$id = trim($_POST['id']);
+		self::getLog()->unblockRange($id);
+		return array('ok' => 1);
+	}
+	public static function ajax_blockIPUARange_callback(){
+		$ipRange = trim($_POST['ipRange']);
+		$uaRange = trim($_POST['uaRange']);
+		$reason = trim($_POST['reason']);
+		if(preg_match('/\|+/', $ipRange . $uaRange)){
+			return array('err' => 1, 'errorMsg' => "You are not allowed to include a pipe character \"|\" in your IP range or browser pattern");
+		}
+		if( (! $ipRange) && wfUtils::isUABlocked($uaRange)){
+			return array('err' => 1, 'errorMsg' => "The browser pattern you specified will block you from your own website. We have not accepted this pattern to protect you from being blocked.");
+		}
+		if($ipRange && (! preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $ipRange ))){
+			return array('err' => 1, 'errorMsg' => "The IP range you specified is not valid. Please specify an IP range like the following example: \"1.2.3.4 - 1.2.3.8\" without quotes.");
+		}
+		if($ipRange){
+			$ips = explode('-', $ipRange);
+			$ip1 = wfUtils::inet_aton($ips[0]);
+			$ip2 = wfUtils::inet_aton($ips[1]);
+			if($ip1 >= $ip2){
+				return array('err' => 1, 'errorMsg' => "The first IP address in your range must be less than the second IP address in your range.");
+			}
+			$clientIP = wfUtils::inet_aton(wfUtils::getIP());
+			if($ip1 <= $clientIP && $ip2 >= $clientIP){
+				return array('err' => 1, 'errorMsg' => "You are trying to block yourself. Your IP address is " . wfUtils::getIP() . " which falls into the range $ipRange. This blocking action has been cancelled so that you don't block yourself from your website.");
+			}
+			$ipRange = $ip1 . '-' . $ip2;
+		}
+		$range = $ipRange . '|' . $uaRange;
+		self::getLog()->blockRange('IU', $range, $reason);
+		return array('ok' => 1);
+	}
+	public static function ajax_whois_callback(){
+		require_once('whois/whois.main.php');
+		$val = trim($_POST['val']);
+		$whois = new Whois();
+		$result = $whois->Lookup($val);
+		return array('ok' => 1, 'result' => $result);
+	}
 	public static function ajax_blockIP_callback(){
 		$IP = trim($_POST['IP']);
+		$perm = $_POST['perm'] == '1' ? true : false;
 		if(! preg_match('/^\d+\.\d+\.\d+\.\d+$/', $IP)){
 			return array('err' => 1, 'errorMsg' => "Please enter a valid IP address to block.");
 		}
@@ -943,7 +986,7 @@ class wordfence {
 				return array('err' => 1, 'errorMsg' => "The IP address you're trying to block belongs to Google. Your options are currently set to not block these crawlers. Change this in Wordfence options if you want to manually block Google.");
 			}
 		}
-		self::getLog()->blockIP($IP, $_POST['reason']);
+		self::getLog()->blockIP($IP, $_POST['reason'], false, $perm);
 		return array('ok' => 1);
 	}
 	public static function ajax_reverseLookup_callback(){
@@ -1336,7 +1379,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain') as $func){
+		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -1371,10 +1414,6 @@ class wordfence {
 			'tourClosed' => wfConfig::get('tourClosed', 0)
 			));
 	}
-	public static function noHowGetIPWarning(){
-		echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Please go to the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options Page</a> and set the option that tells Wordfence how your site gets visitor IP addresses.</strong> This is important to avoid IP spoofing attacks.</p></div>';
-	}
-
 	public static function activation_warning(){
 		$activationError = get_option('wf_plugin_act_error', '');
 		if(strlen($activationError) > 400){
@@ -1407,16 +1446,23 @@ class wordfence {
 			}
 			$warningAdded = true;
 		}
-		if( (! $warningAdded) && (! wfConfig::get('howGetIPs', false)) ){
-			if(! preg_match('/WordfenceSecOpt/', $_SERVER['REQUEST_URI'])){
-				if(wfUtils::isAdminPageMU()){
-					add_action('network_admin_notices', 'wordfence::noHowGetIPWarning');
-				} else {
-					add_action('admin_notices', 'wordfence::noHowGetIPWarning');
-				}
-				$warningAdded = true;
+		if(is_plugin_active('w3-total-cache/w3-total-cache.php') && wfConfig::get('liveTrafficEnabled')){
+			wfConfig::set('liveTrafficEnabled', 0);
+			if(wfUtils::isAdminPageMU()){
+				add_action('network_admin_notices', 'wordfence::liveTrafficW3TCWarning');
+			} else {
+				add_action('admin_notices', 'wordfence::liveTrafficW3TCWarning');
 			}
-		}	
+		}
+		if(is_plugin_active('wp-super-cache/wp-cache.php') && wfConfig::get('liveTrafficEnabled')){
+			wfConfig::set('liveTrafficEnabled', 0);
+			if(wfUtils::isAdminPageMU()){
+				add_action('network_admin_notices', 'wordfence::liveTrafficSuperCacheWarning');
+			} else {
+				add_action('admin_notices', 'wordfence::liveTrafficSuperCacheWarning');
+			}
+		}
+
 		add_submenu_page("Wordfence", "Scan", "Scan", "activate_plugins", "Wordfence", 'wordfence::menu_scan');
 		add_menu_page('Wordfence', 'Wordfence', 'activate_plugins', 'Wordfence', 'wordfence::menu_scan', wfUtils::getBaseURL() . 'images/wordfence-logo-16x16.png'); 
 		if(wfConfig::get('liveTrafficEnabled')){
@@ -1425,6 +1471,8 @@ class wordfence {
 		add_submenu_page('Wordfence', 'Blocked IPs', 'Blocked IPs', 'activate_plugins', 'WordfenceBlockedIPs', 'wordfence::menu_blockedIPs');
 		add_submenu_page("Wordfence", "Country Blocking", "Country Blocking", "activate_plugins", "WordfenceCountryBlocking", 'wordfence::menu_countryBlocking');
 		add_submenu_page("Wordfence", "Scan Schedule", "Scan Schedule", "activate_plugins", "WordfenceScanSchedule", 'wordfence::menu_scanSchedule');
+		add_submenu_page("Wordfence", "Whois Lookup", "Whois Lookup", "activate_plugins", "WordfenceWhois", 'wordfence::menu_whois');
+		add_submenu_page("Wordfence", "Advanced Blocking", "Advanced Blocking", "activate_plugins", "WordfenceRangeBlocking", 'wordfence::menu_rangeBlocking');
 		add_submenu_page("Wordfence", "Options", "Options", "activate_plugins", "WordfenceSecOpt", 'wordfence::menu_options');
 	}
 	public static function menu_options(){
@@ -1438,6 +1486,22 @@ class wordfence {
 	}
 	public static function menu_countryBlocking(){
 		require 'menu_countryBlocking.php';
+	}
+	public static function menu_whois(){
+		require 'menu_whois.php';
+	}
+
+	public static function menu_rangeBlocking(){
+		require 'menu_rangeBlocking.php';
+	}
+	public static function liveTrafficW3TCWarning(){
+		echo self::cachingWarning("W3 Total Cache");
+	}
+	public static function liveTrafficSuperCacheWarning(){
+		echo self::cachingWarning("WP Super Cache");
+	}
+	public static function cachingWarning($plugin){
+		return '<div id="wordfenceConfigWarning" class="error fade"><p><strong>The Wordfence Live Traffic feature has been disabled because you have ' . $plugin . ' active which is not compatible with Wordfence Live Traffic.</strong> If you want to reenable Wordfence Live Traffic, you need to deactivate ' . $plugin . ' and then go to the Wordfence options page and reenable Live Traffic there. Wordfence does work with ' . $plugin . ', however Live Traffic will be disabled and the Wordfence firewall will also count less hits per visitor because of the ' . $plugin . ' caching function. All other functions should work correctly.</p></div>';
 	}
 	public static function menu_activity(){
 		require 'menu_activity.php';
