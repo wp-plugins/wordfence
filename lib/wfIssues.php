@@ -53,7 +53,7 @@ class wfIssues {
 			'tmplData' => $templateData
 			);
 			
-		$this->getDB()->query("insert into " . $this->issuesTable . " (time, status, type, severity, ignoreP, ignoreC, shortMsg, longMsg, data) values (unix_timestamp(), '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s')",
+		$this->getDB()->queryWrite("insert into " . $this->issuesTable . " (time, status, type, severity, ignoreP, ignoreC, shortMsg, longMsg, data) values (unix_timestamp(), '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s')",
 			'new',
 			$type,
 			$severity,
@@ -66,13 +66,13 @@ class wfIssues {
 		return true;
 	}
 	public function deleteIgnored(){
-		$this->getDB()->query("delete from " . $this->issuesTable . " where status='ignoreP' or status='ignoreC'");
+		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where status='ignoreP' or status='ignoreC'");
 	}
 	public function deleteNew(){
-		$this->getDB()->query("delete from " . $this->issuesTable . " where status='new'");
+		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where status='new'");
 	}
 	public function ignoreAllNew(){
-		$this->getDB()->query("update " . $this->issuesTable . " set status='ignoreC' where status='new'");
+		$this->getDB()->queryWrite("update " . $this->issuesTable . " set status='ignoreC' where status='new'");
 	}
 	public function emailNewIssues(){
 		$level = wfConfig::getAlertLevel();
@@ -124,14 +124,14 @@ class wfIssues {
 		wp_mail(implode(',', $emails), $subject, $content);
 	}
 	public function deleteIssue($id){ 
-		$this->getDB()->query("delete from " . $this->issuesTable . " where id=%d", $id);
+		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
 	}
 	public function updateIssue($id, $status){ //ignoreC, ignoreP, delete or new
 		$currentStatus = $this->getDB()->querySingle("select status from " . $this->issuesTable . " where id=%d", $id);
 		if($status == 'delete'){
-			$this->getDB()->query("delete from " . $this->issuesTable . " where id=%d", $id);
+			$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
 		} else if($status == 'ignoreC' || $status == 'ignoreP' || $status == 'new'){
-			$this->getDB()->query("update " . $this->issuesTable . " set status='%s' where id=%d", $status, $id);
+			$this->getDB()->queryWrite("update " . $this->issuesTable . " set status='%s' where id=%d", $status, $id);
 		}
 	}
 	public function getIssueByID($id){
@@ -145,8 +145,8 @@ class wfIssues {
 			'new' => array(),
 			'ignored' => array()
 			);
-		$q1 = $this->getDB()->query("select * from " . $this->issuesTable . " order by time desc");
-		while($i = mysql_fetch_assoc($q1)){
+		$q1 = $this->getDB()->querySelect("select * from " . $this->issuesTable . " order by time desc");
+		foreach($q1 as $i){
 			$i['data'] = unserialize($i['data']);
 			$i['timeAgo'] = wfUtils::makeTimeAgo(time() - $i['time']);
 			if($i['status'] == 'new'){

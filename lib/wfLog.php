@@ -30,7 +30,7 @@ class wfLog {
 		if($user){
 			$userID = $user->ID;
 		}
-		$this->getDB()->query("insert into " . $this->loginsTable . " (ctime, fail, action, username, userID, IP, UA) values (%f, %d, '%s', '%s', %s, %s, '%s')", 
+		$this->getDB()->queryWrite("insert into " . $this->loginsTable . " (ctime, fail, action, username, userID, IP, UA) values (%f, %d, '%s', '%s', %s, %s, '%s')", 
 			sprintf('%.6f', microtime(true)),
 			$fail,
 			$action,
@@ -66,13 +66,13 @@ class wfLog {
 				wordfence::status(1, 'error', "Invalid type to logLeechAndBlock(): $type");
 				return;
 			}
-			$this->getDB()->query("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
+			$this->getDB()->queryWrite("insert into $table (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfcurrenthits := hits + 1, hits + 1, hits + 1)", wfUtils::inet_aton($IP)); 
 			$hitsPerMinute = $this->getDB()->querySingle("select @wfcurrenthits");
 			//end block moved into "is fw enabled" section
 
 			//New range and UA pattern blocking:
-			$r1 = $this->getDB()->query("select id, blockType, blockString from " . $this->ipRangesTable);
-			while($blockRec = mysql_fetch_assoc($r1)){
+			$r1 = $this->getDB()->querySelect("select id, blockType, blockString from " . $this->ipRangesTable);
+			foreach($r1 as $blockRec){
 				if($blockRec['blockType'] == 'IU'){
 					$ipRangeBlocked = false;
 					$uaPatternBlocked = false;
@@ -106,7 +106,7 @@ class wfLog {
 						}
 					}
 					if($rangeBlockReason){
-						$this->getDB()->query("update " . $this->ipRangesTable . " set totalBlocked = totalBlocked + 1, lastBlocked = unix_timestamp() where id=%d", $blockRec['id']);
+						$this->getDB()->queryWrite("update " . $this->ipRangesTable . " set totalBlocked = totalBlocked + 1, lastBlocked = unix_timestamp() where id=%d", $blockRec['id']);
 						$this->do503(3600, $rangeBlockReason);
 					}
 				}
@@ -126,16 +126,16 @@ class wfLog {
 			if($type == '404'){
 				global $wpdb; $p = $wpdb->base_prefix;
 				if(wfConfig::get('other_WFNet')){
-					$this->getDB()->query("insert IGNORE into $p"."wfNet404s (sig, ctime, URI) values (UNHEX(MD5('%s')), unix_timestamp(), '%s')", $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_URI']);
+					$this->getDB()->queryWrite("insert IGNORE into $p"."wfNet404s (sig, ctime, URI) values (UNHEX(MD5('%s')), unix_timestamp(), '%s')", $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_URI']);
 				}
 				$pat = wfConfig::get('vulnRegex');
 				if($pat){
 					$URL = wfUtils::getRequestedURL();
 					if(preg_match($pat, $URL)){
-						$this->getDB()->query("insert IGNORE into $p"."wfVulnScanners (IP, ctime, hits) values (INET_ATON('%s'), unix_timestamp(), 1) ON DUPLICATE KEY UPDATE ctime = unix_timestamp, hits = hits + 1", $IP);
+						$this->getDB()->queryWrite("insert IGNORE into $p"."wfVulnScanners (IP, ctime, hits) values (INET_ATON('%s'), unix_timestamp(), 1) ON DUPLICATE KEY UPDATE ctime = unix_timestamp, hits = hits + 1", $IP);
 						if(wfConfig::get('maxScanHits') != 'DISABLED'){
 							if( empty($_SERVER['HTTP_REFERER'] )){
-								$this->getDB()->query("insert into " . $this->badLeechersTable . " (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfblcurrenthits := hits + 1, hits + 1, hits + 1)", $IPnum); 
+								$this->getDB()->queryWrite("insert into " . $this->badLeechersTable . " (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfblcurrenthits := hits + 1, hits + 1, hits + 1)", $IPnum); 
 								$BL_hitsPerMinute = $this->getDB()->querySingle("select @wfblcurrenthits");
 								if($BL_hitsPerMinute > wfConfig::get('maxScanHits')){
 									$this->takeBlockingAction('maxScanHits', "Exceeded the maximum number of 404 requests per minute for a known security vulnerability.");
@@ -200,25 +200,24 @@ class wfLog {
 		return false;
 	}
 	public function unblockAllIPs(){
-		$this->getDB()->query("delete from " . $this->blocksTable);
+		$this->getDB()->queryWrite("delete from " . $this->blocksTable);
 	}
 	public function unlockAllIPs(){
-		$this->getDB()->query("delete from " . $this->lockOutTable);
+		$this->getDB()->queryWrite("delete from " . $this->lockOutTable);
 	}
 	public function unblockIP($IP){
-		$this->getDB()->query("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
+		$this->getDB()->queryWrite("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
 	}
 	public function unblockRange($id){
-		$this->getDB()->query("delete from " . $this->ipRangesTable . " where id=%d", $id);
+		$this->getDB()->queryWrite("delete from " . $this->ipRangesTable . " where id=%d", $id);
 	}
 	public function blockRange($blockType, $range, $reason){
-		$this->getDB()->query("insert IGNORE into " . $this->ipRangesTable . " (blockType, blockString, ctime, reason, totalBlocked, lastBlocked) values ('%s', '%s', unix_timestamp(), '%s', 0, 0)", $blockType, $range, $reason);
+		$this->getDB()->queryWrite("insert IGNORE into " . $this->ipRangesTable . " (blockType, blockString, ctime, reason, totalBlocked, lastBlocked) values ('%s', '%s', unix_timestamp(), '%s', 0, 0)", $blockType, $range, $reason);
 		return true;
 	}
 	public function getRanges(){
-		$res = $this->getDB()->query("select id, blockType, blockString, unix_timestamp() - ctime as ctimeAgo, reason, totalBlocked, unix_timestamp() - lastBlocked as lastBlockedAgo, lastBlocked from " . $this->ipRangesTable . " order by ctime desc");
-		$results = array();
-		while($elem = mysql_fetch_assoc($res)){
+		$results = $this->getDB()->querySelect("select id, blockType, blockString, unix_timestamp() - ctime as ctimeAgo, reason, totalBlocked, unix_timestamp() - lastBlocked as lastBlockedAgo, lastBlocked from " . $this->ipRangesTable . " order by ctime desc");
+		foreach($results as &$elem){
 			if($elem['blockType'] != 'IU'){ continue; } //We only use IU type for now, but have this for future different block types.
 			$elem['ctimeAgo'] = wfUtils::makeTimeAgo($elem['ctimeAgo']);
 			if($elem['lastBlocked'] > 0){
@@ -239,7 +238,6 @@ class wfLog {
 			} else {
 				$elem['browserPattern'] = 'Allow all browsers';
 			}
-			array_push($results, $elem);
 		}
 		return $results;
 	}
@@ -248,7 +246,7 @@ class wfLog {
 		$wfsn = $wfsn ? 1 : 0;
 		if($permanent){
 			//Insert permanent=1 or update existing perm or non-per block to be permanent
-			$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
+			$this->getDB()->queryWrite("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
 				wfUtils::inet_aton($IP),
 				$reason,
 				$wfsn,
@@ -259,7 +257,7 @@ class wfLog {
 				);
 		} else {
 			//insert perm=0 but don't update and make perm blocks non-perm. 
-			$this->getDB()->query("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
+			$this->getDB()->queryWrite("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
 				wfUtils::inet_aton($IP),
 				$reason,
 				$wfsn,
@@ -272,7 +270,7 @@ class wfLog {
 	}
 	public function lockOutIP($IP, $reason){
 		if($this->isWhitelisted($IP)){ return false; }
-		$this->getDB()->query("insert into " . $this->lockOutTable . " (IP, blockedTime, reason) values(%s, unix_timestamp(), '%s') ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s'",
+		$this->getDB()->queryWrite("insert into " . $this->lockOutTable . " (IP, blockedTime, reason) values(%s, unix_timestamp(), '%s') ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s'",
 			wfUtils::inet_aton($IP),
 			$reason,
 			$reason
@@ -280,23 +278,21 @@ class wfLog {
 		return true;
 	}
 	public function unlockOutIP($IP){
-		$this->getDB()->query("delete from " . $this->lockOutTable . " where IP=%s", wfUtils::inet_aton($IP));
+		$this->getDB()->queryWrite("delete from " . $this->lockOutTable . " where IP=%s", wfUtils::inet_aton($IP));
 	}
 	public function isIPLockedOut($IP){
 		if($this->getDB()->querySingle("select IP from " . $this->lockOutTable . " where IP=%s and blockedTime + %s > unix_timestamp()", wfUtils::inet_aton($IP), wfConfig::get('loginSec_lockoutMins') * 60)){
-			$this->getDB()->query("update " . $this->lockOutTable . " set blockedHits = blockedHits + 1, lastAttempt = unix_timestamp() where IP=%s", wfUtils::inet_aton($IP));
+			$this->getDB()->queryWrite("update " . $this->lockOutTable . " set blockedHits = blockedHits + 1, lastAttempt = unix_timestamp() where IP=%s", wfUtils::inet_aton($IP));
 			return true;
 		} else {
 			return false;
 		}
 	}
 	public function getThrottledIPs(){
-		$res = $this->getDB()->query("select IP, startTime, endTime, timesThrottled, lastReason, unix_timestamp() - startTime as startTimeAgo, unix_timestamp() - endTime as endTimeAgo from " . $this->throttleTable . " order by endTime desc limit 50");
-		$results = array();
-		while($elem = mysql_fetch_assoc($res)){			
+		$results = $this->getDB()->querySelect("select IP, startTime, endTime, timesThrottled, lastReason, unix_timestamp() - startTime as startTimeAgo, unix_timestamp() - endTime as endTimeAgo from " . $this->throttleTable . " order by endTime desc limit 50");
+		foreach($results as &$elem){
 			$elem['startTimeAgo'] = wfUtils::makeTimeAgo($elem['startTimeAgo']);
 			$elem['endTimeAgo'] = wfUtils::makeTimeAgo($elem['endTimeAgo']);
-			array_push($results, $elem);
 		}
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
@@ -305,12 +301,10 @@ class wfLog {
 		return $results;
 	}
 	public function getLockedOutIPs(){
-		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->lockOutTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('loginSec_lockoutMins'), wfConfig::get('loginSec_lockoutMins'));
-		$results = array();
-		while($elem = mysql_fetch_assoc($res)){			
+		$results = $this->getDB()->querySelect("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->lockOutTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('loginSec_lockoutMins'), wfConfig::get('loginSec_lockoutMins'));
+		foreach($results as &$elem){
 			$elem['lastAttemptAgo'] = $elem['lastAttempt'] ? wfUtils::makeTimeAgo($elem['lastAttemptAgo']) : '';
 			$elem['blockedForAgo'] = wfUtils::makeTimeAgo($elem['blockedFor']);
-			array_push($results, $elem);
 		}
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
@@ -319,9 +313,8 @@ class wfLog {
 		return $results;
 	}
 	public function getBlockedIPs(){
-		$res = $this->getDB()->query("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where (permanent=1 OR (blockedTime + %s > unix_timestamp())) order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
-		$results = array();
-		while($elem = mysql_fetch_assoc($res)){			
+		$results = $this->getDB()->querySelect("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where (permanent=1 OR (blockedTime + %s > unix_timestamp())) order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
+		foreach($results as &$elem){
 			$lastHitAgo = 0;
 			$totalHits = 0;
 			$serverTime = $this->getDB()->querySingle("select unix_timestamp()");
@@ -343,7 +336,6 @@ class wfLog {
 			$elem['lastHitAgo'] = $lastHitAgo ? wfUtils::makeTimeAgo($lastHitAgo) : '';
 			$elem['lastAttemptAgo'] = $elem['lastAttempt'] ? wfUtils::makeTimeAgo($elem['lastAttemptAgo']) : '';
 			$elem['blockedForAgo'] = wfUtils::makeTimeAgo($elem['blockedFor']);
-			array_push($results, $elem);
 		}
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
@@ -361,11 +353,7 @@ class wfLog {
 			wordfence::status(1, 'error', "Invalid type to getLeechers(): $type");
 			return false;
 		}
-		$res = $this->getDB()->query("select IP, sum(hits) as totalHits from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
-		$results = array();
-		while($elem = mysql_fetch_assoc($res)){			
-			array_push($results, $elem);
-		}
+		$results = $this->getDB()->querySelect("select IP, sum(hits) as totalHits from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
 			$elem['timeAgo'] = wfUtils::makeTimeAgo($this->getDB()->querySingle("select unix_timestamp() - (eMin * 60) from $table where IP=%s", $elem['IP']));
@@ -383,7 +371,7 @@ class wfLog {
 				$headers[$matches[1]] = $v;
 			}
 		}
-		$this->getDB()->query("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s')", 
+		$this->getDB()->queryWrite("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s')", 
 			sprintf('%.6f', microtime(true)),
 			(is_404() ? 1 : 0),
 			(wfCrawl::isGoogleCrawler() ? 1 : 0),
@@ -400,7 +388,10 @@ class wfLog {
 		$serverTime = $this->getDB()->querySingle("select unix_timestamp()");
 		$IPSQL = "";
 		if($IP){
-			$IPSQL = " and IP=INET_ATON('" . mysql_real_escape_string($IP) . "') ";
+			$IPSQL = " and IP=INET_ATON(%s) ";
+			$sqlArgs = array($afterTime, $IP, $limit);
+		} else {
+			$sqlArgs = array($afterTime, $limit);
 		}
 		if($hitType == 'hits'){
 			if($type == 'hit'){
@@ -420,25 +411,16 @@ class wfLog {
 				wordfence::status(1, 'error', "Invalid log type to wfLog: $type");
 				return false;
 			}
-
-			$r1 = $this->getDB()->query("select * from " . $this->hitsTable . " where ctime > %f $IPSQL $typeSQL order by ctime desc limit %s", 
-				$afterTime,
-				$limit
-				);
+			array_unshift($sqlArgs, "select * from " . $this->hitsTable . " where ctime > %f $IPSQL $typeSQL order by ctime desc limit %d");
+			$results = call_user_func_array(array($this->getDB(), 'querySelect'), $sqlArgs);
 
 		} else if($hitType == 'logins'){
-			$r1 = $this->getDB()->query("select * from " . $this->loginsTable . " where ctime > %f $IPSQL order by ctime desc limit %s", 
-				$afterTime,
-				$limit
-				);
+			array_unshift($sqlArgs, "select * from " . $this->loginsTable . " where ctime > %f $IPSQL order by ctime desc limit %d");
+			$results = call_user_func_array(array($this->getDB(), 'querySelect'), $sqlArgs ); 
 
 		} else {
 			wordfence::status(1, 'error', "getHits got invalid hitType: $hitType");
 			return false;
-		}
-		$results = array();
-		while($res = mysql_fetch_assoc($r1)){
-			array_push($results, $res);
 		}
 		$this->resolveIPs($results);
 		$ourURL = parse_url(site_url());
@@ -626,7 +608,7 @@ class wfLog {
 
 		$IP = wfUtils::inet_aton(wfUtils::getIP());
 		if($rec = $this->getDB()->querySingleRec("select blockedTime, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR (blockedTime + %s > unix_timestamp()))", $IP, wfConfig::get('blockedTime'))){
-			$this->getDB()->query("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP);
+			$this->getDB()->queryWrite("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP);
 			$now = $this->getDB()->querySingle("select unix_timestamp()");
 			$secsToGo = ($rec['blockedTime'] + wfConfig::get('blockedTime')) - $now;
 			$this->do503($secsToGo, $rec['reason']); 
@@ -667,7 +649,7 @@ class wfLog {
 				$secsToGo = wfConfig::get('blockedTime');
 			} else if($action == 'throttle'){
 				$IP = wfUtils::inet_aton(wfUtils::getIP());
-				$this->getDB()->query("insert into " . $this->throttleTable . " (IP, startTime, endTime, timesThrottled, lastReason) values (%s, unix_timestamp(), unix_timestamp(), 1, '%s') ON DUPLICATE KEY UPDATE endTime=unix_timestamp(), timesThrottled = timesThrottled + 1, lastReason='%s'", $IP, $reason, $reason);
+				$this->getDB()->queryWrite("insert into " . $this->throttleTable . " (IP, startTime, endTime, timesThrottled, lastReason) values (%s, unix_timestamp(), unix_timestamp(), 1, '%s') ON DUPLICATE KEY UPDATE endTime=unix_timestamp(), timesThrottled = timesThrottled + 1, lastReason='%s'", $IP, $reason, $reason);
 				wordfence::status(2, 'info', "Throttling IP $IP. $reason");
 				$secsToGo = 60;
 			}
@@ -729,7 +711,7 @@ class wfLog {
 	}
 	public function addStatus($level, $type, $msg){
 		//$msg = '[' . sprintf('%.2f', memory_get_usage(true) / (1024 * 1024)) . '] ' . $msg;
-		$this->getDB()->query("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", sprintf('%.6f', microtime(true)), $level, $type, $msg);
+		$this->getDB()->queryWrite("insert into " . $this->statusTable . " (ctime, level, type, msg) values (%s, %d, '%s', '%s')", sprintf('%.6f', microtime(true)), $level, $type, $msg);
 	}
 	public function getStatusEvents($lastCtime){
 		if($lastCtime < 1){
@@ -738,25 +720,21 @@ class wfLog {
 				$lastCtime = 0;
 			}
 		}
-		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where ctime > %f order by ctime asc", $lastCtime);
-		$results = array();
+		$results = $this->getDB()->querySelect("select ctime, level, type, msg from " . $this->statusTable . " where ctime > %f order by ctime asc", $lastCtime);
 		$lastTime = false;
 		$timeOffset = 3600 * get_option('gmt_offset');
-		while($rec = mysql_fetch_assoc($res)){
+		foreach($results as &$rec){
 			//$rec['timeAgo'] = wfUtils::makeTimeAgo(time() - $rec['ctime']);
 			$rec['date'] = date('M d H:i:s', $rec['ctime'] + $timeOffset);
-			array_push($results, $rec);
 		}
 		return $results;
 	}
 	public function getSummaryEvents(){
-		$res = $this->getDB()->query("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100");
-		$results = array();
+		$results = $this->getDB()->querySelect("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100");
 		$lastTime = false;
 		$timeOffset = 3600 * get_option('gmt_offset');
-		while($rec = mysql_fetch_assoc($res)){
+		foreach($results as &$rec){
 			$rec['date'] = date('M d H:i:s', $rec['ctime'] + $timeOffset);
-			array_push($results, $rec);
 			if(strpos($rec['msg'], 'SUM_PREP:') === 0){
 				break;
 			}

@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_blockedIPs"></div>
 <div class="wrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Wordfence Blocked IP Addresses</h2>
+	<?php $pageTitle = "Wordfence Blocked IPs"; include('pageTitle.php'); ?>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>

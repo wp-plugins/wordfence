@@ -385,7 +385,7 @@ class wfConfig {
 			return;
 		}
 
-		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
+		self::getDB()->queryWrite("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
 		self::$cache[$key] = $val;
 	}
 	public static function get($key, $default = false){
@@ -421,30 +421,19 @@ class wfConfig {
 				}
 			}
 		}
-		self::getDB()->reconnect();
-		//We do our own query handling here because we are dealing with some very big strings
-		$dbh = self::getDB()->getDBH();
-		$res = mysql_query("select val from " . self::table() . " where name='" . mysql_real_escape_string($key) . "'", $dbh);
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); 
-			$caller=array_shift($trace); 
-			wordfence::status(2, 'error', "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-			return false;
-		}
 
-		if(mysql_num_rows($res) > 0){
-			$row = mysql_fetch_row($res);
-			return unserialize($row[0]);
+		$res = self::getDB()->querySingle("select val from " . self::table() . " where name=%s", $key);
+		self::getDB()->flush(); //clear cache
+		if($res){
+			return unserialize($res);
 		}
 		return $default;
 	}
 	public static function set_ser($key, $val, $canUseDisk = false){
-		//We serialize some very big values so this is ultra-memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
+		//We serialize some very big values so this is memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
 		// because we would have to concatenate $val twice into the query which could also exceed max packet for the mysql server
-		self::getDB()->reconnect();
-		$dbh = self::getDB()->getDBH();
 		$serialized = serialize($val);
+		$val = '';
 		$tempFilename = 'wordfence_tmpfile_' . $key . '.php';
 		if((strlen($serialized) * 1.1) > self::getDB()->getMaxAllowedPacketBytes()){ //If it's greater than max_allowed_packet + 10% for escaping and SQL
 			if($canUseDisk){
@@ -481,18 +470,12 @@ class wfConfig {
 			}
 			$exists = self::getDB()->querySingle("select name from " . self::table() . " where name='%s'", $key);
 			if($exists){
-				$res = mysql_query("update " . self::table() . " set val='" . mysql_real_escape_string($serialized) . "' where name='" . mysql_real_escape_string($key) . "'", $dbh);
+				self::getDB()->queryWrite("update " . self::table() . " set val=%s where name=%s", $serialized, $key);
 			} else {
-				$res = mysql_query("insert IGNORE into " . self::table() . " (name, val) values ('" . mysql_real_escape_string($key) . "', '" . mysql_real_escape_string($serialized) . "')", $dbh);
-			}
-			$err = mysql_error();
-			if($err){
-				$trace=debug_backtrace(); 
-				$caller=array_shift($trace); 
-				wordfence::status(2, 'error', "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-				return false;
+				self::getDB()->queryWrite("insert IGNORE into " . self::table() . " (name, val) values (%s, %s)", $key, $serialized);
 			}
 		}
+		self::getDB()->flush();
 		return true;
 	}
 	private static function deleteOldTempFile($filename){
@@ -539,8 +522,8 @@ class wfConfig {
 	}
 	public static function getArray(){
 		$ret = array();
-		$q = self::getDB()->query("select name, val from " . self::table());
-		while($row = mysql_fetch_assoc($q)){
+		$q = self::getDB()->querySelect("select name, val from " . self::table());
+		foreach($q as $row){
 			self::$cache[$row['name']] = $row['val'];
 		}
 		return self::$cache;

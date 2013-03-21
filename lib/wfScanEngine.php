@@ -267,8 +267,8 @@ class wfScanEngine {
 		$wfdb = new wfDB();
 		$this->hoover = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		foreach($blogsToScan as $blog){
-			$q1 = $wfdb->query("select ID from " . $blog['table'] . " where post_type IN ('page', 'post') and post_status = 'publish'");
-			while($idRow = mysql_fetch_assoc($q1)){
+			$q1 = $wfdb->querySelect("select ID from " . $blog['table'] . " where post_type IN ('page', 'post') and post_status = 'publish'");
+			foreach($q1 as $idRow){
 				$this->scanQueue[] = array($blog, $idRow['ID']);
 			}
 		}
@@ -375,16 +375,8 @@ class wfScanEngine {
 		$blogsToScan = $this->getBlogsToScan('comments');
 		$wfdb = new wfDB();
 		foreach($blogsToScan as $blog){
-			$q1 = $wfdb->query("select comment_ID from " . $blog['table'] . " where comment_approved=1");
-			if( ! $q1){
-				wordfence::statusEndErr();
-				return;
-			}
-			if(! (mysql_num_rows($q1) > 0)){
-				continue;
-			}
-			
-			while($idRow = mysql_fetch_assoc($q1)){
+			$q1 = $wfdb->querySelect("select comment_ID from " . $blog['table'] . " where comment_approved=1");
+			foreach($q1 as $idRow){
 				$this->scanQueue[] = array($blog, $idRow['comment_ID']);
 			}
 		}
@@ -506,8 +498,8 @@ class wfScanEngine {
 		$prefix = $wpdb->base_prefix;
 		$blogsToScan = array();
 		if(is_multisite()){
-			$q1 = $wfdb->query("select blog_id, domain, path from $prefix"."blogs where deleted=0 order by blog_id asc");
-			while($row = mysql_fetch_assoc($q1)){
+			$q1 = $wfdb->querySelect("select blog_id, domain, path from $prefix"."blogs where deleted=0 order by blog_id asc");
+			foreach($q1 as $row){
 				$row['isMultisite'] = true;
 				if($row['blog_id'] == 1){
 					$row['table'] = $prefix . $table;
@@ -547,10 +539,10 @@ class wfScanEngine {
 		$this->statusIDX['passwds'] = wordfence::statusStart('Scanning for weak passwords');
 		global $wpdb;
 		$wfdb = new wfDB();
-		$res1 = $wfdb->query("select ID from " . $wpdb->users);
+		$res1 = $wfdb->querySelect("select ID from " . $wpdb->users);
 		$counter = 0;
-		while($rec = mysql_fetch_row($res1)){
-			$this->userPasswdQueue .= pack('N', $rec[0]);
+		foreach($res1 as $rec){
+			$this->userPasswdQueue .= pack('N', $rec['ID']);
 			$counter++;
 		}
 		wordfence::status(2, 'info', "Starting password strength check on $counter users.");

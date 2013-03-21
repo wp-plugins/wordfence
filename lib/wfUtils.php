@@ -330,20 +330,18 @@ class wfUtils {
 		$locsTable = $wpdb->base_prefix . 'wfLocs';
 		$IPLocs = array();
 		foreach($IPs as $IP){
-			$r1 = $db->query("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", ($isInt ? $IP : self::inet_aton($IP)) );
-			if($r1){
-				if($row = mysql_fetch_assoc($r1)){
-					if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
-						$db->query("delete from " . $locsTable . " where IP=%s", $row['IP']);
+			$row = $db->querySingleRec("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", ($isInt ? $IP : self::inet_aton($IP)) );
+			if($row){
+				if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
+					$db->queryWrite("delete from " . $locsTable . " where IP=%s", $row['IP']);
+				} else {
+					if($row['failed'] == 1){
+						$IPLocs[$IP] = false;
 					} else {
-						if($row['failed'] == 1){
-							$IPLocs[$IP] = false;
-						} else {
-							if(! $isInt){
-								$row['IP'] = self::inet_ntoa($row['IP']);
-							}
-							$IPLocs[$IP] = $row;
+						if(! $isInt){
+							$row['IP'] = self::inet_ntoa($row['IP']);
 						}
+						$IPLocs[$IP] = $row;
 					}
 				}
 			}
@@ -360,10 +358,10 @@ class wfUtils {
 				if(is_array($freshIPs)){
 					foreach($freshIPs as $IP => $value){
 						if($value == 'failed'){
-							$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
+							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
 							$IPLocs[$IP] = false;
 						} else {
-							$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
+							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
 								($isInt ? $IP : self::inet_aton($IP)),
 								$value[3], //city
 								$value[2], //region
@@ -405,7 +403,7 @@ class wfUtils {
 			} else {
 				$host = $host[0]['target'];
 			}
-			$db->query("insert into " . $reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
+			$db->queryWrite("insert into " . $reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
 		}
 		if($host == 'NONE'){
 			return '';

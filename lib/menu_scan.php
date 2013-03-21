@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scan"></div>
 <div class="wrap wordfence">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Wordfence Scan</h2>
+	<?php $pageTitle = "Wordfence Scan"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap">
 		<div class="wordfenceScanButton">
 			<table border="0" cellpadding="0" cellspacing="0" style="width: 800px;">

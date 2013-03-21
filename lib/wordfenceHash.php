@@ -49,8 +49,8 @@ class wordfenceHash {
 		$this->db = new wfDB();
 
 		//Doing a delete for now. Later we can optimize this to only scan modified files.
-		//$this->db->query("update " . $this->db->prefix() . "wfFileMods set oldMD5 = newMD5");			
-		$this->db->query("delete from " . $this->db->prefix() . "wfFileMods");
+		//$this->db->queryWrite("update " . $this->db->prefix() . "wfFileMods set oldMD5 = newMD5");			
+		$this->db->queryWrite("delete from " . $this->db->prefix() . "wfFileMods");
 		$fetchCoreHashesStatus = wordfence::statusStart("Fetching core, theme and plugin file signatures from Wordfence");	
 		$dataArr = $engine->api->binCall('get_known_files', json_encode(array(
 				'plugins' => $plugins,
@@ -313,7 +313,7 @@ class wordfenceHash {
 			// knownFile means that the file is both part of core or a known plugin or theme AND that we recognize the file's hash. 
 			// we could split this into files who's path we recognize and file's who's path we recognize AND who have a valid sig.
 			// But because we want to scan files who's sig we don't recognize, regardless of known path or not, we only need one "knownFile" field.
-			$this->db->query("insert into " . $this->db->prefix() . "wfFileMods (filename, filenameMD5, knownFile, oldMD5, newMD5) values ('%s', unhex(md5('%s')), %d, '', unhex('%s')) ON DUPLICATE KEY UPDATE newMD5=unhex('%s'), knownFile=%d", $file, $file, $knownFile, $md5, $md5, $knownFile);
+			$this->db->queryWrite("insert into " . $this->db->prefix() . "wfFileMods (filename, filenameMD5, knownFile, oldMD5, newMD5) values ('%s', unhex(md5('%s')), %d, '', unhex('%s')) ON DUPLICATE KEY UPDATE newMD5=unhex('%s'), knownFile=%d", $file, $file, $knownFile, $md5, $md5, $knownFile);
 
 			//Now that we know we can open the file, lets update stats
 			if(preg_match('/\.(?:js|html|htm|css)$/i', $realFile)){

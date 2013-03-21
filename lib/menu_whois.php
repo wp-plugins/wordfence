@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_whois"></div>
 <div class="wrap" id="paidWrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">WHOIS Facility: Look up the owner of an IP Address or Domain Name</h2>
+	<?php $pageTitle = "WHOIS Lookup"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p style="width: 600px;">
 			Wordfence WHOIS queries the WHOIS servers on the Internet and gets information about domain name or IP address owners. This helps you determine who is hacking your site and helps you report them to the relevant authorities. If you see a malicious IP address, do a WHOIS lookup, find out who is responsible for that IP address and send an email reporting them to the 'abuse' email address provided.<br /><br />

@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_activity"></div>
 <div class="wrap wordfence">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Live Site Activity</h2>
+	<?php $pageTitle = "Live Site Activity"; include('pageTitle.php'); ?>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>

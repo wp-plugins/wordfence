@@ -57,9 +57,9 @@ class wordfence {
 		
 		if(wfConfig::get('other_WFNet')){
 			$wfdb = new wfDB();
-			$q1 = $wfdb->query("select URI from $p"."wfNet404s where ctime > unix_timestamp() - 3600 limit 1000");
+			$q1 = $wfdb->querySelect("select URI from $p"."wfNet404s where ctime > unix_timestamp() - 3600 limit 1000");
 			$URIs = array();
-			while($rec = mysql_fetch_assoc($q1)){
+			foreach($q1 as $rec){
 				array_push($URIs, $rec['URI']);
 			}
 			$wfdb->truncate($p . "wfNet404s");
@@ -71,16 +71,16 @@ class wordfence {
 				}
 			}
 
-			$q2 = $wfdb->query("select INET_NTOA(IP) as IP from $p"."wfVulnScanners where ctime > unix_timestamp() - 3600");
+			$q2 = $wfdb->querySelect("select INET_NTOA(IP) as IP from $p"."wfVulnScanners where ctime > unix_timestamp() - 3600");
 			$scanCont = "";
-			while($rec = mysql_fetch_assoc($q2)){
+			foreach($q2 as $rec){
 				$scanCont .= pack('N', ip2long($rec['IP']));
 			}
 			$wfdb->truncate($p . "wfVulnScanners");
 
-			$q3 = $wfdb->query("select INET_NTOA(IP) as IP from $p"."wfLockedOut where blockedTime > unix_timestamp() - 3600");
+			$q3 = $wfdb->querySelect("select INET_NTOA(IP) as IP from $p"."wfLockedOut where blockedTime > unix_timestamp() - 3600");
 			$lockCont = "";
-			while($rec = mysql_fetch_assoc($q3)){
+			foreach($q3 as $rec){
 				$lockCont .= pack('N', ip2long($rec['IP']));
 			}
 			if(strlen($lockCont) > 0 || strlen($scanCont) > 0){
@@ -90,7 +90,7 @@ class wordfence {
 					if($resp['code'] == 200){
 						$len = strlen($resp['data']);
 						$reason = "WFSN: Blocked by Wordfence Security Network";
-						$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
+						$wfdb->queryWrite("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
 						if($len > 0 && $len % 4 == 0){
 							for($i = 0; $i < $len; $i += 4){
 								list($ipLong) = array_values(unpack('N', substr($resp['data'], $i, 4)));
@@ -122,42 +122,42 @@ class wordfence {
 			wordfence::status(4, 'error', "Could not fetch vulnerability patterns in scheduled job: " . $e->getMessage());
 		}
 
-		$wfdb->query("delete from $p"."wfLocs where ctime < unix_timestamp() - %d", WORDFENCE_MAX_IPLOC_AGE); 
+		$wfdb->queryWrite("delete from $p"."wfLocs where ctime < unix_timestamp() - %d", WORDFENCE_MAX_IPLOC_AGE); 
 		$wfdb->truncate($p . "wfBadLeechers"); //only uses date that's less than 1 minute old
-		$wfdb->query("delete from $p"."wfBlocks where (blockedTime + %s < unix_timestamp()) and permanent=0", wfConfig::get('blockedTime'));
-		$wfdb->query("delete from $p"."wfCrawlers where lastUpdate < unix_timestamp() - (86400 * 7)");
+		$wfdb->queryWrite("delete from $p"."wfBlocks where (blockedTime + %s < unix_timestamp()) and permanent=0", wfConfig::get('blockedTime'));
+		$wfdb->queryWrite("delete from $p"."wfCrawlers where lastUpdate < unix_timestamp() - (86400 * 7)");
 
 		$count = $wfdb->querySingle("select count(*) as cnt from $p"."wfHits");
 		if($count > 20000){
-			$wfdb->query("delete from $p"."wfHits order by id asc limit " . ($count - 20000));
+			$wfdb->queryWrite("delete from $p"."wfHits order by id asc limit " . ($count - 20000));
 		}
 		$maxRows = 1000; //affects stuff further down too
 		foreach(array('wfLeechers', 'wfScanners') as $table){
 			//This is time based per IP so shouldn't get too big
-			$wfdb->query("delete from $p"."$table where eMin < ((unix_timestamp() - (86400 * 2)) / 60)");
+			$wfdb->queryWrite("delete from $p"."$table where eMin < ((unix_timestamp() - (86400 * 2)) / 60)");
 		}
-		$wfdb->query("delete from $p"."wfLockedOut where blockedTime + %s < unix_timestamp()", wfConfig::get('loginSec_lockoutMins') * 60);
+		$wfdb->queryWrite("delete from $p"."wfLockedOut where blockedTime + %s < unix_timestamp()", wfConfig::get('loginSec_lockoutMins') * 60);
 		$count2 = $wfdb->querySingle("select count(*) as cnt from $p"."wfLogins");
 		if($count2 > 20000){
 			$wfdb->truncate($p . "wfLogins"); //in case of Dos
 		} else if($count2 > $maxRows){
-			$wfdb->query("delete from $p"."wfLogins order by ctime asc limit %d", ($count2 - $maxRows));
+			$wfdb->queryWrite("delete from $p"."wfLogins order by ctime asc limit %d", ($count2 - $maxRows));
 		}
-		$wfdb->query("delete from $p"."wfReverseCache where unix_timestamp() - lastUpdate > 86400");
+		$wfdb->queryWrite("delete from $p"."wfReverseCache where unix_timestamp() - lastUpdate > 86400");
 		$count3 = $wfdb->querySingle("select count(*) as cnt from $p"."wfThrottleLog");
 		if($count3 > 20000){
 			$wfdb->truncate($p . "wfThrottleLog"); //in case of DoS
 		} else if($count3 > $maxRows){
-			$wfdb->query("delete from $p"."wfThrottleLog order by endTime asc limit %d", ($count3 - $maxRows));
+			$wfdb->queryWrite("delete from $p"."wfThrottleLog order by endTime asc limit %d", ($count3 - $maxRows));
 		}
 		$count4 = $wfdb->querySingle("select count(*) as cnt from $p"."wfStatus");
 		if($count4 > 100000){
 			$wfdb->truncate($p . "wfStatus");
 		} else if($count4 > 1000){ //max status events we keep. This determines how much gets emailed to us when users sends us a debug report. 
-			$wfdb->query("delete from $p"."wfStatus where level != 10 order by ctime asc limit %d", ($count4 - 1000));
+			$wfdb->queryWrite("delete from $p"."wfStatus where level != 10 order by ctime asc limit %d", ($count4 - 1000));
 			$count5 = $wfdb->querySingle("select count(*) as cnt from $p"."wfStatus where level=10");
 			if($count5 > 100){
-				$wfdb->query("delete from $p"."wfStatus where level = 10 order by ctime asc limit %d", ($count5 - 100) );
+				$wfdb->queryWrite("delete from $p"."wfStatus where level = 10 order by ctime asc limit %d", ($count5 - 100) );
 			}
 		}
 
@@ -169,13 +169,14 @@ class wordfence {
 		//Remove old legacy cron job if exists
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
 
-		//Install new schedule. If schedule config is blank it will install the default 'auto' schedule.
-		wordfence::scheduleScans();
 
 		$schema = new wfSchema();
 		$schema->createAll(); //if not exists
 		wfConfig::setDefaults(); //If not set
-	
+
+		//Install new schedule. If schedule config is blank it will install the default 'auto' schedule.
+		wordfence::scheduleScans();
+
 		if(! wfConfig::get('apiKey')){
 			$api = new wfAPI('', wfUtils::getWPVersion());
 			try {
@@ -201,7 +202,7 @@ class wordfence {
 			$prefix = $wpdb->base_prefix;
 			$count = $db->querySingle("select count(*) as cnt from $prefix"."wfHits");
 			if($count > 20000){
-				$db->query("delete from $prefix"."wfHits order by id asc limit " . ($count - 20000));
+				$db->queryWrite("delete from $prefix"."wfHits order by id asc limit " . ($count - 20000));
 			}
 			$db->dropColumn('wfHits', 'HTTPHeaders');
 		}
@@ -215,19 +216,19 @@ class wordfence {
 
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
-		$db->queryIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
-		$db->queryIgnoreError("alter table $prefix"."wfBlocks add column permanent tinyint UNSIGNED default 0");
-		$db->queryIgnoreError("alter table $prefix"."wfStatus modify column msg varchar(1000) NOT NULL");
+		$db->queryWriteIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
+		$db->queryWriteIgnoreError("alter table $prefix"."wfBlocks add column permanent tinyint UNSIGNED default 0");
+		$db->queryWriteIgnoreError("alter table $prefix"."wfStatus modify column msg varchar(1000) NOT NULL");
 		//3.1.2 to 3.1.4
-		$db->queryIgnoreError("alter table $prefix"."wfBlocks modify column blockedTime bigint signed NOT NULL");
+		$db->queryWriteIgnoreError("alter table $prefix"."wfBlocks modify column blockedTime bigint signed NOT NULL");
 		//3.2.1 to 3.2.2
-		$db->queryIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
-		$db->queryIgnoreError("drop table if exists $prefix"."wfFileQueue");
-		$db->queryIgnoreError("drop table if exists $prefix"."wfFileChanges");
+		$db->queryWriteIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
+		$db->queryWriteIgnoreError("drop table if exists $prefix"."wfFileQueue");
+		$db->queryWriteIgnoreError("drop table if exists $prefix"."wfFileChanges");
 
 		$optScanEnabled = $db->querySingle("select val from $prefix"."wfConfig where name='scansEnabled_options'");
 		if($optScanEnabled != '0' && $optScanEnabled != '1'){
-			$db->query("update $prefix"."wfConfig set val='1' where name='scansEnabled_options'");
+			$db->queryWrite("update $prefix"."wfConfig set val='1' where name='scansEnabled_options'");
 		}
 		
 		//Must be the final line
@@ -305,7 +306,7 @@ class wordfence {
 		if(! preg_match('/^\d+$/', $hid)){ exit(); }
 		$db = new wfDB();
 		global $wpdb; $p = $wpdb->base_prefix;
-		$db->query("update $p"."wfHits set jsRun=1 where id=%d", $hid);
+		$db->queryWrite("update LOW_PRIORITY $p"."wfHits set jsRun=1 where id=%d", $hid);
 		if(! headers_sent()){ //suppress content-type warning in chrome
 			header('Content-type: image/gif');
 		}
@@ -439,12 +440,14 @@ class wordfence {
 			if($_GET['func'] == 'unlockMyIP'){
 				$wfLog->unblockIP(wfUtils::getIP());
 				$wfLog->unlockOutIP(wfUtils::getIP());
+				delete_transient('wflginfl_' . wfUtils::inet_aton(wfUtils::getIP())); //Reset login failure counter
 				header('Location: ' . wp_login_url());
 				exit();
 			} else if($_GET['func'] == 'unlockAllIPs'){
 				wordfence::status(1, 'info', "Request received via unlock email link to unblock all IP's.");
 				$wfLog->unblockAllIPs();
 				$wfLog->unlockAllIPs();
+				delete_transient('wflginfl_' . wfUtils::inet_aton(wfUtils::getIP())); //Reset login failure counter
 				header('Location: ' . wp_login_url());
 				exit();
 			} else if($_GET['func'] == 'disableRules'){
@@ -453,6 +456,7 @@ class wordfence {
 				wordfence::status(1, 'info', "Request received via unlock email link to unblock all IP's via disabling firewall rules.");
 				$wfLog->unblockAllIPs();
 				$wfLog->unlockAllIPs();
+				delete_transient('wflginfl_' . wfUtils::inet_aton(wfUtils::getIP())); //Reset login failure counter
 				wfConfig::set('cbl_countries', ''); //unblock all countries
 				header('Location: ' . wp_login_url());
 				exit();
@@ -705,9 +709,9 @@ class wordfence {
 		$wfdb = new wfDB();
 		global $wpdb;
 		$p = $wpdb->base_prefix;
-		$q = $wfdb->query("select ctime, level, type, msg from $p"."wfStatus order by ctime desc limit 10000");
+		$q = $wfdb->querySelect("select ctime, level, type, msg from $p"."wfStatus order by ctime desc limit 10000");
 		$timeOffset = 3600 * get_option('gmt_offset');
-		while($r = mysql_fetch_assoc($q)){
+		foreach($q as $r){
 			if($r['type'] == 'error'){
 				$content .= "\n";
 			}
@@ -828,7 +832,7 @@ class wordfence {
 			$wfdb = new wfDB();
 			global $wpdb;
 			$p = $wpdb->base_prefix;
-			$wfdb->query("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
+			$wfdb->queryWrite("delete from $p"."wfBlocks where wfsn=1 and permanent=0");
 		}
 		if($opts['howGetIPs'] != wfConfig::get('howGetIPs', '')){
 			$reload = 'reload';
@@ -1446,6 +1450,7 @@ class wordfence {
 			}
 			$warningAdded = true;
 		}
+		/*
 		if(is_plugin_active('w3-total-cache/w3-total-cache.php') && wfConfig::get('liveTrafficEnabled')){
 			wfConfig::set('liveTrafficEnabled', 0);
 			if(wfUtils::isAdminPageMU()){
@@ -1462,6 +1467,7 @@ class wordfence {
 				add_action('admin_notices', 'wordfence::liveTrafficSuperCacheWarning');
 			}
 		}
+		*/
 
 		add_submenu_page("Wordfence", "Scan", "Scan", "activate_plugins", "Wordfence", 'wordfence::menu_scan');
 		add_menu_page('Wordfence', 'Wordfence', 'activate_plugins', 'Wordfence', 'wordfence::menu_scan', wfUtils::getBaseURL() . 'images/wordfence-logo-16x16.png'); 

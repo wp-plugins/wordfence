@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_rangeBlocking"></div>
 <div class="wrap" id="paidWrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Advanced Pattern Blocking</h2>
+	<?php $pageTitle = "Advanced Blocking"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p>
 			<div style="width: 600px; margin-bottom: 15px;">
@@ -31,14 +31,6 @@
 		</p>
 	</div>
 </div>
-<script type="text/javascript">
-<?php
-if( (! wfConfig::get('isPaid')) && (wfConfig::get('tourClosed', 0) == '1') ){
-	echo 'WFAD.paidUsersOnly("Range and Internet Service Provider blocking is only available to paid members.");';
-}
-?>
-</script>
-
 <script type="text/x-jquery-template" id="wfBlockedRangesTmpl">
 <div>
 <div style="border-bottom: 1px solid #CCC; padding-bottom: 10px; margin-bottom: 10px;">
@@ -60,7 +52,7 @@ if( (! wfConfig::get('isPaid')) && (wfConfig::get('tourClosed', 0) == '1') ){
 	<ul>
 	<li>${totalBlocked} blocked hits</li>
 	{{if lastBlockedAgo}}
-	<li>Last blocked: ${lastBlockedAgo}</li>
+	<li>Last blocked: ${lastBlockedAgo} ago</li>
 	{{/if}}
 	</ul>
 </td></tr>

@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.5.1
-Stable tag: 3.6.1
+Stable tag: 3.6.3
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -154,6 +154,19 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+=3.6.3 =
+* Fixed 'max_user_connections' issue. 
+* Wordfence now uses WordPress's WPDB and this halves the number of DB connections Wordfence establishes to your DB.
+* Wordfence is now HyperDB compatible.
+* Advanced blocking i.e. Browser and IP Range blocking is now a free feature.
+* We no longer disable Live Traffic if we detect a caching plugin. Based on user feedback, apparently live traffic actually works with those plugins.
+* Fixed issue that causes site to crash if a conflicting GeoIP library is installed.
+* Changed logHuman routine to do a LOW_PRIORITY MySQL update to speed things up.
+* Login failure counter is now reset if you send yourself an unlock email so you're not locked out again after 1 failure. 
+* The free version of Wordfence is now supported with ads at the top of the admin pages. Please visit our sponsors and help keep Wordfence free!
+* Fixed issue that may cause scans to not be scheduled using the default schedule for new users.
+* There was no 3.6.2 release, in case you're wondering about the version skip.
 
 = 3.6.1 =
 * Major new release that includes the much asked for IP Range blocking with ISP blocking ability and browser blocking. 
