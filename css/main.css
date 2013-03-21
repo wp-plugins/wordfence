@@ -40,7 +40,24 @@ div.wordfenceLive p {
 	margin: 7px 5px 0 0;
 	float: left;
 }
-.wordfence-lock-icon {
+#wfHeading {
+	white-space: nowrap;
+}
+a.bluehostBanner {
+	width: 120px;
+	height: 60px;
+	padding: 0;
+	margin: 0px 0 0px 0px;
+	display: block;
+	border-width: 0;
+}
+a.bluehostBanner1 { background-image: url(../images/bh_120x60_01.gif); }
+a.bluehostBanner2 { background-image: url(../images/bh_120x60_02.gif); }
+a.bluehostBanner3 { background-image: url(../images/bh_120x60_03.gif); }
+a.bluehostBanner4 { background-image: url(../images/bh_120x60_04.gif); }
+a.bluehostBanner5 { background-image: url(../images/bh_120x60_05.gif); }
+
+div.wordfence-lock-icon {
 	background-image: url(../images/wordfence-logo-32x32.png);
 }
 

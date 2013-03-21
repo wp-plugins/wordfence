@@ -74,7 +74,7 @@ class wfUtils {
 		return WP_CONTENT_DIR . '/plugins/';
 		//return ABSPATH . 'wp-content/plugins/';
 	}
-	public static function getIP(){
+	public static function defaultGetIP(){
 		$IP = 0;
 		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
@@ -88,6 +88,15 @@ class wfUtils {
 			$IP = $_SERVER['REMOTE_ADDR'];
 			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
 		}
+		return $IP;
+	}
+	public static function getIP(){
+		$howGet = wfConfig::get('howGetIPs', false);
+		if($howGet){
+			$IP = $_SERVER[$howGet];
+		} else {
+			$IP = wfUtils::defaultGetIP();
+		}
 		if(preg_match('/,/', $IP)){
 			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
 			foreach($parts as $part){
@@ -96,14 +105,35 @@ class wfUtils {
 					break;
 				}
 			}
+		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
+			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
+			foreach($parts as $part){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+					$IP = trim($part);
+					break;
+				}
+			}
+			
 		}
 		if(preg_match('/:\d+$/', $IP)){
 			$IP = preg_replace('/:\d+$/', '', $IP);
 		}
 		if(self::isValidIP($IP)){
+			if(wfConfig::get('IPGetFail', false)){
+				if(preg_match('/^(?:10\.|192\.168|127\.|172\.)/', $IP)){
+					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
+				} else {
+					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
+				}
+				wfConfig::set('IPGetFail', '');
+			}
 			return $IP;
 		} else {
-			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $_SERVER['HTTP_X_FORWARDED_FOR'] . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
+			$xFor = "";
+			if(isset($_SERVER['HTTP_X_FORWARDED_FOR']) ){
+				$xFor = $_SERVER['HTTP_X_FORWARDED_FOR'];
+			}
+			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $xFor . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
 			$possible = array();
 			foreach($_SERVER as $key => $val){
 				if(is_string($val) && preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
@@ -119,6 +149,7 @@ class wfUtils {
 				}
 			}
 			wordfence::status(1, 'error', $msg);
+			wfConfig::set('IPGetFail', 1);
 			return false;
 		}
 	}
@@ -136,7 +167,12 @@ class wfUtils {
 		return false;
 	}
 	public static function getRequestedURL(){
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+		if(isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST']){
+			$host = $_SERVER['HTTP_HOST'];
+		} else {
+			$host = $_SERVER['SERVER_NAME'];
+		}
+		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){
@@ -183,11 +219,10 @@ class wfUtils {
 		error_log("Caller for " . $caller['file'] . " line " . $caller['line'] . " is " . $c2['file'] . ' line ' . $c2['line']);
 	}
 	public static function getWPVersion(){
-		global $wp_version;
-		global $wordfence_wp_version;
-		if(isset($wordfence_wp_version)){
-			return $wordfence_wp_version;
+		if(wordfence::$wordfence_wp_version){
+			return wordfence::$wordfence_wp_version;
 		} else {
+			global $wp_version;
 			return $wp_version;
 		}
 	}
@@ -291,25 +326,22 @@ class wfUtils {
 		}
 		$toResolve = array();
 		$db = new wfDB();
-		global $wp_version;
 		global $wpdb;
 		$locsTable = $wpdb->base_prefix . 'wfLocs';
 		$IPLocs = array();
 		foreach($IPs as $IP){
-			$r1 = $db->query("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", ($isInt ? $IP : self::inet_aton($IP)) );
-			if($r1){
-				if($row = mysql_fetch_assoc($r1)){
-					if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
-						$db->query("delete from " . $locsTable . " where IP=%s", $row['IP']);
+			$row = $db->querySingleRec("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", ($isInt ? $IP : self::inet_aton($IP)) );
+			if($row){
+				if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
+					$db->queryWrite("delete from " . $locsTable . " where IP=%s", $row['IP']);
+				} else {
+					if($row['failed'] == 1){
+						$IPLocs[$IP] = false;
 					} else {
-						if($row['failed'] == 1){
-							$IPLocs[$IP] = false;
-						} else {
-							if(! $isInt){
-								$row['IP'] = self::inet_ntoa($row['IP']);
-							}
-							$IPLocs[$IP] = $row;
+						if(! $isInt){
+							$row['IP'] = self::inet_ntoa($row['IP']);
 						}
+						$IPLocs[$IP] = $row;
 					}
 				}
 			}
@@ -318,7 +350,7 @@ class wfUtils {
 			}
 		}
 		if(sizeof($toResolve) > 0){
-			$api = new wfAPI(wfConfig::get('apiKey'), $wp_version); 
+			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion()); 
 			try {
 				$freshIPs = $api->call('resolve_ips', array(), array(
 					'ips' => implode(',', $toResolve)
@@ -326,10 +358,10 @@ class wfUtils {
 				if(is_array($freshIPs)){
 					foreach($freshIPs as $IP => $value){
 						if($value == 'failed'){
-							$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
+							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
 							$IPLocs[$IP] = false;
 						} else {
-							$db->query("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
+							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
 								($isInt ? $IP : self::inet_aton($IP)),
 								$value[3], //city
 								$value[2], //region
@@ -371,7 +403,7 @@ class wfUtils {
 			} else {
 				$host = $host[0]['target'];
 			}
-			$db->query("insert into " . $reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
+			$db->queryWrite("insert into " . $reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
 		}
 		if($host == 'NONE'){
 			return '';
@@ -466,6 +498,23 @@ class wfUtils {
 		if(self::funcEnabled('ini_set')){
 			@ini_set($key, $val);
 		}
+	}
+	public static function doNotCache(){
+		define('DONOTCACHEPAGE', true);
+		define('DONOTCACHEDB', true);
+		define('DONOTCDN', true);
+		define('DONOTCACHEOBJECT', true);
+	}
+	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
+		$uaPieces = explode('*', $uaPattern);
+		for($i = 0; $i < sizeof($uaPieces); $i++){
+			$uaPieces[$i] = preg_quote($uaPieces[$i]);
+		}
+		$uaPatternRegex = '/^' . implode('.*', $uaPieces) . '$/i';
+		if(preg_match($uaPatternRegex, $_SERVER['HTTP_USER_AGENT'])){
+			return true;
+		}
+		return false;
 	}
 }
 
