@@ -17,7 +17,7 @@
 				<tr><th>Block anyone that has an IP address in this range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if($_GET['wfBlockRange']){ echo $_GET['wfBlockRange']; } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> 192.168.200.200 - 192.168.200.220</td></tr>
 				<tr><th>...you can also enter a User-Agent (browser) that matches:</th><td><input id="uaRange" type="text" size="30" maxlength="255" >&nbsp;(Case insensitive)</td></tr>
-				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *containsBadRobot*, startsWithBadRobot*, *endsWithBadRobot</td></tr>
+				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *badRobot*, AnotherBadRobot*, *someKindOfSuffix</td></tr>
 				<tr><th>Enter a reason you're blocking this visitor pattern:</th><td><input id="wfReason" type="text" size="30" maxlength="255"></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Why a reason:</strong> The reason you specify above is for your own record keeping.</td></tr>
 				<tr><td colspan="2" style="padding-top: 15px;">

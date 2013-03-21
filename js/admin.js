@@ -1,4 +1,4 @@
-if(! window['wordfenceAdmin']){
+if(! window['wordfenceAdmin']){ //To compile for checking: java -jar /usr/local/bin/closure.jar --js=admin.js --js_output_file=test.js
 window['wordfenceAdmin'] = {
 	loading16: '<div class="wfLoading16"></div>',
 	loadingCount: 0,
@@ -911,7 +911,7 @@ window['wordfenceAdmin'] = {
 		jQuery('#whoisbutton').attr('disabled', 'disabled');
 		jQuery('#whoisbutton').attr('value', 'Loading...');
 		this.ajax('wordfence_whois', {
-			val: val,
+			val: val
 			}, function(res){
 				jQuery('#whoisbutton').removeAttr('disabled');
 				jQuery('#whoisbutton').attr('value', 'Look up IP or Domain');
@@ -931,7 +931,7 @@ window['wordfenceAdmin'] = {
 					redStyle = " style=\"color: #F00;\"";
 				}
 				var self = this;
-				function wfm21(str, ipRange, offset, str){
+				function wfm21(str, ipRange, offset, totalStr){
 					var ips = ipRange.split(/\s*\-\s*/);
 					var ip1num = self.inet_aton(ips[0]);
 					var ip2num = self.inet_aton(ips[1]);
@@ -967,7 +967,7 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_blockIPUARange', {
 			ipRange: ipRange,
 			uaRange: uaRange,
-			reason: reason,
+			reason: reason
 			}, function(res){
 				if(res.ok){
 					self.loadBlockRanges();
@@ -1273,7 +1273,7 @@ window['wordfenceAdmin'] = {
 	},
 	inet_aton: function(dot) {
 		var d = dot.split('.');
-		return ((((((+d[0])*256)+(+d[1]))*256)+(+d[2]))*256)+(+d[3]);i
+		return ((((((+d[0])*256)+(+d[1]))*256)+(+d[2]))*256)+(+d[3]);
 	},
 	inet_ntoa: function(num){
 		var d = num % 256;
