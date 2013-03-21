@@ -12,7 +12,8 @@ class wfDB {
 	public function querySingle(){
 		global $wpdb;
 		if(func_num_args() > 1){
-			return $wpdb->get_var(call_user_func_array(array($wpdb, 'prepare'), func_get_args()));
+			$args = func_get_args();
+			return $wpdb->get_var(call_user_func_array(array($wpdb, 'prepare'), $args));
 		} else {
 			return $wpdb->get_var(func_get_arg(0));
 		}
@@ -20,7 +21,8 @@ class wfDB {
 	public function querySingleRec(){ //queryInSprintfFormat, arg1, arg2, ... :: Returns a single assoc-array or null if nothing found.
 		global $wpdb;
 		if(func_num_args() > 1){
-			return $wpdb->get_row(call_user_func_array(array($wpdb, 'prepare'), func_get_args()), ARRAY_A);
+			$args = func_get_args();
+			return $wpdb->get_row(call_user_func_array(array($wpdb, 'prepare'), $args), ARRAY_A);
 		} else {
 			return $wpdb->get_row(func_get_arg(0), ARRAY_A);
 		}
@@ -28,7 +30,8 @@ class wfDB {
 	public function queryWrite(){
 		global $wpdb;
 		if(func_num_args() > 1){
-			return $wpdb->query(call_user_func_array(array($wpdb, 'prepare'), func_get_args()));
+			$args = func_get_args();
+			return $wpdb->query(call_user_func_array(array($wpdb, 'prepare'), $args));
 		} else {
 			return $wpdb->query(func_get_arg(0));
 		}
@@ -40,7 +43,8 @@ class wfDB {
 	public function querySelect(){ //sprintfString, arguments :: always returns array() and will be empty if no results.
 		global $wpdb;
 		if(func_num_args() > 1){
-			return $wpdb->get_results(call_user_func_array(array($wpdb, 'prepare'), func_get_args()), ARRAY_A);
+			$args = func_get_args();
+			return $wpdb->get_results(call_user_func_array(array($wpdb, 'prepare'), $args), ARRAY_A);
 		} else {
 			return $wpdb->get_results(func_get_arg(0), ARRAY_A);
 		}
@@ -48,7 +52,8 @@ class wfDB {
 	public function queryWriteIgnoreError(){ //sprintfString, arguments
 		global $wpdb;
 		$oldSuppress = $wpdb->suppress_errors(true);
-		call_user_func_array(array($this, 'queryWrite'), func_get_args());
+		$args = func_get_args();
+		call_user_func_array(array($this, 'queryWrite'), $args);
 		$wpdb->suppress_errors($oldSuppress);
 	}
 	public function columnExists($table, $col){
