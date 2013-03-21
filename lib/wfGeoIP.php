@@ -19,7 +19,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+if(! class_exists('wfGeoIP')){
 define("GEOIP_COUNTRY_BEGIN", 16776960);
 define("GEOIP_STATE_BEGIN_REV0", 16700000);
 define("GEOIP_STATE_BEGIN_REV1", 16000000);
@@ -70,7 +70,7 @@ define("GEOIP_DOMAIN_EDITION_V6",24);
 
 define("CITYCOMBINED_FIXED_RECORD", 7 );
 
-class GeoIP {
+class wfGeoIP {
     var $flags;
     var $filehandle;
     var $memory_buffer;
@@ -377,7 +377,7 @@ function _setup_segments($gi){
 }
 
 function geoip_open($filename, $flags) {
-  $gi = new GeoIP;
+  $gi = new wfGeoIP;
   $gi->flags = $flags;
   if ($gi->flags & GEOIP_SHARED_MEMORY) {
     $gi->shmid = @shmop_open (GEOIP_SHM_KEY, "a", 0, 0);
@@ -709,5 +709,5 @@ function getdnsattributes ($l,$ip){
   $str = substr( $str, 1, -1 );
   return $str;
 }
-
+}
 ?>
