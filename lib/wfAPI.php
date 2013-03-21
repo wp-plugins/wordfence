@@ -4,7 +4,6 @@ require_once('wordfenceClass.php');
 class wfAPI {
 	public $lastHTTPStatus = '';
 	public $lastCurlErrorNo = '';
-	private $curlDataWritten = 0;
 	private $curlContent = 0;
 	private $APIKey = '';
 	private $wordpressVersion = '';
@@ -37,11 +36,7 @@ class wfAPI {
 	}
 	public function curlWrite($h, $d){
 		$this->curlContent .= $d;
-		if($this->curlDataWritten > 10000000){ //10 megs
-			return 0;
-		} else {
-			return strlen($d);
-		}
+		return strlen($d);
 	}
 	protected function getURL($url, $postParams = array()){
 		if(function_exists('curl_init')){
@@ -155,7 +150,12 @@ class wfAPI {
 	public function makeAPIQueryString(){
 		$siteurl = '';
 		if(function_exists('get_bloginfo')){
-			$siteurl = get_bloginfo('siteurl');
+			if(is_multisite()){
+				$siteurl = network_home_url();
+				$siteurl = rtrim($siteurl, '/'); //Because previously we used get_bloginfo and it returns http://example.com without a '/' char.
+			} else {
+				$siteurl = home_url();
+			}
 		}
 		return self::buildQuery(array(
 			'v' => $this->wordpressVersion, 

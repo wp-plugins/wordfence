@@ -1,14 +1,16 @@
 <?php
 /*
 Plugin Name: Wordfence Security
-Plugin URI: http://wordfence.com/
+Plugin URI: http://www.wordfence.com/
 Description: Wordfence Security - Anti-virus and Firewall security plugin for WordPress 
 Author: Mark Maunder
-Version: 3.3.8
-Author URI: http://wordfence.com/
+Version: 3.6.3
+Author URI: http://www.wordfence.com/
 */
-define('WORDFENCE_VERSION', '3.3.8');
-add_action('activated_plugin','wordfence_save_activation_error'); function wordfence_save_activation_error(){ update_option('wf_plugin_act_error',  ob_get_contents()); }
+define('WORDFENCE_VERSION', '3.6.3');
+if(get_option('wordfenceActivated') != 1){
+	add_action('activated_plugin','wordfence_save_activation_error'); function wordfence_save_activation_error(){ update_option('wf_plugin_act_error',  ob_get_contents()); }
+}
 if(! defined('WORDFENCE_VERSIONONLY_MODE')){
 	if((int) @ini_get('memory_limit') < 64){
 		if(strpos(ini_get('disable_functions'), 'ini_set') === false){
