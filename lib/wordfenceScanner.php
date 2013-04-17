@@ -50,9 +50,9 @@ class wordfenceScanner {
 			$this->lastStatusTime = microtime(true);
 		}
 		$db = new wfDB();
-		$res1 = $db->query("select filename, filenameMD5, hex(newMD5) as newMD5 from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0");
-		while($rec1 = mysql_fetch_assoc($res1)){
-			$db->query("update " . $db->prefix() . "wfFileMods set oldMD5 = newMD5 where filenameMD5='%s'", $rec1['filenameMD5']); //A way to mark as scanned so that if we come back from a sleep we don't rescan this one.
+		$res1 = $db->querySelect("select filename, filenameMD5, hex(newMD5) as newMD5 from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0");
+		foreach($res1 as $rec1){
+			$db->queryWrite("update " . $db->prefix() . "wfFileMods set oldMD5 = newMD5 where filenameMD5='%s'", $rec1['filenameMD5']); //A way to mark as scanned so that if we come back from a sleep we don't rescan this one.
 			$file = $rec1['filename'];
 			$fileSum = $rec1['newMD5'];
 
@@ -102,7 +102,7 @@ class wordfenceScanner {
 					break;
 				}
 				if($isPHP){
-					if(strpos($data, '\$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false && strpos($data, "TimThum"."b script created by") !== false){
+					if(strpos($data, '$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false && strpos($data, "TimThum"."b script created by") !== false){
 						$this->addResult(array(
 							'type' => 'file',
 							'severity' => 1,
@@ -136,6 +136,7 @@ class wordfenceScanner {
 						break;
 
 					}
+					/*
 					$longestNospace = wfUtils::longestNospace($data);
 					if($longestNospace > 1000 && (strpos($data, $this->patterns['pat1']) !== false || preg_match('/preg_replace\([^\(]+\/[a-z]*e/', $data)) ){
 						$this->addResult(array(
@@ -154,6 +155,7 @@ class wordfenceScanner {
 							));
 						break;
 					}
+					*/
 					if(preg_match($this->patterns['pat2'], $data)){
 						$this->addResult(array(
 							'type' => 'file',

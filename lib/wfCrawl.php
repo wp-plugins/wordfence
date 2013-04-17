@@ -24,7 +24,7 @@ class wfCrawl {
 		$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$host = wfUtils::reverseLookup($IP);
 		if(! $host){ 
-			$db->query("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'noPTR', '', 'noPTR', '');
+			$db->queryWrite("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'noPTR', '', 'noPTR', '');
 			return false; 
 		}
 		if(preg_match($hostPattern, $host)){
@@ -37,14 +37,14 @@ class wfCrawl {
 				}
 			}
 			if($addrsMatch){
-				$db->query("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'verified', $host, 'verified', $host);
+				$db->queryWrite("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'verified', $host, 'verified', $host);
 				return true;
 			} else {
-				$db->query("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'fwdFail', $host, 'fwdFail', $host);
+				$db->queryWrite("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'fwdFail', $host, 'fwdFail', $host);
 				return false;
 			}
 		} else {
-			$db->query("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'badPTR', $host, 'badPTR', $host);
+			$db->queryWrite("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'badPTR', $host, 'badPTR', $host);
 			return false;
 		}
 	}
