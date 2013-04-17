@@ -136,6 +136,7 @@ class wordfenceScanner {
 						break;
 
 					}
+					/*
 					$longestNospace = wfUtils::longestNospace($data);
 					if($longestNospace > 1000 && (strpos($data, $this->patterns['pat1']) !== false || preg_match('/preg_replace\([^\(]+\/[a-z]*e/', $data)) ){
 						$this->addResult(array(
@@ -154,6 +155,7 @@ class wordfenceScanner {
 							));
 						break;
 					}
+					*/
 					if(preg_match($this->patterns['pat2'], $data)){
 						$this->addResult(array(
 							'type' => 'file',

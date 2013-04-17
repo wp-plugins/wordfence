@@ -55,9 +55,9 @@ class wfLog {
 			//Moved the following block into the "is fw enabled section" for optimization. 
 			$IP = wfUtils::getIP();
 			$IPnum = wfUtils::inet_aton($IP);
-		//	if($this->isWhitelisted($IP)){
-		//		return;
-		//	}
+			if($this->isWhitelisted($IP)){
+				return;
+			}
 			if($type == '404'){
 				$table = $this->scanTable;
 			} else if($type == 'hit'){
@@ -70,48 +70,7 @@ class wfLog {
 			$hitsPerMinute = $this->getDB()->querySingle("select @wfcurrenthits");
 			//end block moved into "is fw enabled" section
 
-			//New range and UA pattern blocking:
-			$r1 = $this->getDB()->querySelect("select id, blockType, blockString from " . $this->ipRangesTable);
-			foreach($r1 as $blockRec){
-				if($blockRec['blockType'] == 'IU'){
-					$ipRangeBlocked = false;
-					$uaPatternBlocked = false;
-
-					$bDat = explode('|', $blockRec['blockString']);
-					$ipRange = $bDat[0];
-					$uaPattern = $bDat[1];
-					if($ipRange){
-						$ips = explode('-', $ipRange);
-						if($IPnum >= $ips[0] && $IPnum <= $ips[1]){
-							$ipRangeBlocked = true;
-						}
-					}
-					if($uaPattern){
-						if(wfUtils::isUABlocked($uaPattern)){	
-							$uaPatternBlocked = true;
-						}
-					}
-					$rangeBlockReason = false;
-					if($uaPattern && $ipRange){
-						if($uaPatternBlocked && $ipRangeBlocked){
-							$rangeBlockReason = "Advanced pattern blocking in effect.";
-						}
-					} else if($uaPattern){
-						if($uaPatternBlocked){
-							$rangeBlockReason = "Advanced pattern blocking in effect.";
-						}
-					} else if($ipRange){
-						if($ipRangeBlocked){
-							$rangeBlockReason = "Advanced pattern blocking in effect.";
-						}
-					}
-					if($rangeBlockReason){
-						$this->getDB()->queryWrite("update " . $this->ipRangesTable . " set totalBlocked = totalBlocked + 1, lastBlocked = unix_timestamp() where id=%d", $blockRec['id']);
-						$this->do503(3600, $rangeBlockReason);
-					}
-				}
-			}
-			//End range/UA blocking
+			//Range blocking was here. Moved to wordfenceClass::veryFirstAction
 
 			if(wfConfig::get('blockFakeBots')){
 				if(wfCrawl::isGooglebot() && (! wfCrawl::verifyCrawlerPTR($this->googlePattern, $IP) )){
@@ -161,6 +120,10 @@ class wfLog {
 		}
 	}
 	public function isWhitelisted($IP){
+		$IPnum = wfUtils::inet_aton($IP);
+		if($IPnum > 1160651777 && $IPnum < 1160651808){ //IP is in Wordfence's IP block which would prevent our scanning server manually kicking off scans that are stuck
+			return true;
+		}
 		//We now whitelist all RFC1918 IP addresses and loopback
 		if(strpos($IP, '127.') === 0 || strpos($IP, '10.') === 0 || strpos($IP, '192.168.') === 0 || strpos($IP, '172.') === 0){
 			if(strpos($IP, '172.') === 0){
@@ -555,6 +518,50 @@ class wfLog {
 		return $this->db;
 	}
 	public function firewallBadIPs(){
+
+		//New range and UA pattern blocking:
+		$r1 = $this->getDB()->querySelect("select id, blockType, blockString from " . $this->ipRangesTable);
+		foreach($r1 as $blockRec){
+			if($blockRec['blockType'] == 'IU'){
+				$ipRangeBlocked = false;
+				$uaPatternBlocked = false;
+
+				$bDat = explode('|', $blockRec['blockString']);
+				$ipRange = $bDat[0];
+				$uaPattern = $bDat[1];
+				if($ipRange){
+					$ips = explode('-', $ipRange);
+					if($IPnum >= $ips[0] && $IPnum <= $ips[1]){
+						$ipRangeBlocked = true;
+					}
+				}
+				if($uaPattern){
+					if(wfUtils::isUABlocked($uaPattern)){	
+						$uaPatternBlocked = true;
+					}
+				}
+				$rangeBlockReason = false;
+				if($uaPattern && $ipRange){
+					if($uaPatternBlocked && $ipRangeBlocked){
+						$rangeBlockReason = "Advanced pattern blocking in effect.";
+					}
+				} else if($uaPattern){
+					if($uaPatternBlocked){
+						$rangeBlockReason = "Advanced pattern blocking in effect.";
+					}
+				} else if($ipRange){
+					if($ipRangeBlocked){
+						$rangeBlockReason = "Advanced pattern blocking in effect.";
+					}
+				}
+				if($rangeBlockReason){
+					$this->getDB()->queryWrite("update " . $this->ipRangesTable . " set totalBlocked = totalBlocked + 1, lastBlocked = unix_timestamp() where id=%d", $blockRec['id']);
+					$this->do503(3600, $rangeBlockReason);
+				}
+			}
+		}
+		//End range/UA blocking
+
 		$blockedCountries = wfConfig::get('cbl_countries', false);
 		$bareRequestURI = wfUtils::extractBareURI($_SERVER['REQUEST_URI']);
 		$bareBypassRedirURI = wfUtils::extractBareURI(wfConfig::get('cbl_bypassRedirURL', ''));

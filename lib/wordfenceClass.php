@@ -466,8 +466,10 @@ class wordfence {
 			}
 		}
 
-		$wfLog = self::getLog();
-		$wfLog->firewallBadIPs();
+		if(wfConfig::get('firewallEnabled')){
+			$wfLog = self::getLog();
+			$wfLog->firewallBadIPs();
+		}
 	}
 	public static function loginAction($username){
 		if(sizeof($_POST) < 1){ return; } //only execute if login form is posted
@@ -1181,7 +1183,7 @@ class wordfence {
 			}
 		}
 
-		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
+		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'conntest' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
 			return;
 		}
 		if(! wfUtils::isAdmin()){
@@ -1199,6 +1201,8 @@ class wordfence {
 			self::wfFunc_view();
 		} else if($wfFunc == 'sysinfo'){
 			require('sysinfo.php');
+		} else if($wfFunc == 'conntest'){
+			require('conntest.php');
 		} else if($wfFunc == 'unknownFiles'){
 			require('unknownFiles.php');
 		} else if($wfFunc == 'IPTraf'){
@@ -1410,11 +1414,18 @@ class wordfence {
 
 	}
 	private static function setupAdminVars(){
+		$updateInt = wfConfig::get('actUpdateInterval', 2);
+		if(! preg_match('/^\d+$/', $updateInt)){
+			$updateInt = 2;
+		}
+		$updateInt *= 1000;
+
 		wp_localize_script('wordfenceAdminjs', 'WordfenceAdminVars', array(
 			'ajaxURL' => admin_url('admin-ajax.php'),
 			'firstNonce' => wp_create_nonce('wp-ajax'),
 			'siteBaseURL' => wfUtils::getSiteBaseURL(),
 			'debugOn' => wfConfig::get('debugOn', 0),
+			'actUpdateInterval' => $updateInt,
 			'tourClosed' => wfConfig::get('tourClosed', 0)
 			));
 	}

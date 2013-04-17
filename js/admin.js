@@ -2,7 +2,6 @@ if(! window['wordfenceAdmin']){ //To compile for checking: java -jar /usr/local/
 window['wordfenceAdmin'] = {
 	loading16: '<div class="wfLoading16"></div>',
 	loadingCount: 0,
-	actUpdateInterval: 2000,
 	dbCheckTables: [],
 	dbCheckCount_ok: 0,
 	dbCheckCount_skipped: 0,
@@ -126,7 +125,7 @@ window['wordfenceAdmin'] = {
 		if(this.mode){ //We are in a Wordfence page
 			var self = this;
 			if(startTicker){
-				this.liveInt = setInterval(function(){ self.updateTicker(); }, 2000);
+				this.liveInt = setInterval(function(){ self.updateTicker(); }, WordfenceAdminVars.actUpdateInterval);
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
@@ -200,7 +199,7 @@ window['wordfenceAdmin'] = {
 		var self = this;
 		setInterval(function(){
 			self.updateActivityLog();
-			}, this.actUpdateInterval);
+			}, parseInt(WordfenceAdminVars.actUpdateInterval));
 	},
 	updateActivityLog: function(){
 		if(this.activityLogUpdatePending){
@@ -214,7 +213,7 @@ window['wordfenceAdmin'] = {
 
 	},
 	doneUpdateActivityLog: function(res){
-		this.actNextUpdateAt = (new Date()).getTime() + this.actUpdateInterval;
+		this.actNextUpdateAt = (new Date()).getTime() + parseInt(WordfenceAdminVars.actUpdateInterval);
 		if(res.ok){
 			if(res.items.length > 0){
 				this.activityQueue.push.apply(this.activityQueue, res.items);
@@ -226,14 +225,12 @@ window['wordfenceAdmin'] = {
 	},
 	processActQueue: function(currentScanID){
 		if(this.activityQueue.length > 0){
-			
 			this.addActItem(this.activityQueue.shift());
 			this.totalActAdded++;
 			if(this.totalActAdded > this.maxActivityLogItems){
 				jQuery('#consoleActivity div:first').remove();
 				this.totalActAdded--;
 			}
-			
 			var timeTillNextUpdate = this.actNextUpdateAt - (new Date()).getTime();
 			var maxRate = 50 / 1000; //Rate per millisecond
 			var bulkTotal = 0;
@@ -1070,7 +1067,7 @@ window['wordfenceAdmin'] = {
 			}
 		}
 		for(var k in WFSLevels[level].otherParams){
-			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem|maxExecutionTime)$/.test(k)){
+			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem|maxExecutionTime|actUpdateInterval)$/.test(k)){
 				jQuery('#' + k).val(WFSLevels[level].otherParams[k]);
 			}
 		}

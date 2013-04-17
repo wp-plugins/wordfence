@@ -62,7 +62,7 @@ class wfAPI {
 			} else {
 				$cerror = curl_error($curl);
 				curl_close($curl);
-				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus]" . ($cerror ? (' and the error from CURL was ' . $cerror) : ''));
+				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus] and the curl error number was [" . $this->lastCurlErrorNo . "] " . ($cerror ? (' and the error from CURL was: ' . $cerror) : ''));
 			}
 		} else {
 			$data = $this->fileGet($url, $postParams);
