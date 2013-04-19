@@ -94,6 +94,9 @@ class wfUtils {
 		$howGet = wfConfig::get('howGetIPs', false);
 		if($howGet){
 			$IP = $_SERVER[$howGet];
+			if( $howGet == "HTTP_CF_CONNECTING_IP" && (! self::isValidIP($IP)) ){
+				$IP = $_SERVER['REMOTE_ADDR'];
+			}
 		} else {
 			$IP = wfUtils::defaultGetIP();
 		}

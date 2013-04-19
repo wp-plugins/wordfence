@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.5.1
-Stable tag: 3.6.6
+Stable tag: 3.6.7
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -154,6 +154,11 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.6.7 =
+* Improved security for Cloudflare customers to prevent spoofing attacks and protect when a hacker bypasses Cloudflare proxies.
+* Added clear explanation of what increasing AJAX polling time does on options page.
+* Fixed issue with Wordfence detecting itself as malware. We messed up the version number in previous release. 
 
 = 3.6.6 =
 * Added option to change AJAX polling frequency
