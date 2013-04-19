@@ -1,6 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scan"></div>
 <div class="wrap wordfence">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Wordfence Scan</h2>
+	<?php $pageTitle = "Wordfence Scan"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap">
 		<div class="wordfenceScanButton">
 			<table border="0" cellpadding="0" cellspacing="0" style="width: 800px;">
@@ -11,7 +11,7 @@
 				</td>
 				<td>
 					<div style="border: 1px solid #CCC; padding: 4px;">
-						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a> or <a target="_blank" href="http://www.wordfence.com/forums/">visit our support forums for help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a>. Spreading the word helps us keep the best features free.
+						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://www.wordfence.com/forums/">visit our support forums for help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a>. Spreading the word helps us keep the best features free.
 					</div>
 				</td>
 			</tr>
@@ -243,6 +243,40 @@
 </div>
 </div>
 </script>
+<script type="text/x-jquery-template" id="issueTmpl_badOption">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		{{if data.isMultisite}}
+		<tr><th>Multisite Blog ID:</th><td>${data.blog_id}</td></tr>
+		<tr><th>Multisite Blog Domain:</th><td>${data.domain}</td></tr>
+		<tr><th>Multisite Blog Path:</th><td>${data.path}</td></tr>
+		{{/if}}
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreP' || status == 'ignoreC' }}Ignoring all alerts related to this option{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+	{{if (status == 'new')}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</span>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore issues related to this option</span>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring issues related to this option</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
+
 
 <script type="text/x-jquery-template" id="issueTmpl_diskSpace">
 <div>
