@@ -5,6 +5,21 @@
 		<p style="width: 600px;">
 			Wordfence WHOIS queries the WHOIS servers on the Internet and gets information about domain name or IP address owners. This helps you determine who is hacking your site and helps you report them to the relevant authorities. If you see a malicious IP address, do a WHOIS lookup, find out who is responsible for that IP address and send an email reporting them to the 'abuse' email address provided.<br /><br />
 		</p>
+<?php
+if(! function_exists('fsockopen')){
+?>
+		<p style="color: #F00; width: 600px;">
+			Sorry, but your web hosting provider has disabled the 'fsockopen' function on your WordPress server. That means you can't 
+			use WHOIS. Please log a support call with them asking them to enable this function. Explain that you need it to be able to 
+			perform Whois lookups on IP addresses which will allow you to determine who owns the IP's that are attacking your website.
+			<br /><br />
+			If you are hosting your own site, edit your php.ini config file and make sure 'fsockopen' does not appear
+			next to disable_functions in php.ini. You may have to restart your web server for the changes to take effect.
+		</p>
+<?php
+} else {
+?>
+		</p>
 		<p>
 			<input type="text" name="whois" id="wfwhois" value="" size="40" maxlength="255" onkeydown="if(event.keyCode == 13){ WFAD.whois(jQuery('#wfwhois').val()); }" />&nbsp;<input type="button" name="whoisbutton" id="whoisbutton" class="button-primary" value="Look up IP or Domain" onclick="WFAD.whois(jQuery('#wfwhois').val());" />
 
@@ -64,3 +79,7 @@ if(whoisval){
 </p>
 </div>
 </script>
+<?php
+} //closing paren for function_exists('fsockopen')
+?>
+

@@ -1021,6 +1021,14 @@ window['wordfenceAdmin'] = {
 				self.reloadActivities(); 
 				});
 	},
+	unblockIPTwo: function(IP){
+		var self = this;
+		this.ajax('wordfence_unblockIP', {
+			IP: IP
+			}, function(res){ 
+				self.staticTabChanged(); 
+				});
+	},
 	permBlockIP: function(IP){
 		var self = this;
 		this.ajax('wordfence_permBlockIP', {

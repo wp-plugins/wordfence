@@ -118,7 +118,7 @@
 		{{/if}}
 	</div>
 	<div>
-		<strong>IP:</strong>&nbsp;<a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a> [<a href="#" onclick="WFAD.unblockIP('${IP}'); return false;">unblock</a>]
+		<strong>IP:</strong>&nbsp;<a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a> [<a href="#" onclick="WFAD.unblockIPTwo('${IP}'); return false;">unblock</a>]
 		{{if permanent == '1'}}
 			[<span style="color: #F00;">permanently blocked</span>]
 		{{else}}&nbsp;&nbsp;[<a href="#" onclick="WFAD.permBlockIP('${IP}'); return false;">make permanent</a>]{{/if}}

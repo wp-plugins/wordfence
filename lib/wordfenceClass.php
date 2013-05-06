@@ -363,7 +363,7 @@ class wordfence {
 				$forgotAttempts = 1;
 			}
 			if($forgotAttempts >= wfConfig::get('loginSec_maxForgotPasswd')){
-				self::lockOutIP($IP, "Exceeded the maximum number of tries to recover their password which is set at: " . wfConfig::get('loginSec_maxForgotPasswd'));
+				self::lockOutIP($IP, "Exceeded the maximum number of tries to recover their password which is set at: " . wfConfig::get('loginSec_maxForgotPasswd') . ". The last username or email they entered before getting locked out was: '" . $_POST['user_login'] . "'");
 				require('wfLockedOut.php');
 			}
 			set_transient($tKey, $forgotAttempts, wfConfig::get('loginSec_countFailMins') * 60);
@@ -494,7 +494,7 @@ class wordfence {
 		}
 		if(wfConfig::get('loginSecurityEnabled')){
 			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username' && wfConfig::get('loginSec_lockInvalidUsers')){
-				self::lockOutIP($IP, "Used an invalid username to try to sign in.");
+				self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
 				require('wfLockedOut.php');
 			}
 			$tKey = 'wflginfl_' . wfUtils::inet_aton($IP);
@@ -506,7 +506,7 @@ class wordfence {
 					$tries = 1;
 				}
 				if($tries >= wfConfig::get('loginSec_maxFailures')){
-					self::lockOutIP($IP, "Exceeded the maximum number of login failures which is: " . wfConfig::get('loginSec_maxFailures'));
+					self::lockOutIP($IP, "Exceeded the maximum number of login failures which is: " . wfConfig::get('loginSec_maxFailures') . ". The last username they tried to sign in with was: '" . $_POST['log'] . "'");
 					require('wfLockedOut.php');
 				}
 				set_transient($tKey, $tries, wfConfig::get('loginSec_countFailMins') * 60);

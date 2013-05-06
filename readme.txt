@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.5.1
-Stable tag: 3.6.7
+Stable tag: 3.6.8
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -154,6 +154,19 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.6.8 =
+* Fixed bug that caused IP range blocking to not block.
+* Fixed bug that caused unblocking a permanently blocked IP to work, but not refresh the list. 
+* Added usernames to the email you receive when a user is locked out.
+* Added a few more status messages for URL malware scanning.
+* Removed the sockets function call from connection testing because some hosts don't allow calls to socket_create()
+* Added detection in the Whois page to check if the server has the fsockopen() function available with helpful message if it's disabled. 
+* Whitelisted IP's now override country blocking and range blocking.
+* Removed Bluehost affiliate links for free customers
+* Fixed issue that caused scans to crash when checking URLs for malware.
+* Fixed issue that caused scans with large numbers of posts that contain the same URL to crash.
+* Updated the GeoIP database for country blocking to newest version.
 
 = 3.6.7 =
 * Improved security for Cloudflare customers to prevent spoofing attacks and protect when a hacker bypasses Cloudflare proxies.

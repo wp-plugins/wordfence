@@ -52,8 +52,9 @@ class wfAPI {
 			curl_setopt ($curl, CURLOPT_WRITEFUNCTION, array($this, 'curlWrite'));
 			curl_setopt($curl, CURLOPT_POST, true);
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $postParams);
-			
+			wordfence::status(4, 'info', "CURL fetching URL: " . $url);
 			$curlResult = curl_exec($curl);
+
 			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 			$this->lastCurlErrorNo = curl_errno($curl);
 			if($httpStatus == 200){
@@ -65,6 +66,7 @@ class wfAPI {
 				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus] and the curl error number was [" . $this->lastCurlErrorNo . "] " . ($cerror ? (' and the error from CURL was: ' . $cerror) : ''));
 			}
 		} else {
+			wordfence::status(4, 'info', "Fetching URL with file_get: " . $url);
 			$data = $this->fileGet($url, $postParams);
 			if($data === false){
 				$err = error_get_last();
@@ -117,6 +119,7 @@ class wfAPI {
 				curl_setopt($curl, CURLOPT_POSTFIELDS, array());
 			}                               
 			$data = curl_exec($curl);       
+
 			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 			if($httpStatus != 200){
 				$cError = curl_error($curl);

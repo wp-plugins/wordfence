@@ -233,7 +233,7 @@ class wfLog {
 	}
 	public function lockOutIP($IP, $reason){
 		if($this->isWhitelisted($IP)){ return false; }
-		$this->getDB()->queryWrite("insert into " . $this->lockOutTable . " (IP, blockedTime, reason) values(%s, unix_timestamp(), '%s') ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s'",
+		$this->getDB()->queryWrite("insert into " . $this->lockOutTable . " (IP, blockedTime, reason) values (%s, unix_timestamp(), '%s') ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s'",
 			wfUtils::inet_aton($IP),
 			$reason,
 			$reason
@@ -518,6 +518,11 @@ class wfLog {
 		return $this->db;
 	}
 	public function firewallBadIPs(){
+		$IP = wfUtils::getIP();
+		if($this->isWhitelisted($IP)){
+			return;
+		}
+		$IPnum = wfUtils::inet_aton($IP);
 
 		//New range and UA pattern blocking:
 		$r1 = $this->getDB()->querySelect("select id, blockType, blockString from " . $this->ipRangesTable);
@@ -587,7 +592,7 @@ class wfLog {
 			} else if(strpos($_SERVER['REQUEST_URI'], '/wp-login.php') !== false && (! wfConfig::get('cbl_loginFormBlocked', false))  ){ //It's the login form and we're allowing that
 				//Do nothing 
 			} else {
-				if($country = wfUtils::IP2Country(wfUtils::getIP()) ){
+				if($country = wfUtils::IP2Country($IP) ){
 					foreach(explode(',', $blockedCountries) as $blocked){
 						if(strtoupper($blocked) == strtoupper($country)){ //At this point we know the user has been blocked
 							if(wfConfig::get('cbl_action') == 'redir'){
@@ -613,9 +618,8 @@ class wfLog {
 			}
 		}
 
-		$IP = wfUtils::inet_aton(wfUtils::getIP());
-		if($rec = $this->getDB()->querySingleRec("select blockedTime, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR (blockedTime + %s > unix_timestamp()))", $IP, wfConfig::get('blockedTime'))){
-			$this->getDB()->queryWrite("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IP);
+		if($rec = $this->getDB()->querySingleRec("select blockedTime, reason from " . $this->blocksTable . " where IP=%s and (permanent=1 OR (blockedTime + %s > unix_timestamp()))", $IPnum, wfConfig::get('blockedTime'))){
+			$this->getDB()->queryWrite("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IPnum);
 			$now = $this->getDB()->querySingle("select unix_timestamp()");
 			$secsToGo = ($rec['blockedTime'] + wfConfig::get('blockedTime')) - $now;
 			$this->do503($secsToGo, $rec['reason']); 
