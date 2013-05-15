@@ -265,6 +265,8 @@ window['wordfenceAdmin'] = {
 		}
 	},
 	addActItem: function(item){
+		if(! item){ return; }
+		if(! item.msg){ return; }
 		if(item.msg.indexOf('SUM_') == 0){
 			this.processSummaryLine(item);
 			jQuery('#consoleSummary').scrollTop(jQuery('#consoleSummary').prop('scrollHeight'));

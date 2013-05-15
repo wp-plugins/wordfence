@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
 Requires at least: 3.3.1
 Tested up to: 3.5.1
-Stable tag: 3.6.8
+Stable tag: 3.6.9
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -154,6 +154,16 @@ or a theme, because often these have been updated to fix a security hole.
 5. If you're technically minded, this is the under-the-hood view of Wordfence options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.6.9 =
+* Fixed JS error that occurs occasionally when users are viewing activity log in real-time.
+* New Feature: Prevent users registering 'admin' username if it doesn't exist. Recommended if you've deleted 'admin'. Enable on 'options' page. 
+* Check if GeoIP library is already declared for all functions. Fixes Fatal error: Cannot redeclare geoip_country_code_by_name.
+* Fixed a compatibility issue with sites and hosts using Varnish front-end cache to ensure legit users don't get blocked. Added two HTTP no-cache and Expires headers.
+* Fixed bug when using Advanced User-Agent blocking with certain patterns this would appear: Warning: preg_match() [function.preg-match]: Unknown modifier
+* Vastly improved speed of Advanced User-Agent blocking. No longer using regex but still support wildcards using fnmatch()
+* We now support usernames with spaces in the list of users to ignore in the live traffic config on 'options' page.
+* Improved language in status messages to avoid confusion. Changed "unrecognized files" to "additional files" to describe non-core/theme/plugin files.
 
 = 3.6.8 =
 * Fixed bug that caused IP range blocking to not block.

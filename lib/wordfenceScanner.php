@@ -252,7 +252,7 @@ class wordfenceScanner {
 		return $this->results;
 	}
 	private function writeScanningStatus(){
-		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " unrecognized files at " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " per second");
+		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " additional files at " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " per second");
 	}
 	private function addEncIssue($ignoreP, $ignoreC, $encoding, $file){
 		$this->addResult(array(

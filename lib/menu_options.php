@@ -217,6 +217,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		</td></tr>
 	<tr><th>Immediately lock out invalid usernames</th><td><input type="checkbox" id="loginSec_lockInvalidUsers" class="wfConfigElem" name="loginSec_lockInvalidUsers" <?php $w->cb('loginSec_lockInvalidUsers'); ?> /></td></tr>
 	<tr><th>Don't let WordPress reveal valid users in login errors</th><td><input type="checkbox" id="loginSec_maskLoginErrors" class="wfConfigElem" name="loginSec_maskLoginErrors" <?php $w->cb('loginSec_maskLoginErrors'); ?> /></td></tr>
+	<tr><th>Prevent users registering 'admin' username if it doesn't exist</th><td><input type="checkbox" id="loginSec_blockAdminReg" class="wfConfigElem" name="loginSec_blockAdminReg" <?php $w->cb('loginSec_blockAdminReg'); ?> /></td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerOtherOptions"></div>
 		<h3 class="wfConfigHeading">Other Options</h3>

@@ -503,21 +503,16 @@ class wfUtils {
 		}
 	}
 	public static function doNotCache(){
+		header("Cache-Control: no-cache, must-revalidate");
+		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); //In the past
 		define('DONOTCACHEPAGE', true);
 		define('DONOTCACHEDB', true);
 		define('DONOTCDN', true);
 		define('DONOTCACHEOBJECT', true);
+
 	}
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
-		$uaPieces = explode('*', $uaPattern);
-		for($i = 0; $i < sizeof($uaPieces); $i++){
-			$uaPieces[$i] = preg_quote($uaPieces[$i]);
-		}
-		$uaPatternRegex = '/^' . implode('.*', $uaPieces) . '$/i';
-		if(preg_match($uaPatternRegex, $_SERVER['HTTP_USER_AGENT'])){
-			return true;
-		}
-		return false;
+		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
 	}
 }
 

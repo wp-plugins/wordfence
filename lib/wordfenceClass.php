@@ -276,6 +276,7 @@ class wordfence {
 		add_filter('get_the_generator_rdf', 'wordfence::genFilter', 99, 2);
 		add_filter('get_the_generator_comment', 'wordfence::genFilter', 99, 2);
 		add_filter('get_the_generator_export', 'wordfence::genFilter', 99, 2);
+		add_filter('registration_errors', 'wordfence::registrationFilter', 99, 3);
 		if(is_admin()){
 			add_action('admin_init', 'wordfence::admin_init');
 			if(is_multisite()){
@@ -486,6 +487,12 @@ class wordfence {
 				wordfence::alert("User login", "A non-admin user with username \"$username\" signed in to your WordPress site.", wfUtils::getIP());
 			}
 		}
+	}
+	public static function registrationFilter($errors, $santizedLogin, $userEmail){
+		if(wfConfig::get('loginSec_blockAdminReg') && $santizedLogin == 'admin'){
+			$errors->add('user_login_error', '<strong>ERROR</strong>: You can\'t register using that username');
+		}
+		return $errors;
 	}
 	public static function authenticateFilter($authResult){
 		$IP = wfUtils::getIP();	
@@ -784,7 +791,8 @@ class wordfence {
 		}
 		$validUsers = array();
 		$invalidUsers = array();
-		foreach(explode(',', preg_replace('/[\r\n\s\t]+/', '', $opts['liveTraf_ignoreUsers'])) as $val){
+		foreach(explode(',', $opts['liveTraf_ignoreUsers']) as $val){
+			$val = trim($val);
 			if(strlen($val) > 0){
 				if(get_user_by('login', $val)){
 					array_push($validUsers, $val);
