@@ -10,6 +10,7 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<table class="wfConfigForm">
 		<tr><td colspan="2"><h2>Country Blocking Options</h2></td></tr>
+		<?php if(! wfConfig::get('firewallEnabled')){ ?><tr><td colspan="2"><div style="color: #F00; font-weight: bold;">Firewall is disabled. You can enable it on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options page</a> at the top.</div></td></tr><?php } ?>
 		<tr><th>What to do when we block someone:</th><td>
 			<select id="wfBlockAction">
 				<option value="block"<?php if(wfConfig::get('cbl_action') == 'block'){ echo ' selected'; } ?>>Show the standard Wordfence blocked message</option>

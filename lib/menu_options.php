@@ -16,6 +16,15 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<form id="wfConfigForm">
 	<table class="wfConfigForm">
 	<tr><td colspan="2"><h2>Basic Options</h2></td></tr>
+	<tr><th class="wfConfigEnable">Enable firewall </th><td><input type="checkbox" id="firewallEnabled" class="wfConfigElem" name="firewallEnabled" value="1" <?php $w->cb('firewallEnabled'); ?> />&nbsp;<span style="color: #F00;">NOTE:</span> This checkbox enables ALL firewall functions including IP, country and advanced blocking and the "Firewall Rules" below.</td></tr>
+	<tr><td colspan="2">&nbsp;</td></tr>
+	<tr><th class="wfConfigEnable">Enable login security</th><td><input type="checkbox" id="loginSecurityEnabled" class="wfConfigElem" name="loginSecurityEnabled" value="1" <?php $w->cb('loginSecurityEnabled'); ?> />&nbsp;This option enables all "Login Security" options. You can modify individual options further down this page.</td></tr>
+	<tr><td colspan="2">&nbsp;</td></tr>
+	<tr><th class="wfConfigEnable">Enable Live Traffic View</th><td><input type="checkbox" id="liveTrafficEnabled" class="wfConfigElem" name="liveTrafficEnabled" value="1" <?php $w->cb('liveTrafficEnabled'); ?> onclick="WFAD.reloadConfigPage = true; return true;" />&nbsp;This option enables live traffic logging.</td></tr>
+	<tr><td colspan="2">&nbsp;</td></tr>
+	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> />&nbsp;Regular scans ensure your site stays secure.</td></tr>
+	<tr><td colspan="2">&nbsp;</td></tr>
+
 	<tr><th>Where to email alerts:</th><td><input type="text" id="alertEmails" name="alertEmails" value="<?php $w->f('alertEmails'); ?>" size="50" />&nbsp;<span class="wfTipText">Separate multiple emails with commas</span></td></tr>
 	<tr><th>Your Wordfence API Key:</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="50" />
 		</td></tr>
@@ -75,7 +84,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<div class="wfMarker" id="wfMarkerLiveTrafficOptions"></div>
 		<h3 class="wfConfigHeading">Live Traffic View</h3>
 	</td></tr>
-	<tr><th class="wfConfigEnable">Enable Live Traffic View</th><td><input type="checkbox" id="liveTrafficEnabled" class="wfConfigElem" name="liveTrafficEnabled" value="1" <?php $w->cb('liveTrafficEnabled'); ?> onclick="WFAD.reloadConfigPage = true; return true;" /></td></tr>
 	<tr><th>Don't log signed-in users with publishing access:</th><td><input type="checkbox" id="liveTraf_ignorePublishers" name="liveTraf_ignorePublishers" value="1" <?php $w->cb('liveTraf_ignorePublishers'); ?> /></td></tr>
 	<tr><th>List of comma separated usernames to ignore:</th><td><input type="text" name="liveTraf_ignoreUsers" id="liveTraf_ignoreUsers" value="<?php echo $w->getHTML('liveTraf_ignoreUsers'); ?>" /></td></tr>
 	<tr><th>List of comma separated IP addresses to ignore:</th><td><input type="text" name="liveTraf_ignoreIPs" id="liveTraf_ignoreIPs" value="<?php echo $w->getHTML('liveTraf_ignoreIPs'); ?>" /></td></tr>
@@ -83,7 +91,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerScansToInclude"></div>
 		<h3 class="wfConfigHeading">Scans to include</h3></td></tr>
-	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> /></td></tr>
 	<?php if(wfConfig::get('isPaid')){ ?>
 	<tr><th>Scan public facing site for vulnerabilities?</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" <?php $w->cb('scansEnabled_public'); ?></td></tr>
 	<?php } else { ?>
@@ -107,8 +114,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<div class="wfMarker" id="wfMarkerFirewallRules"></div>
 		<h3 class="wfConfigHeading">Firewall Rules</h3>
 	</td></tr>
-
-	<tr><th class="wfConfigEnable">Enable firewall rules</th><td><input type="checkbox" id="firewallEnabled" class="wfConfigElem" name="firewallEnabled" value="1" <?php $w->cb('firewallEnabled'); ?> /></td></tr>
 	<tr><th>Immediately block fake Google crawlers:</th><td><input type="checkbox" id="blockFakeBots" class="wfConfigElem" name="blockFakeBots" value="1" <?php $w->cb('blockFakeBots'); ?>/></td></tr>
 	<tr><th>How should we treat Google's crawlers</th><td>
 		<select id="neverBlockBG" class="wfConfigElem" name="neverBlockBG">
@@ -142,7 +147,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<div class="wfMarker" id="wfMarkerLoginSecurity"></div>
 		<h3 class="wfConfigHeading">Login Security Options</h3>
 		</td></tr>
-	<tr><th class="wfConfigEnable">Enable login security</th><td><input type="checkbox" id="loginSecurityEnabled" class="wfConfigElem" name="loginSecurityEnabled" value="1" <?php $w->cb('loginSecurityEnabled'); ?> /></td></tr>
 	<tr><th>Lock out after how many login failures</th><td>
 		<select id="loginSec_maxFailures" class="wfConfigElem" name="loginSec_maxFailures">
 			<option value="1"<?php $w->sel('loginSec_maxFailures', '1'); ?>>1</option>

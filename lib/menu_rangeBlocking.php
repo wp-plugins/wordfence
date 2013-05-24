@@ -4,6 +4,7 @@
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p>
 			<div style="width: 600px; margin-bottom: 15px;">
+			<?php if(! wfConfig::get('firewallEnabled')){ ?><div style="color: #F00; font-weight: bold;">Firewall is disabled. You can enable it on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options page</a> at the top.</div><br /><?php } ?>
 			This page lets you block visitors who are from a range of IP addresses or are using a certain web browser or browser pattern. 
 			You can also block a certain web browser that is visiting your site from a certain range of IP addresses. This can be useful when
 			blocking someone pretending to be Google and using a specific Internet Service Provider or Web Host.<br /><br /> 
