@@ -1,7 +1,7 @@
-if(! window['wordfenceAdmin']){
+if(! window['wordfenceAdmin']){ //To compile for checking: java -jar /usr/local/bin/closure.jar --js=admin.js --js_output_file=test.js
 window['wordfenceAdmin'] = {
 	loading16: '<div class="wfLoading16"></div>',
-	actUpdateInterval: 2000,
+	loadingCount: 0,
 	dbCheckTables: [],
 	dbCheckCount_ok: 0,
 	dbCheckCount_skipped: 0,
@@ -92,13 +92,32 @@ window['wordfenceAdmin'] = {
 				var self = this;	
 				this.tour('wfWelcomeContentCntBlk', 'wfHeading', 'top', 'left', "Learn how to Schedule Scans", function(){ self.tourRedir('WordfenceScanSchedule'); });
 			}
+		} else if(jQuery('#wordfenceMode_rangeBlocking').length > 0){
+			this.mode = 'rangeBlocking';
+			startTicker = false;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfWelcomeContentRangeBlocking', 'wfHeading', 'top', 'left', "Learn how to Customize Wordfence", function(){ self.tourRedir('WordfenceSecOpt'); });
+			}
+			this.calcRangeTotal();
+			this.loadBlockRanges();
+		} else if(jQuery('#wordfenceMode_whois').length > 0){
+			this.mode = 'whois';
+			startTicker = false;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfWelcomeContentWhois', 'wfHeading', 'top', 'left', "Learn how to use Advanced Blocking", function(){ self.tourRedir('WordfenceRangeBlocking'); });
+			}
+			this.calcRangeTotal();
+			this.loadBlockRanges();
+
 		} else if(jQuery('#wordfenceMode_scanScheduling').length > 0){
 			this.mode = 'scanScheduling';
 			startTicker = false;
 			this.sched_modeChange();
 			if(! this.tourClosed){
 				var self = this;	
-				this.tour('wfWelcomeContentScanSched', 'wfHeading', 'top', 'left', "Learn how to Customize Wordfence", function(){ self.tourRedir('WordfenceSecOpt'); });
+				this.tour('wfWelcomeContentScanSched', 'wfHeading', 'top', 'left', "Learn about WHOIS", function(){ self.tourRedir('WordfenceWhois'); });
 			}
 		} else {
 			this.mode = false;
@@ -106,7 +125,7 @@ window['wordfenceAdmin'] = {
 		if(this.mode){ //We are in a Wordfence page
 			var self = this;
 			if(startTicker){
-				this.liveInt = setInterval(function(){ self.updateTicker(); }, 2000);
+				this.liveInt = setInterval(function(){ self.updateTicker(); }, WordfenceAdminVars.actUpdateInterval);
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
@@ -165,17 +184,22 @@ window['wordfenceAdmin'] = {
 		this.scanTourStart();
 	},
 	showLoading: function(){
-		this.removeLoading();
-		jQuery('<div id="wordfenceWorking">Wordfence is working...</div>').appendTo('body');
+		this.loadingCount++;
+		if(this.loadingCount == 1){
+			jQuery('<div id="wordfenceWorking">Wordfence is working...</div>').appendTo('body');
+		}
 	},
 	removeLoading: function(){
-		jQuery('#wordfenceWorking').remove();
+		this.loadingCount--;
+		if(this.loadingCount == 0){
+			jQuery('#wordfenceWorking').remove();
+		}
 	},
 	startActivityLogUpdates: function(){
 		var self = this;
 		setInterval(function(){
 			self.updateActivityLog();
-			}, this.actUpdateInterval);
+			}, parseInt(WordfenceAdminVars.actUpdateInterval));
 	},
 	updateActivityLog: function(){
 		if(this.activityLogUpdatePending){
@@ -189,7 +213,7 @@ window['wordfenceAdmin'] = {
 
 	},
 	doneUpdateActivityLog: function(res){
-		this.actNextUpdateAt = (new Date()).getTime() + this.actUpdateInterval;
+		this.actNextUpdateAt = (new Date()).getTime() + parseInt(WordfenceAdminVars.actUpdateInterval);
 		if(res.ok){
 			if(res.items.length > 0){
 				this.activityQueue.push.apply(this.activityQueue, res.items);
@@ -201,14 +225,12 @@ window['wordfenceAdmin'] = {
 	},
 	processActQueue: function(currentScanID){
 		if(this.activityQueue.length > 0){
-			
 			this.addActItem(this.activityQueue.shift());
 			this.totalActAdded++;
 			if(this.totalActAdded > this.maxActivityLogItems){
 				jQuery('#consoleActivity div:first').remove();
 				this.totalActAdded--;
 			}
-			
 			var timeTillNextUpdate = this.actNextUpdateAt - (new Date()).getTime();
 			var maxRate = 50 / 1000; //Rate per millisecond
 			var bulkTotal = 0;
@@ -243,6 +265,8 @@ window['wordfenceAdmin'] = {
 		}
 	},
 	addActItem: function(item){
+		if(! item){ return; }
+		if(! item.msg){ return; }
 		if(item.msg.indexOf('SUM_') == 0){
 			this.processSummaryLine(item);
 			jQuery('#consoleSummary').scrollTop(jQuery('#consoleSummary').prop('scrollHeight'));
@@ -337,16 +361,12 @@ window['wordfenceAdmin'] = {
 	},
 	handleTickerReturn: function(res){
 		this.tickerUpdatePending = false;
-		var statusMsgChanged = false;
 		var newMsg = "";
-		var oldMsg = jQuery('#wfLiveStatus').html();
+		var oldMsg = jQuery('#wfLiveStatus').text();
 		if( res.msg ){ 
 			newMsg = res.msg;
 		} else {
 			newMsg = "Idle";
-		}
-		if(newMsg && oldMsg && newMsg != oldMsg){
-			statusMsgChanged = true;
 		}
 		if(newMsg && newMsg != oldMsg){
 			jQuery('#wfLiveStatus').hide().html(newMsg).fadeIn(200);
@@ -354,9 +374,6 @@ window['wordfenceAdmin'] = {
 
 		if(this.mode == 'activity'){
 			if(res.alsoGet != 'logList_' + this.activityMode){ return; } //user switched panels since ajax request started
-			if(/^(?:topScanners|topLeechers)$/.test(this.activityMode)){
-				if(statusMsgChanged){ this.updateTicker(true); } return;
-			}
 			if(res.events.length > 0){
 				this.newestActivityTime = res.events[0]['ctime'];
 			}
@@ -393,7 +410,6 @@ window['wordfenceAdmin'] = {
 				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
 				});
 		}
-		if(statusMsgChanged){ this.updateTicker(true); } return;
 	},
 	reverseLookupIPs: function(){
 		var ips = [];
@@ -571,7 +587,9 @@ window['wordfenceAdmin'] = {
 			dataType: "json",
 			data: data,
 			success: function(json){ 
-				self.removeLoading();
+				if(! noLoading){
+					self.removeLoading();
+				}
 				if(json && json.nonce){
 					self.nonce = json.nonce;
 				}
@@ -580,7 +598,12 @@ window['wordfenceAdmin'] = {
 				}
 				cb(json); 
 			},
-			error: function(){ self.removeLoading(); cbErr(); }
+			error: function(){ 
+				if(! noLoading){
+					self.removeLoading();  
+				}
+				cbErr();
+			}
 			});
 	},
 	colorbox: function(width, heading, body){ 
@@ -848,6 +871,117 @@ window['wordfenceAdmin'] = {
 			return m1 + ' ' + t1;
 		}
 	},
+	calcRangeTotal: function(){
+		var range = jQuery('#ipRange').val();
+		if(! range){ return; }
+		range = range.replace(/ /g, '');
+		if(range && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s*\-\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(range)){
+			var ips = range.split('-');
+			var total = this.inet_aton(ips[1]) - this.inet_aton(ips[0]) + 1;
+			if(total < 1){
+				jQuery('#wfShowRangeTotal').html("<span style=\"color: #F00;\">Invalid. Starting IP is greater than ending IP.</span>");
+				return;
+			}
+			jQuery('#wfShowRangeTotal').html("<span style=\"color: #0A0;\">Valid: " + total + " addresses in range.</span>");
+		} else {
+			jQuery('#wfShowRangeTotal').empty();
+		}
+	},
+	loadBlockRanges: function(){
+		var self = this;
+		this.ajax('wordfence_loadBlockRanges', {}, function(res){ self.completeLoadBlockRanges(res); });
+			
+	},
+	completeLoadBlockRanges: function(res){
+		jQuery('#currentBlocks').empty();
+		if(res.results && res.results.length > 0){
+			jQuery('#wfBlockedRangesTmpl').tmpl(res).prependTo('#currentBlocks');
+		} else {
+			jQuery('#currentBlocks').html("You have not blocked any IP ranges or other patterns yet.");
+		}
+	},
+	whois: function(val){
+		val = val.replace(' ','');
+		if( ! /\w+/.test(val)){
+			this.colorbox('300px', "Enter a valid IP or domain", "Please enter a valid IP address or domain name for your whois lookup.");
+			return;
+		}
+		var self = this;
+		jQuery('#whoisbutton').attr('disabled', 'disabled');
+		jQuery('#whoisbutton').attr('value', 'Loading...');
+		this.ajax('wordfence_whois', {
+			val: val
+			}, function(res){
+				jQuery('#whoisbutton').removeAttr('disabled');
+				jQuery('#whoisbutton').attr('value', 'Look up IP or Domain');
+				if(res.ok){
+					self.completeWhois(res);
+				}
+			});
+	},
+	completeWhois: function(res){
+		if(res.ok && res.result && res.result.rawdata && res.result.rawdata.length > 0){
+			var rawhtml = "";
+			for(var i = 0; i < res.result.rawdata.length; i++){
+				res.result.rawdata[i] = res.result.rawdata[i].replace(/([^\s\t\r\n:;]+@[^\s\t\r\n:;\.]+\.[^\s\t\r\n:;]+)/, "<a href=\"mailto:$1\">$1<\/a>"); 
+				res.result.rawdata[i] = res.result.rawdata[i].replace(/(https?:\/\/[^\/]+[^\s\r\n\t]+)/, "<a target=\"_blank\" href=\"$1\">$1<\/a>"); 
+				var redStyle = "";
+				if(this.getQueryParam('wfnetworkblock')){
+					redStyle = " style=\"color: #F00;\"";
+				}
+				var self = this;
+				function wfm21(str, ipRange, offset, totalStr){
+					var ips = ipRange.split(/\s*\-\s*/);
+					var ip1num = self.inet_aton(ips[0]);
+					var ip2num = self.inet_aton(ips[1]);
+					var totalIPs = ip2num - ip1num + 1;
+					return "<a href=\"admin.php?page=WordfenceRangeBlocking&wfBlockRange=" + ipRange + "\"" + redStyle + ">" + ipRange + " [<strong>" + totalIPs + "</strong> addresses in this network. Click to block this network]<\/a>";
+				}
+
+				res.result.rawdata[i] = res.result.rawdata[i].replace(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/, wfm21); 
+				rawhtml += res.result.rawdata[i] + "<br />";
+			}
+			jQuery('#wfrawhtml').html(rawhtml);
+		} else {
+			jQuery('#wfrawhtml').html('<span style="color: #F00;">Sorry, but no data for that IP or domain was found.</span>');
+		}
+	},
+	blockIPUARange: function(ipRange, uaRange, reason){
+		if(! /\w+/.test(reason)){
+			this.colorbox('300px', "Please specify a reason", "You forgot to include a reason you're blocking this IP range. We ask you to include this for your own record keeping.");
+			return;
+		}
+		ipRange = ipRange.replace(/ /g, '');
+		if(ipRange){
+			if(! /^\d+\.\d+\.\d+\.\d+\-\d+\.\d+\.\d+\.\d+$/.test(ipRange)){
+				this.colorbox('300px', 'Specify a valid IP range', "Please specify a valid IP address range in the form of \"1.2.3.4 - 1.2.3.5\" without quotes. Make sure the dash between the IP addresses in a normal dash (a minus sign on your keyboard) and not another character that looks like a dash.");
+				return;
+			}
+		}
+		if( ! (/\w+/.test(ipRange) || /\w+/.test(uaRange))){
+			this.colorbox('300px', 'Specify an IP range or Browser pattern', "Please specify either an IP address range or a web browser pattern to match.");
+			return;
+		}
+		var self = this;
+		this.ajax('wordfence_blockIPUARange', {
+			ipRange: ipRange,
+			uaRange: uaRange,
+			reason: reason
+			}, function(res){
+				if(res.ok){
+					self.loadBlockRanges();
+					return;
+				}
+			});
+	},
+	unblockRange: function(id){
+		var self = this;
+		this.ajax('wordfence_unblockRange', {
+			id: id
+			}, function(res){
+				self.loadBlockRanges();
+			});
+	},
 	blockIP: function(IP, reason){
 		var self = this;
 		this.ajax('wordfence_blockIP', {
@@ -861,11 +995,12 @@ window['wordfenceAdmin'] = {
 				}
 			});
 	},
-	blockIPTwo: function(IP, reason){
+	blockIPTwo: function(IP, reason, perm){
 		var self = this;
 		this.ajax('wordfence_blockIP', {
 			IP: IP,
-			reason: reason
+			reason: reason,
+			perm: (perm ? '1' : '0')
 			}, function(res){ 
 				if(res.errorMsg){
 					return;
@@ -884,7 +1019,17 @@ window['wordfenceAdmin'] = {
 		var self = this;
 		this.ajax('wordfence_unblockIP', {
 			IP: IP
-			}, function(res){ self.staticTabChanged(); });
+			}, function(res){ 
+				self.reloadActivities(); 
+				});
+	},
+	unblockIPTwo: function(IP){
+		var self = this;
+		this.ajax('wordfence_unblockIP', {
+			IP: IP
+			}, function(res){ 
+				self.staticTabChanged(); 
+				});
 	},
 	permBlockIP: function(IP){
 		var self = this;
@@ -932,7 +1077,7 @@ window['wordfenceAdmin'] = {
 			}
 		}
 		for(var k in WFSLevels[level].otherParams){
-			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem)$/.test(k)){
+			if(! /^(?:apiKey|securityLevel|alertEmails|liveTraf_ignoreUsers|liveTraf_ignoreIPs|liveTraf_ignoreUA|liveTraf_hitsMaxSize|maxMem|maxExecutionTime|actUpdateInterval)$/.test(k)){
 				jQuery('#' + k).val(WFSLevels[level].otherParams[k]);
 			}
 		}
@@ -1121,8 +1266,30 @@ window['wordfenceAdmin'] = {
 				jQuery('.wfAjax24').hide();
 				self.pulse('.wfSaveMsg');
 				});
+	},
+	getQueryParam: function(name){
+		name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+		var regexS = "[\\?&]" + name + "=([^&#]*)";
+		var regex = new RegExp(regexS);
+		var results = regex.exec(window.location.search);
+		if(results == null){
+			return "";
+		} else {
+			return decodeURIComponent(results[1].replace(/\+/g, " "));
+		}
+	},
+	inet_aton: function(dot) {
+		var d = dot.split('.');
+		return ((((((+d[0])*256)+(+d[1]))*256)+(+d[2]))*256)+(+d[3]);
+	},
+	inet_ntoa: function(num){
+		var d = num % 256;
+		for(var i = 3; i > 0; i--) { 
+			num = Math.floor(num/256);
+			d = num%256 + '.' + d;
+		}
+		return d;
 	}
-
 };
 window['WFAD'] = window['wordfenceAdmin'];
 }

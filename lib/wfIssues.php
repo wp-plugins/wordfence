@@ -53,7 +53,7 @@ class wfIssues {
 			'tmplData' => $templateData
 			);
 			
-		$this->getDB()->query("insert into " . $this->issuesTable . " (time, status, type, severity, ignoreP, ignoreC, shortMsg, longMsg, data) values (unix_timestamp(), '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s')",
+		$this->getDB()->queryWrite("insert into " . $this->issuesTable . " (time, status, type, severity, ignoreP, ignoreC, shortMsg, longMsg, data) values (unix_timestamp(), '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s')",
 			'new',
 			$type,
 			$severity,
@@ -66,13 +66,13 @@ class wfIssues {
 		return true;
 	}
 	public function deleteIgnored(){
-		$this->getDB()->query("delete from " . $this->issuesTable . " where status='ignoreP' or status='ignoreC'");
+		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where status='ignoreP' or status='ignoreC'");
 	}
 	public function deleteNew(){
-		$this->getDB()->query("delete from " . $this->issuesTable . " where status='new'");
+		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where status='new'");
 	}
 	public function ignoreAllNew(){
-		$this->getDB()->query("update " . $this->issuesTable . " set status='ignoreC' where status='new'");
+		$this->getDB()->queryWrite("update " . $this->issuesTable . " set status='ignoreC' where status='new'");
 	}
 	public function emailNewIssues(){
 		$level = wfConfig::getAlertLevel();
@@ -124,14 +124,14 @@ class wfIssues {
 		wp_mail(implode(',', $emails), $subject, $content);
 	}
 	public function deleteIssue($id){ 
-		$this->getDB()->query("delete from " . $this->issuesTable . " where id=%d", $id);
+		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
 	}
 	public function updateIssue($id, $status){ //ignoreC, ignoreP, delete or new
 		$currentStatus = $this->getDB()->querySingle("select status from " . $this->issuesTable . " where id=%d", $id);
 		if($status == 'delete'){
-			$this->getDB()->query("delete from " . $this->issuesTable . " where id=%d", $id);
+			$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
 		} else if($status == 'ignoreC' || $status == 'ignoreP' || $status == 'new'){
-			$this->getDB()->query("update " . $this->issuesTable . " set status='%s' where id=%d", $status, $id);
+			$this->getDB()->queryWrite("update " . $this->issuesTable . " set status='%s' where id=%d", $status, $id);
 		}
 	}
 	public function getIssueByID($id){
@@ -145,8 +145,8 @@ class wfIssues {
 			'new' => array(),
 			'ignored' => array()
 			);
-		$q1 = $this->getDB()->query("select * from " . $this->issuesTable . " order by time desc");
-		while($i = mysql_fetch_assoc($q1)){
+		$q1 = $this->getDB()->querySelect("select * from " . $this->issuesTable . " order by time desc");
+		foreach($q1 as $i){
 			$i['data'] = unserialize($i['data']);
 			$i['timeAgo'] = wfUtils::makeTimeAgo(time() - $i['time']);
 			if($i['status'] == 'new'){
@@ -217,16 +217,16 @@ class wfIssues {
 	private function updateSummaryItems(){
 		global $wpdb;
 		$dat = array();
-		$users = $wpdb->get_col($wpdb->prepare("SELECT $wpdb->users.ID FROM $wpdb->users"));
+		$users = $wpdb->get_col("SELECT $wpdb->users.ID FROM $wpdb->users");
 		$dat['totalUsers'] = sizeof($users);
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->posts where post_type='page' and post_status NOT IN ('auto-draft')")); $dat['totalPages'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->posts where post_type='post' and post_status NOT IN ('auto-draft')")); $dat['totalPosts'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->comments")); $dat['totalComments'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("SELECT count(*) as cnt FROM $wpdb->term_taxonomy where taxonomy='category'")); $dat['totalCategories'] = $res1['0'];
-		$res1 = $wpdb->get_col($wpdb->prepare("show tables")); $dat['totalTables'] = sizeof($res1);
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->posts where post_type='page' and post_status NOT IN ('auto-draft')"); $dat['totalPages'] = $res1['0'];
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->posts where post_type='post' and post_status NOT IN ('auto-draft')"); $dat['totalPosts'] = $res1['0'];
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->comments"); $dat['totalComments'] = $res1['0'];
+		$res1 = $wpdb->get_col("SELECT count(*) as cnt FROM $wpdb->term_taxonomy where taxonomy='category'"); $dat['totalCategories'] = $res1['0'];
+		$res1 = $wpdb->get_col("show tables"); $dat['totalTables'] = sizeof($res1);
 		$totalRows = 0;
 		foreach($res1 as $table){
-			$res2 = $wpdb->get_col($wpdb->prepare("select count(*) from $table"));
+			$res2 = $wpdb->get_col("select count(*) from $table");
 			if(isset($res2[0]) ){
 				$totalRows += $res2[0];
 			}

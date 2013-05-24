@@ -149,35 +149,45 @@ class wfSchema {
 	knownFile tinyint UNSIGNED NOT NULL,
 	oldMD5 binary(16) NOT NULL,
 	newMD5 binary(16) NOT NULL
+) default charset=utf8",
+'wfBlocksAdv' => "(
+	id int UNSIGNED NOT NULL auto_increment PRIMARY KEY,
+	blockType char(2) NOT NULL,
+	blockString varchar(255) NOT NULL,
+	ctime int UNSIGNED NOT NULL,
+	reason varchar(255) NOT NULL,
+	totalBlocked int UNSIGNED default 0,
+	lastBlocked int UNSIGNED default 0
 ) default charset=utf8"
 );
 	private $db = false;
 	private $prefix = 'wp_';
 	public function __construct($dbhost = false, $dbuser = false, $dbpassword = false, $dbname = false){
+		/*
 		if($dbhost){ //for testing
 			$this->db = new wfDB(false, $dbhost, $dbuser, $dbpassword, $dbname);
 			$this->prefix = 'wp_';
 		} else {
-			global $wpdb;
-			$this->db = new wfDB();
-			$this->prefix = $wpdb->base_prefix;
-		}
+		*/
+		global $wpdb;
+		$this->db = new wfDB();
+		$this->prefix = $wpdb->base_prefix;
 	}
 	public function dropAll(){
 		foreach($this->tables as $table => $def){
-			$this->db->query("drop table if exists " . $this->prefix . $table);
+			$this->db->queryWrite("drop table if exists " . $this->prefix . $table);
 		}
 	}
 	public function createAll(){
 		foreach($this->tables as $table => $def){
-			$this->db->query("create table IF NOT EXISTS " . $this->prefix . $table . " " . $def);
+			$this->db->queryWrite("create table IF NOT EXISTS " . $this->prefix . $table . " " . $def);
 		}
 	}
 	public function create($table){
-		$this->db->query("create table IF NOT EXISTS " . $this->prefix . $table . " " . $this->tables[$table]);
+		$this->db->queryWrite("create table IF NOT EXISTS " . $this->prefix . $table . " " . $this->tables[$table]);
 	}
 	public function drop($table){
-		$this->db->query("drop table if exists " . $this->prefix . $table);
+		$this->db->queryWrite("drop table if exists " . $this->prefix . $table);
 	}
 }
 ?>

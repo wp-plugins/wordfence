@@ -40,7 +40,10 @@ div.wordfenceLive p {
 	margin: 7px 5px 0 0;
 	float: left;
 }
-.wordfence-lock-icon {
+#wfHeading {
+	white-space: nowrap;
+}
+div.wordfence-lock-icon {
 	background-image: url(../images/wordfence-logo-32x32.png);
 }
 
