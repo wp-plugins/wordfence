@@ -4,7 +4,6 @@ require_once('wordfenceClass.php');
 class wfAPI {
 	public $lastHTTPStatus = '';
 	public $lastCurlErrorNo = '';
-	private $curlDataWritten = 0;
 	private $curlContent = 0;
 	private $APIKey = '';
 	private $wordpressVersion = '';
@@ -37,11 +36,7 @@ class wfAPI {
 	}
 	public function curlWrite($h, $d){
 		$this->curlContent .= $d;
-		if($this->curlDataWritten > 10000000){ //10 megs
-			return 0;
-		} else {
-			return strlen($d);
-		}
+		return strlen($d);
 	}
 	protected function getURL($url, $postParams = array()){
 		if(function_exists('curl_init')){
@@ -57,8 +52,9 @@ class wfAPI {
 			curl_setopt ($curl, CURLOPT_WRITEFUNCTION, array($this, 'curlWrite'));
 			curl_setopt($curl, CURLOPT_POST, true);
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $postParams);
-			
+			wordfence::status(4, 'info', "CURL fetching URL: " . $url);
 			$curlResult = curl_exec($curl);
+
 			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 			$this->lastCurlErrorNo = curl_errno($curl);
 			if($httpStatus == 200){
@@ -67,9 +63,10 @@ class wfAPI {
 			} else {
 				$cerror = curl_error($curl);
 				curl_close($curl);
-				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus]" . ($cerror ? (' and the error from CURL was ' . $cerror) : ''));
+				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus] and the curl error number was [" . $this->lastCurlErrorNo . "] " . ($cerror ? (' and the error from CURL was: ' . $cerror) : ''));
 			}
 		} else {
+			wordfence::status(4, 'info', "Fetching URL with file_get: " . $url);
 			$data = $this->fileGet($url, $postParams);
 			if($data === false){
 				$err = error_get_last();
@@ -122,6 +119,7 @@ class wfAPI {
 				curl_setopt($curl, CURLOPT_POSTFIELDS, array());
 			}                               
 			$data = curl_exec($curl);       
+
 			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 			if($httpStatus != 200){
 				$cError = curl_error($curl);
@@ -155,7 +153,12 @@ class wfAPI {
 	public function makeAPIQueryString(){
 		$siteurl = '';
 		if(function_exists('get_bloginfo')){
-			$siteurl = get_bloginfo('siteurl');
+			if(is_multisite()){
+				$siteurl = network_home_url();
+				$siteurl = rtrim($siteurl, '/'); //Because previously we used get_bloginfo and it returns http://example.com without a '/' char.
+			} else {
+				$siteurl = home_url();
+			}
 		}
 		return self::buildQuery(array(
 			'v' => $this->wordpressVersion, 
