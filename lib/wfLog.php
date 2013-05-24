@@ -264,7 +264,8 @@ class wfLog {
 		return $results;
 	}
 	public function getLockedOutIPs(){
-		$results = $this->getDB()->querySelect("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->lockOutTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", wfConfig::get('loginSec_lockoutMins'), wfConfig::get('loginSec_lockoutMins'));
+		$lockoutSecs = wfConfig::get('loginSec_lockoutMins') * 60;
+		$results = $this->getDB()->querySelect("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor from " . $this->lockOutTable . " where blockedTime + %s > unix_timestamp() order by blockedTime desc", $lockoutSecs, $lockoutSecs);
 		foreach($results as &$elem){
 			$elem['lastAttemptAgo'] = $elem['lastAttempt'] ? wfUtils::makeTimeAgo($elem['lastAttemptAgo']) : '';
 			$elem['blockedForAgo'] = wfUtils::makeTimeAgo($elem['blockedFor']);
