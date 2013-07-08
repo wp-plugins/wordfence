@@ -156,6 +156,7 @@ or a theme, because often these have been updated to fix a security hole.
 == Changelog ==
 
 = 3.7.3 =
+* Fixes from Juliette R. F. Remove warnings for unset variables. Fix options 'save' spinner spinning infinitely on some platforms. Removed redundant error handling code. 
 * Added ability to downgrade a paid license to free.
 
 = 3.7.2 =

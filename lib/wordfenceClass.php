@@ -338,6 +338,7 @@ class wordfence {
 		}
 		$returnArr['nonce'] = wp_create_nonce('wp-ajax');
 		die(json_encode($returnArr));
+		exit;
 	}
 	public static function lostPasswordPost(){
 		$IP = wfUtils::getIP();
@@ -905,12 +906,7 @@ class wordfence {
 				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . $e->getMessage());
 			}
 		}
-		//Clears next scan if scans are disabled. Schedules next scan if enabled.
-		if($err){
-			return array('errorMsg' => $err);
-		} else {
-			return array('ok' => 1, 'reload' => $reload, 'paidKeyMsg' => $paidKeyMsg );
-		}
+		return array('ok' => 1, 'reload' => $reload, 'paidKeyMsg' => $paidKeyMsg );
 	}
 	public static function ajax_clearAllBlocked_callback(){
 		$op = $_POST['op'];
@@ -1368,7 +1364,7 @@ class wordfence {
 	}
 	public static function wfFunc_diff(){
 		$result = self::getWPFileContent($_GET['file'], $_GET['cType'], $_GET['cName'], $_GET['cVersion']);
-		if($result['errorMsg']){
+		if( isset( $result['errorMsg'] ) && $result['errorMsg']){
 			echo $result['errorMsg'];
 			exit(0);
 		} else if(! $result['fileContent']){

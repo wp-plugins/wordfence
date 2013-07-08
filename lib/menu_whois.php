@@ -24,7 +24,7 @@ if(! function_exists('fsockopen')){
 			<input type="text" name="whois" id="wfwhois" value="" size="40" maxlength="255" onkeydown="if(event.keyCode == 13){ WFAD.whois(jQuery('#wfwhois').val()); }" />&nbsp;<input type="button" name="whoisbutton" id="whoisbutton" class="button-primary" value="Look up IP or Domain" onclick="WFAD.whois(jQuery('#wfwhois').val());" />
 
 		</p>
-		<?php if($_GET['wfnetworkblock']){ ?>
+		<?php if( isset( $_GET['wfnetworkblock'] ) && $_GET['wfnetworkblock']){ ?>
 		<h2>How to block a network</h2>
 		<p style="width: 600px;">
 			You've chosen to block the network that <span style="color: #F00;"><?php echo $_GET['whoisval']; ?></span> is part of.
@@ -50,7 +50,7 @@ if(! function_exists('fsockopen')){
 </div>
 </script>
 <script type="text/javascript">
-var whoisval = "<?php echo $_GET['whoisval']; ?>";
+var whoisval = "<?php if( isset( $_GET['whoisval'] ) ) { echo $_GET['whoisval']; } ?>";
 if(whoisval){
 	jQuery(function(){
 		jQuery('#wfwhois').val(whoisval);

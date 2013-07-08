@@ -12,7 +12,7 @@ class wfScan {
 		if(! wordfence::wfSchemaExists()){
 			self::errorExit("Looks like the Wordfence database tables have been deleted. You can fix this by de-activating and re-activating the Wordfence plugin from your Plugins menu.");
 		}
-		if($_GET['test'] == '1'){
+		if( isset( $_GET['test'] ) && $_GET['test'] == '1'){
 			echo "WFCRONTESTOK:" . wfConfig::get('cronTestID');
 			self::status(4, 'info', "Cron test received and message printed");
 			exit();
