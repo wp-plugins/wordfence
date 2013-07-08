@@ -742,6 +742,21 @@ class wordfence {
 		wfConfig::set('tourClosed', 0);
 		return array('ok' => 1);
 	}
+	public static function ajax_downgradeLicense_callback(){
+		$api = new wfAPI('', wfUtils::getWPVersion());
+		try {
+			$keyData = $api->call('get_anon_api_key');
+			if($keyData['ok'] && $keyData['apiKey']){
+				wfConfig::set('apiKey', $keyData['apiKey']);
+				wfConfig::set('isPaid', 0);
+			} else {
+				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
+			}
+		} catch(Exception $e){
+			return array('errorMsg' => "Could not fetch free API key from Wordfence: " . $e->getMessage());
+		}
+		return array('ok' => 1);
+	}
 	public static function ajax_tourClosed_callback(){
 		wfConfig::set('tourClosed', 1);
 		return array('ok' => 1);
@@ -1395,7 +1410,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain') as $func){
+		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 

@@ -155,6 +155,9 @@ or a theme, because often these have been updated to fix a security hole.
 
 == Changelog ==
 
+= 3.7.3 =
+* Added ability to downgrade a paid license to free.
+
 = 3.7.2 =
 * Fixed issue that caused locked out IP's to not appear, or to appear with incorrect "locked out until" time. 
 

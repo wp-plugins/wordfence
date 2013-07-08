@@ -51,7 +51,7 @@
  * @version 0.5.1
  *
  */
-class idna_convert
+class wordfence_idna_convert
 {
     /**
      * Holds all relevant mapping tables, loaded from a seperate file on construct
@@ -942,7 +942,7 @@ class idna_convert
 * Adapter class for aligning the API of idna_convert with that of Net_IDNA
 * @author  Matthias Sommerfeld <mso@phlylabs.de>
 */
-class Net_IDNA_php4 extends idna_convert
+class Net_IDNA_php4 extends wordfence_idna_convert
 {
     /**
      * Sets a new option value. Available options and values:

@@ -82,7 +82,7 @@ class Whois extends WhoisClient
 
 		$query = trim($query);
 
-		$IDN = new idna_convert();
+		$IDN = new wordfence_idna_convert();
 
 		if ($is_utf)
 			$query = $IDN->encode($query);
