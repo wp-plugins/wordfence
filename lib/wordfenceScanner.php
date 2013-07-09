@@ -36,7 +36,9 @@ class wordfenceScanner {
 	}
 	private function setupSigs(){
 		$this->api = new wfAPI($this->apiKey, $this->wordpressVersion);
-		$sigData = $this->api->call('get_patterns', array(), array());	
+		$sigData = $this->api->call('get_patterns', array(), array());
+		//For testing, comment out above two, include server sig file and get local sigs
+		//$sigData = wfSigs::getSigData();
 		if(! (is_array($sigData) && isset($sigData['sigPattern'])) ){
 			throw new Exception("Wordfence could not get the attack signature patterns from the scanning server.");
 		}
@@ -50,17 +52,18 @@ class wordfenceScanner {
 			$this->lastStatusTime = microtime(true);
 		}
 		$db = new wfDB();
-		$keepGoing = true;
-		$limitOffset = 0;
-		$queryChunkSize = 1000;
-		while($keepGoing){
-			$keepGoing = false;
-			$res1 = $db->querySelect("select filename, filenameMD5, hex(newMD5) as newMD5 from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0 limit $limitOffset , $queryChunkSize");
-			if(sizeof($res1) > 0){
-				$keepGoing = true;
-				$limitOffset += $queryChunkSize;
+		$lastCount = 'whatever';
+		while(true){
+			$thisCount = $db->querySingle("select count(*) from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0");
+			if($thisCount == $lastCount){
+				//count should always be decreasing. If not, we're in an infinite loop so lets catch it early
+				break;
 			}
-
+			$lastCount = $thisCount;
+			$res1 = $db->querySelect("select filename, filenameMD5, hex(newMD5) as newMD5 from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0 limit 500");
+			if(sizeof($res1) < 1){
+				break;
+			}
 			foreach($res1 as $rec1){
 				$db->queryWrite("update " . $db->prefix() . "wfFileMods set oldMD5 = newMD5 where filenameMD5='%s'", $rec1['filenameMD5']); //A way to mark as scanned so that if we come back from a sleep we don't rescan this one.
 				$file = $rec1['filename'];
@@ -134,8 +137,8 @@ class wordfenceScanner {
 								'severity' => 1,
 								'ignoreP' => $this->path . $file,
 								'ignoreC' => $fileSum,
-								'shortMsg' => "This file appears to be an attack shell",
-								'longMsg' => "This file appears to be an executable shell that allows hackers entry to your site via a backdoor. If you know about this file you can choose to ignore it to exclude it from future scans. The text we found in this file that matches a known malicious file is: <strong style=\"color: #F00;\">\"" . $matches[1] . "\"</strong>.",
+								'shortMsg' => "This file appears to be malicious",
+								'longMsg' => "This file appears to be installed by a hacker to perform malicious activity. If you know about this file you can choose to ignore it to exclude it from future scans. The text we found in this file that matches a known malicious file is: <strong style=\"color: #F00;\">\"" . $matches[1] . "\"</strong>.",
 								'data' => array(
 									'file' => $file,
 									'canDiff' => false,

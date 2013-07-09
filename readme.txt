@@ -156,6 +156,8 @@ or a theme, because often these have been updated to fix a security hole.
 == Changelog ==
 
 = 3.7.3 =
+* Added new backdoor/malware signatures including detection for spamming scripts, youtube spam scripts and a new attack shell.
+* Fixed issue: Under some conditions, files not part of core or a known theme or plugin would be excluded from a scan. 
 * Fixes from Juliette R. F. Remove warnings for unset variables. Fix options 'save' spinner spinning infinitely on some platforms. Removed redundant error handling code. 
 * Added ability to downgrade a paid license to free.
 
