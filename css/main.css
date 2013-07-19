@@ -295,8 +295,8 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 #paidCover {
 }
 .paidInnerMsg {
-	width: 400px;
-	margin: 200px auto 0 auto;
+	width: 500px;
+	margin: 150px auto 0 auto;
 	color: #000;
 	font-size: 18px;
 	font-family: Georgia, Times;

@@ -17,6 +17,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<table class="wfConfigForm">
 	<tr><td colspan="2"><h2>License</h2></td></tr>
 
+	<tr><th>Your Wordfence API Key:</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="80" /></td></tr>
 	<tr><th>Key type currently active:</th><td>
 		<?php if(wfConfig::get('isPaid')){ ?>
 		The currently active API Key is a Premium Key. <span style="font-weight: bold; color: #0A0;">Premium scanning enabled!</span>
@@ -41,8 +42,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><td colspan="2">&nbsp;</td></tr>
 
 	<tr><th>Where to email alerts:</th><td><input type="text" id="alertEmails" name="alertEmails" value="<?php $w->f('alertEmails'); ?>" size="50" />&nbsp;<span class="wfTipText">Separate multiple emails with commas</span></td></tr>
-	<tr><th>Your Wordfence API Key:</th><td><input type="text" id="apiKey" name="apiKey" value="<?php $w->f('apiKey'); ?>" size="50" />
-		</td></tr>
 	<tr><th colspan="2">&nbsp;</th></tr>
 	<tr><th>Security Level:</th><td>
 		<select id="securityLevel" name="securityLevel" onchange="WFAD.changeSecurityLevel(); return true;">
@@ -156,6 +155,12 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<div class="wfMarker" id="wfMarkerLoginSecurity"></div>
 		<h3 class="wfConfigHeading">Login Security Options</h3>
 		</td></tr>
+	<tr><th>Enforce strong passwords?</th><td>
+		<select class="wfConfigElem" id="loginSec_strongPasswds" name="loginSec_strongPasswds">
+			<option value="">Do not force users to use strong passwords</option>
+			<option value="pubs"<?php $w->sel('loginSec_strongPasswds', 'pubs'); ?>>Force admins and publishers to use strong passwords (recommended)</option>
+			<option value="all"<?php $w->sel('loginSec_strongPasswds', 'all'); ?>>Force all members to use strong passwords</option>
+		</select>
 	<tr><th>Lock out after how many login failures</th><td>
 		<select id="loginSec_maxFailures" class="wfConfigElem" name="loginSec_maxFailures">
 			<option value="1"<?php $w->sel('loginSec_maxFailures', '1'); ?>>1</option>

@@ -1,24 +1,26 @@
 === Wordfence Security ===
 Contributors: mmaunder 
-Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure
+Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor
 Requires at least: 3.3.1
 Tested up to: 3.5.1
-Stable tag: 3.7.2
+Stable tag: 3.8.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
 == Description ==
 
-Wordfence Security is a free enterprise class security plugin that includes a firewall, anti-virus scanning, malicious URL scanning and live traffic including crawlers. Wordfence is the only WordPress security plugin that can verify and repair your core, theme and plugin files, even if you don't have backups.
+Wordfence Security is a free enterprise class security plugin that includes a firewall, anti-virus scanning, cellphone sign-in (two factor authentication), malicious URL scanning and live traffic including crawlers. Wordfence is the only WordPress security plugin that can verify and repair your core, theme and plugin files, even if you don't have backups.
 
-Wordfence is now Multi-Site compatible. 
+Wordfence is now Multi-Site compatible and includes Cellphone Sign-in which permanently secures your website from brute force hacks. 
 
 [Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
-Wordfence is 100% free. We also offer a Premium API key that lets you block countries and schedule scans for specific times.
+Wordfence is 100% free. We also offer a Premium API key that gives you Cellphone Sign-in via SMS, lets you block countries and schedule scans for specific times.
 
 Wordfence:
 
+* Sign-in using your password and your cellphone. This is called Two Factor Authentication and is used by banks, government agencies and military world-wide. 
+* Enforce strong passwords among your administrators, publishers and users. 
 * Scans core files, themes and plugins against WordPress.org repository versions to check their integrity.
 * Includes a firewall to block common security threats like fake Googlebots, malicious scans from hackers and botnets.
 * Includes advanced IP and Domain WHOIS to report malicious IP's or networks and block entire networks using the firewall.
@@ -70,7 +72,7 @@ To install Wordfence on WordPress Multi-Site installations (support is currently
 
 == Frequently Asked Questions ==
 
-[Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
+[Visit our Website FAQ which is more comprehensive and updated frequently.](http://www.wordfence.com/docs/frequently-asked-questions/)
 
 = What does Wordfence Security do that other WordPress security plugins don't do? =
 
@@ -137,13 +139,6 @@ version of timthumb (which the creator of Wordfence wrote and donated to the tim
 caused the problem. However we do scan for old version of timthumb for good measure to make sure they don't 
 cause a security hole on your site. 
 
-= People keep telling me that WordPress itself has security problems. Is that true? =
-
-In general, no it's not. The WordPress team work very hard to keep the awesome software they have produced secure and in the
-rare cases when a security hole is found, they fix it very quickly. Most responsible plugin authors also fix security holes
-as soon as they are told about them. That's why Wordfence will warn you if you're running an old version of WordPress, a plugin
-or a theme, because often these have been updated to fix a security hole.
-
 
 == Screenshots ==
 
@@ -155,7 +150,9 @@ or a theme, because often these have been updated to fix a security hole.
 
 == Changelog ==
 
-= 3.7.3 =
+= 3.8.1 =
+* Added Cellphone Sign-in (Two Factor Authentication) for paid members. Stop brute-force attacks permanently! See new "Cellphone Sign-in" menu option.
+* Added ability to enforce strong passwords when accounts are created or users change their password. See Wordfence 'options' page under 'Login Security Options'. 
 * Added new backdoor/malware signatures including detection for spamming scripts, youtube spam scripts and a new attack shell.
 * Fixed issue: Under some conditions, files not part of core or a known theme or plugin would be excluded from a scan. 
 * Fixes from Juliette R. F. Remove warnings for unset variables. Fix options 'save' spinner spinning infinitely on some platforms. Removed redundant error handling code. 
