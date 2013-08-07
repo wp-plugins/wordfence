@@ -662,8 +662,8 @@ class wfLog {
 				$this->blockIP($IP, $reason);
 				$secsToGo = wfConfig::get('blockedTime');
 			} else if($action == 'throttle'){
-				$IP = wfUtils::inet_aton(wfUtils::getIP());
-				$this->getDB()->queryWrite("insert into " . $this->throttleTable . " (IP, startTime, endTime, timesThrottled, lastReason) values (%s, unix_timestamp(), unix_timestamp(), 1, '%s') ON DUPLICATE KEY UPDATE endTime=unix_timestamp(), timesThrottled = timesThrottled + 1, lastReason='%s'", $IP, $reason, $reason);
+				$IP = wfUtils::getIP();
+				$this->getDB()->queryWrite("insert into " . $this->throttleTable . " (IP, startTime, endTime, timesThrottled, lastReason) values (%s, unix_timestamp(), unix_timestamp(), 1, '%s') ON DUPLICATE KEY UPDATE endTime=unix_timestamp(), timesThrottled = timesThrottled + 1, lastReason='%s'", wfUtils::inet_aton($IP), $reason, $reason);
 				wordfence::status(2, 'info', "Throttling IP $IP. $reason");
 				$secsToGo = 60;
 			}

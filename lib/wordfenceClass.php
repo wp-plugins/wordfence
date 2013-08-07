@@ -337,7 +337,7 @@ class wordfence {
 			error_log("Function $func did not return an array and did not generate an error.");
 			$returnArr = array();
 		}
-		if(isset($returnARr['nonce'])){
+		if(isset($returnArr['nonce'])){
 			error_log("Wordfence ajax function return an array with 'nonce' already set. This could be a bug.");
 		}
 		$returnArr['nonce'] = wp_create_nonce('wp-ajax');

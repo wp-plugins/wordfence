@@ -392,7 +392,7 @@ class wfUtils {
 		}
 		return $IPLocs;
 	}
-	public function reverseLookup($IP){
+	public static function reverseLookup($IP){
 		$db = new wfDB();
 		global $wpdb;
 		$reverseTable = $wpdb->base_prefix . 'wfReverseCache';

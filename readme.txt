@@ -150,6 +150,9 @@ cause a security hole on your site.
 
 == Changelog ==
 
+= 3.8.2 =
+* Fixed bug where we called reverseLookup in wfUtils statically and it's a non-static method. Thanks Juliette. 
+
 = 3.8.1 =
 * Added Cellphone Sign-in (Two Factor Authentication) for paid members. Stop brute-force attacks permanently! See new "Cellphone Sign-in" menu option.
 * Added ability to enforce strong passwords when accounts are created or users change their password. See Wordfence 'options' page under 'Login Security Options'. 
