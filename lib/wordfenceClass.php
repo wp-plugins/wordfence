@@ -376,7 +376,7 @@ class wordfence {
 	}
 	function isStrongPasswd($passwd, $username ) {
 		$strength = 0; 
-		if(strlen( $passwd ) < 5)
+		if(strlen( trim( $passwd ) ) < 5)
 			return false;
 		if(strtolower( $passwd ) == strtolower( $username ) )
 			return false;
