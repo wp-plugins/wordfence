@@ -29,6 +29,7 @@ class wfConfig {
 				"scansEnabled_comments" => false,
 				"scansEnabled_passwds" => false,
 				"scansEnabled_diskSpace" => false,
+				"scansEnabled_options" => false,
 				"scansEnabled_dns" => false,
 				"scansEnabled_oldVersions" => false,
 				"firewallEnabled" => false,
@@ -37,6 +38,7 @@ class wfConfig {
 				"loginSecurityEnabled" => false,
 				"loginSec_lockInvalidUsers" => false,
 				"loginSec_maskLoginErrors" => false,
+				"loginSec_blockAdminReg" => false,
 				"other_hideWPVersion" => false,
 				"other_noAnonMemberComments" => false,
 				"other_scanComments" => false,
@@ -48,10 +50,11 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "", "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '', 'maxExecutionTime' => '', 'howGetIPs' => '', 'actUpdateInterval' => '',
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
 				"loginSec_lockoutMins" => "5",
+				'loginSec_strongPasswds' => '',
 				'loginSec_maxFailures' => "500",
 				'loginSec_maxForgotPasswd' => "500",
 				'maxGlobalRequests' => "DISABLED",
@@ -92,14 +95,16 @@ class wfConfig {
 				"scansEnabled_comments" => true,
 				"scansEnabled_passwds" => true,
 				"scansEnabled_diskSpace" => true,
+				"scansEnabled_options" => true,
 				"scansEnabled_dns" => true,
 				"scansEnabled_oldVersions" => true,
-				"firewallEnabled" => false,
+				"firewallEnabled" => true,
 				"blockFakeBots" => false,
 				"autoBlockScanners" => true,
 				"loginSecurityEnabled" => true,
 				"loginSec_lockInvalidUsers" => false,
 				"loginSec_maskLoginErrors" => true,
+				"loginSec_blockAdminReg" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
@@ -111,10 +116,11 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '', 'maxExecutionTime' => '', 'howGetIPs' => '', 'actUpdateInterval' => '',
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "5",
 				"loginSec_lockoutMins" => "5",
+				'loginSec_strongPasswds' => 'pubs',
 				'loginSec_maxFailures' => "50",
 				'loginSec_maxForgotPasswd' => "50",
 				'maxGlobalRequests' => "DISABLED",
@@ -155,14 +161,16 @@ class wfConfig {
 				"scansEnabled_comments" => true,
 				"scansEnabled_passwds" => true,
 				"scansEnabled_diskSpace" => true,
+				"scansEnabled_options" => true,
 				"scansEnabled_dns" => true,
 				"scansEnabled_oldVersions" => true,
-				"firewallEnabled" => false,
+				"firewallEnabled" => true,
 				"blockFakeBots" => false,
 				"autoBlockScanners" => true,
 				"loginSecurityEnabled" => true,
 				"loginSec_lockInvalidUsers" => false,
 				"loginSec_maskLoginErrors" => true,
+				"loginSec_blockAdminReg" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
@@ -174,10 +182,11 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '', 'maxExecutionTime' => '', 'howGetIPs' => '', 'actUpdateInterval' => '',
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "240",
 				"loginSec_lockoutMins" => "240",
+				'loginSec_strongPasswds' => 'pubs',
 				'loginSec_maxFailures' => "20",
 				'loginSec_maxForgotPasswd' => "20",
 				'maxGlobalRequests' => "DISABLED",
@@ -218,6 +227,7 @@ class wfConfig {
 				"scansEnabled_comments" => true,
 				"scansEnabled_passwds" => true,
 				"scansEnabled_diskSpace" => true,
+				"scansEnabled_options" => true,
 				"scansEnabled_dns" => true,
 				"scansEnabled_oldVersions" => true,
 				"firewallEnabled" => true,
@@ -226,6 +236,7 @@ class wfConfig {
 				"loginSecurityEnabled" => true,
 				"loginSec_lockInvalidUsers" => false,
 				"loginSec_maskLoginErrors" => true,
+				"loginSec_blockAdminReg" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
@@ -237,10 +248,11 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '', 'maxExecutionTime' => '', 'howGetIPs' => '', 'actUpdateInterval' => '',
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
 				"loginSec_lockoutMins" => "1440",
+				'loginSec_strongPasswds' => 'all',
 				'loginSec_maxFailures' => "10",
 				'loginSec_maxForgotPasswd' => "10",
 				'maxGlobalRequests' => "960",
@@ -281,6 +293,7 @@ class wfConfig {
 				"scansEnabled_comments" => true,
 				"scansEnabled_passwds" => true,
 				"scansEnabled_diskSpace" => true,
+				"scansEnabled_options" => true,
 				"scansEnabled_dns" => true,
 				"scansEnabled_oldVersions" => true,
 				"firewallEnabled" => true,
@@ -289,6 +302,7 @@ class wfConfig {
 				"loginSecurityEnabled" => true,
 				"loginSec_lockInvalidUsers" => true,
 				"loginSec_maskLoginErrors" => true,
+				"loginSec_blockAdminReg" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
 				"other_scanComments" => true,
@@ -300,10 +314,11 @@ class wfConfig {
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',
-				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '',
+				"alertEmails" => "", "liveTraf_ignoreUsers" => "", "liveTraf_ignoreIPs" => "", "liveTraf_ignoreUA" => "",  "apiKey" => "", "maxMem" => '256', 'whitelisted' => '', 'maxExecutionTime' => '', 'howGetIPs' => '', 'actUpdateInterval' => '',
 				"neverBlockBG" => "neverBlockVerified",
 				"loginSec_countFailMins" => "1440",
 				"loginSec_lockoutMins" => "1440",
+				'loginSec_strongPasswds' => 'all',
 				'loginSec_maxFailures' => "5",
 				'loginSec_maxForgotPasswd' => "5",
 				'maxGlobalRequests' => "960",
@@ -380,7 +395,7 @@ class wfConfig {
 			return;
 		}
 
-		self::getDB()->query("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
+		self::getDB()->queryWrite("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
 		self::$cache[$key] = $val;
 	}
 	public static function get($key, $default = false){
@@ -416,34 +431,24 @@ class wfConfig {
 				}
 			}
 		}
-		self::getDB()->reconnect();
-		//We do our own query handling here because we are dealing with some very big strings
-		$dbh = self::getDB()->getDBH();
-		$res = mysql_query("select val from " . self::table() . " where name='" . mysql_real_escape_string($key) . "'", $dbh);
-		$err = mysql_error();
-		if($err){
-			$trace=debug_backtrace(); 
-			$caller=array_shift($trace); 
-			wordfence::status(2, 'error', "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-			return false;
-		}
 
-		if(mysql_num_rows($res) > 0){
-			$row = mysql_fetch_row($res);
-			return unserialize($row[0]);
+		$res = self::getDB()->querySingle("select val from " . self::table() . " where name=%s", $key);
+		self::getDB()->flush(); //clear cache
+		if($res){
+			return unserialize($res);
 		}
 		return $default;
 	}
 	public static function set_ser($key, $val, $canUseDisk = false){
-		//We serialize some very big values so this is ultra-memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
+		//We serialize some very big values so this is memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
 		// because we would have to concatenate $val twice into the query which could also exceed max packet for the mysql server
-		self::getDB()->reconnect();
-		$dbh = self::getDB()->getDBH();
 		$serialized = serialize($val);
+		$val = '';
 		$tempFilename = 'wordfence_tmpfile_' . $key . '.php';
 		if((strlen($serialized) * 1.1) > self::getDB()->getMaxAllowedPacketBytes()){ //If it's greater than max_allowed_packet + 10% for escaping and SQL
 			if($canUseDisk){
-				$dir = self::getTempDir();					
+				$dir = self::getTempDir();
+				$potentialDirs = self::getPotentialTempDirs();
 				if($dir){
 					$fh = false;
 					$fullFile = $dir . $tempFilename;
@@ -452,7 +457,7 @@ class wfConfig {
 					if($fh){ 
 						wordfence::status(4, 'info', "Serialized data for $key is " . strlen($serialized) . " bytes and is greater than max_allowed packet so writing it to disk file: " . $fullFile);
 					} else {
-						wordfence::status(1, 'error', "Your database doesn't allow big packets so we have to use files to store temporary data and Wordfence can't find a place to write them. Either ask your admin to increase max_allowed_packet on your MySQL database, or make one of the following directories writable by your web server: " . implode(', ', $dirs));
+						wordfence::status(1, 'error', "Your database doesn't allow big packets so we have to use files to store temporary data and Wordfence can't find a place to write them. Either ask your admin to increase max_allowed_packet on your MySQL database, or make one of the following directories writable by your web server: " . implode(', ', $potentialDirs));
 						return false;
 					}
 					fwrite($fh, self::$tmpFileHeader);
@@ -460,7 +465,7 @@ class wfConfig {
 					fclose($fh);
 					return true;
 				} else {
-					wordfence::status(1, 'error', "Wordfence tried to save a variable with name '$key' and your database max_allowed_packet is set to be too small. We then tried to save it to disk, but you don't have a temporary directory that is writable. You can fix this by making the /wp-content/plugins/wordfence/tmp/ directory writable by your web server. Or by increasing your max_allowed_packet configuration variable in your mysql database.");
+					wordfence::status(1, 'error', "Your database doesn't allow big packets so we have to use files to store temporary data and Wordfence can't find a place to write them. Either ask your admin to increase max_allowed_packet on your MySQL database, or make one of the following directories writable by your web server: " . implode(', ', $potentialDirs));
 					return false;
 				}
 					
@@ -476,18 +481,12 @@ class wfConfig {
 			}
 			$exists = self::getDB()->querySingle("select name from " . self::table() . " where name='%s'", $key);
 			if($exists){
-				$res = mysql_query("update " . self::table() . " set val='" . mysql_real_escape_string($serialized) . "' where name='" . mysql_real_escape_string($key) . "'", $dbh);
+				self::getDB()->queryWrite("update " . self::table() . " set val=%s where name=%s", $serialized, $key);
 			} else {
-				$res = mysql_query("insert IGNORE into " . self::table() . " (name, val) values ('" . mysql_real_escape_string($key) . "', '" . mysql_real_escape_string($serialized) . "')", $dbh);
-			}
-			$err = mysql_error();
-			if($err){
-				$trace=debug_backtrace(); 
-				$caller=array_shift($trace); 
-				wordfence::status(2, 'error', "Wordfence DB error in " . $caller['file'] . " line " . $caller['line'] . ": $err");
-				return false;
+				self::getDB()->queryWrite("insert IGNORE into " . self::table() . " (name, val) values (%s, %s)", $key, $serialized);
 			}
 		}
+		self::getDB()->flush();
 		return true;
 	}
 	private static function deleteOldTempFile($filename){
@@ -497,7 +496,7 @@ class wfConfig {
 	}
 	private static function getTempDir(){
 		if(! self::$tmpDirCache){
-			$dirs = array(wfUtils::getPluginBaseDir() . 'wordfence/tmp/', sys_get_temp_dir(), ABSPATH . 'wp-content/uploads/');
+			$dirs = self::getPotentialTempDirs();
 			$finalDir = 'notmp';
 			wfUtils::errorsOff();
 			foreach($dirs as $dir){
@@ -520,6 +519,9 @@ class wfConfig {
 			return self::$tmpDirCache;
 		}
 	}
+	private static function getPotentialTempDirs() {
+		return array(wfUtils::getPluginBaseDir() . 'wordfence/tmp/', sys_get_temp_dir(), ABSPATH . 'wp-content/uploads/');
+	}
 	public static function f($key){
 		echo esc_attr(self::get($key));
 	}
@@ -534,8 +536,8 @@ class wfConfig {
 	}
 	public static function getArray(){
 		$ret = array();
-		$q = self::getDB()->query("select name, val from " . self::table());
-		while($row = mysql_fetch_assoc($q)){
+		$q = self::getDB()->querySelect("select name, val from " . self::table());
+		foreach($q as $row){
 			self::$cache[$row['name']] = $row['val'];
 		}
 		return self::$cache;
