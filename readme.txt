@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
 Tested up to: 3.6
-Stable tag: 3.8.2
+Stable tag: 3.8.3
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -150,7 +150,7 @@ cause a security hole on your site.
 
 == Changelog ==
 
-= 3.8.2 =
+= 3.8.3 =
 * Updated GeoIP database for country blocking security.
 * Fixed bug in Wordfence Security where we called reverseLookup in wfUtils statically and it's a non-static method. Thanks Juliette. 
 * Removed characters that are invalid in an IP address or domain from the Whois facility to improve security.
@@ -159,6 +159,7 @@ cause a security hole on your site.
 * Fixed issue that caused IP to output as integer in status msg. Not security related but display issue.
 * Declared Wordfence Security reverseLookup function as static to remove warning.
 * Fixed returnARr syntax error in Wordfence Security class.
+* Note, there is no Wordfence Security version 3.8.2.
 
 = 3.8.1 =
 * Added Cellphone Sign-in (Two Factor Authentication) for paid Wordfence Security members. Stop brute-force attacks permanently! See new "Cellphone Sign-in" menu option.
