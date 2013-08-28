@@ -1,26 +1,4 @@
 <?php
-/* Don't remove this line. WFSOURCEVISIBLE */
-define('WORDFENCE_VERSIONONLY_MODE', true); //So that we can include wordfence.php and get the version constant
-ignore_user_abort(true);
-$wordfence_wp_version = false;
-if ( !defined('ABSPATH') ) {
-	/** Set up WordPress environment */
-	if($_SERVER['SCRIPT_FILENAME']){
-		$wfBaseDir = preg_replace('/[^\/]+\/[^\/]+\/[^\/]+\/wfscan\.php$/', '', $_SERVER['SCRIPT_FILENAME']);
-		require_once($wfBaseDir . 'wp-load.php');
-		global $wp_version;
-		global $wordfence_wp_version;
-		require($wfBaseDir . 'wp-includes/version.php');
-		$wordfence_wp_version = $wp_version;
-	} else {
-		require_once('../../../wp-load.php');
-		require_once('../../../wp-includes/version.php');
-	}
-}
-require_once('wordfence.php');
-require_once('lib/wordfenceConstants.php');
-require_once('lib/wfScanEngine.php');
-
 class wfScan {
 	public static $debugMode = false;
 	public static $errorHandlingOn = true;
@@ -34,7 +12,7 @@ class wfScan {
 		if(! wordfence::wfSchemaExists()){
 			self::errorExit("Looks like the Wordfence database tables have been deleted. You can fix this by de-activating and re-activating the Wordfence plugin from your Plugins menu.");
 		}
-		if($_GET['test'] == '1'){
+		if( isset( $_GET['test'] ) && $_GET['test'] == '1'){
 			echo "WFCRONTESTOK:" . wfConfig::get('cronTestID');
 			self::status(4, 'info', "Cron test received and message printed");
 			exit();
@@ -43,7 +21,7 @@ class wfScan {
 		self::status(4, 'info', "Scan engine received request.");
 		self::status(4, 'info', "Checking cronkey");
 		if(! $_GET['cronKey']){ 
-			self::status(4, 'error', "Wordfence wfscan.php accessed directly, or WF did not receive a cronkey.");
+			self::status(4, 'error', "Wordfence scan script accessed directly, or WF did not receive a cronkey.");
 			echo "If you see this message it means Wordfence is working correctly. You should not access this URL directly. It is part of the Wordfence security plugin and is designed for internal use only.";
 			exit();
 		}
@@ -65,7 +43,6 @@ class wfScan {
 		}
 		/* --------- end cronkey check ---------- */
 
-		wfUtils::iniSet('max_execution_time', 1800); //30 mins
 		self::status(4, 'info', "Becoming admin for scan");
 		self::becomeAdmin();
 		self::status(4, 'info', "Done become admin");
@@ -217,5 +194,4 @@ class wfScan {
 		wordfence::status($level, $type, $msg);
 	}
 }
-wfScan::wfScanMain();
 ?>

@@ -20,7 +20,7 @@
 	}
 	echo '</tr><tr><th></th><td></td>';
 	for($hour = 0; $hour <= 23; $hour++){ 
-		$checked = ($sched[$dayIndex][$hour] ? 'checked' : '');
+		$checked = ( isset( $sched[$dayIndex] ) && $sched[$dayIndex][$hour] ? 'checked' : '');
 		echo '<td><input class="wfSchedCheckbox" type="checkbox" id="wfSchedDay_' . $dayIndex . '_' . $hour . '" ' . $checked . ' /></td>'; 
 	}
 	?>

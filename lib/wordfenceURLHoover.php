@@ -113,6 +113,7 @@ class wordfenceURLHoover {
 		if($this->useDB){
 			$sql = "insert into " . $this->table . " (owner, host, path, hostKey) values ";
 			while($elem = $this->hostsToAdd->shift()){
+				//This may be an issue for hyperDB or other abstraction layers, but leaving it for now.
 				$sql .= sprintf("('%s', '%s', '%s', '%s'),", 
 					mysql_real_escape_string($elem['owner']), 
 					mysql_real_escape_string($elem['host']), 
@@ -121,7 +122,7 @@ class wordfenceURLHoover {
 					);
 			}
 			$sql = rtrim($sql, ',');
-			$this->db->query($sql);
+			$this->db->queryWrite($sql);
 		} else {
 			while($elem = $this->hostsToAdd->shift()){
 				$this->hostKeys[] = $elem['hostKey'];
@@ -139,8 +140,8 @@ class wordfenceURLHoover {
 		$stime = microtime(true);
 		$allHostKeys = array();
 		if($this->useDB){
-			$q1 = $this->db->query("select distinct hostKey as hostKey from $this->table");
-			while($hRec = mysql_fetch_assoc($q1)){
+			$q1 = $this->db->querySelect("select distinct hostKey as hostKey from $this->table");
+			foreach($q1 as $hRec){
 				array_push($allHostKeys, $hRec['hostKey']);
 			}
 		} else {
@@ -157,7 +158,9 @@ class wordfenceURLHoover {
 					$this->dbg("Checking hostkey: " . bin2hex($key));
 				}
 			}
+			wordfence::status(2, 'info', "Checking " . sizeof($allHostKeys) . " host keys against Wordfence scanning servers.");
 			$resp = $this->api->binCall('check_host_keys', implode('', $allHostKeys));
+			wordfence::status(2, 'info', "Done host key check.");
 			$this->dbg("Done hostkey check");
 
 			$badHostKeys = array();
@@ -187,18 +190,23 @@ class wordfenceURLHoover {
 			}
 			if(sizeof($badHostKeys) > 0){
 				$urlsToCheck = array();
+				$totalURLs = 0;
 				//need to figure out which id's have bad hostkeys
 				//need to feed in all URL's from those id's where the hostkey matches a URL
 				foreach($badHostKeys as $badHostKey){
 					if($this->useDB){
-						$q1 = $this->db->query("select owner, host, path from $this->table where hostKey='%s'", $badHostKey);
-						while($rec = mysql_fetch_assoc($q1)){
+						//Putting a 10000 limit in here for sites that have a huge number of items with the same URL that repeats.
+						// This is an edge case. But if the URLs are malicious then presumably the admin will fix the malicious URLs
+						// and on subsequent scans the items (owners) that are above the 10000 limit will appear.
+						$q1 = $this->db->querySelect("select owner, host, path from $this->table where hostKey='%s' limit 10000", $badHostKey);
+						foreach($q1 as $rec){
 							$url = 'http://' . $rec['host'] . $rec['path'];
 							if(! isset($urlsToCheck[$rec['owner']])){
 								$urlsToCheck[$rec['owner']] = array();
 							}
 							if(! in_array($url, $urlsToCheck[$rec['owner']])){
 								$urlsToCheck[$rec['owner']][] = $url;
+								$totalURLs++;
 							}
 						}
 					} else {
@@ -210,6 +218,7 @@ class wordfenceURLHoover {
 								}
 								if(! in_array($url, $urlsToCheck[$rec['owner']])){
 									$urlsToCheck[$rec['owner']][] = $url;
+									$totalURLs++;
 								}
 							}
 						}
@@ -217,13 +226,9 @@ class wordfenceURLHoover {
 				}
 
 				if(sizeof($urlsToCheck) > 0){
-					$this->dbg("Checking " . sizeof($urlsToCheck) . " URLs");
-					if($this->debug){
-						foreach($urlsToCheck as $url){
-							$this->dbg("Checking URL: " . var_export($url, true));
-						}
-					}
+					wordfence::status(2, 'info', "Checking " . $totalURLs . " URLs from " . sizeof($urlsToCheck) . " sources.");
 					$badURLs = $this->api->call('check_bad_urls', array(), array( 'toCheck' => json_encode($urlsToCheck)) );
+					wordfence::status(2, 'info', "Done URL check.");
 					$this->dbg("Done URL check");
 					if(is_array($badURLs) && sizeof($badURLs) > 0){
 						$finalResults = array();
