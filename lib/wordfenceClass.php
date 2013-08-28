@@ -1218,6 +1218,7 @@ class wordfence {
 	public static function ajax_whois_callback(){
 		require_once('whois/whois.main.php');
 		$val = trim($_POST['val']);
+		$val = preg_replace('/[^a-zA-Z0-9\.\-]+/', '', $val);
 		$whois = new Whois();
 		$result = $whois->Lookup($val);
 		return array('ok' => 1, 'result' => $result);
