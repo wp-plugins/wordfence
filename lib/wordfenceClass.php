@@ -699,7 +699,7 @@ class wordfence {
 				throw new Exception("We could not fetch a core WordPress file from the Wordfence API.");
 			}
 		} catch (Exception $e){
-			return array('errorMsg' => $e->getMessage());
+			return array('errorMsg' => htmlentities($e->getMessage()));
 		}
 	}
 	public static function ajax_addTwoFactor_callback(){
@@ -716,12 +716,12 @@ class wordfence {
 		try {
 			$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $phone));
 		} catch(Exception $e){
-			return array('errorMsg' => "Could not contact Wordfence servers to generate a verification code: " . $e->getMessage());
+			return array('errorMsg' => "Could not contact Wordfence servers to generate a verification code: " . htmlentities($e->getMessage()) );
 		}
 		if(isset($codeResult['ok']) && $codeResult['ok']){
 			$code = $codeResult['code'];
 		} else if(isset($codeResult['errorMsg']) && $codeResult['errorMsg']){
-			return array('errorMsg' => $codeResult['errorMsg']);
+			return array('errorMsg' => htmlentities($codeResult['errorMsg']));
 		} else {
 			return array('errorMsg' => "We could not generate a verification code.");
 		}
@@ -750,7 +750,7 @@ class wordfence {
 					$user = $twoFactorUsers[$i];
 					break;
 				} else {
-					return array('errorMsg' => "That is not the correct code. Please look for an SMS containing an activation code on the phone with number: " . $twoFactorUsers[$i][1]);
+					return array('errorMsg' => "That is not the correct code. Please look for an SMS containing an activation code on the phone with number: " . htmlentities($twoFactorUsers[$i][1]) );
 				}
 			}
 		}
@@ -982,7 +982,7 @@ class wordfence {
 				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
 			}
 		} catch(Exception $e){
-			return array('errorMsg' => "Could not fetch free API key from Wordfence: " . $e->getMessage());
+			return array('errorMsg' => "Could not fetch free API key from Wordfence: " . htmlentities($e->getMessage()));
 		}
 		return array('ok' => 1);
 	}
@@ -1007,7 +1007,7 @@ class wordfence {
 				}
 			}
 			if(sizeof($badEmails) > 0){
-				return array('errorMsg' => "The following emails are invalid: " . implode(', ', $badEmails));
+				return array('errorMsg' => "The following emails are invalid: " . htmlentities(implode(', ', $badEmails)) );
 			}
 			$opts['alertEmails'] = implode(',', $emails);
 		} else {
@@ -1027,7 +1027,7 @@ class wordfence {
 				}
 			}
 			if(sizeof($badWhiteIPs) > 0){
-				return array('errorMsg' => "Please make sure you separate your IP addresses with commas. The following whitelisted IP addresses are invalid: " . implode(', ', $badWhiteIPs));
+				return array('errorMsg' => "Please make sure you separate your IP addresses with commas. The following whitelisted IP addresses are invalid: " . htmlentities(implode(', ', $badWhiteIPs)) );
 			}
 			$opts['whitelisted'] = implode(',', $whiteIPs);
 		} else {
@@ -1051,7 +1051,7 @@ class wordfence {
 		}
 
 		if(sizeof($invalidUsers) > 0){
-			return array('errorMsg' => "The following users you selected to ignore in live traffic reports are not valid on this system: " . implode(', ', $invalidUsers));
+			return array('errorMsg' => "The following users you selected to ignore in live traffic reports are not valid on this system: " . htmlentities(implode(', ', $invalidUsers)) );
 		}
 		if(sizeof($validUsers) > 0){
 			$opts['liveTraf_ignoreUsers'] = implode(',', $validUsers);
@@ -1071,7 +1071,7 @@ class wordfence {
 			}
 		}
 		if(sizeof($invalidIPs) > 0){
-			return array('errorMsg' => "The following IPs you selected to ignore in live traffic reports are not valid: " . implode(', ', $invalidIPs));
+			return array('errorMsg' => "The following IPs you selected to ignore in live traffic reports are not valid: " . htmlentities(implode(', ', $invalidIPs)) );
 		}
 		if(sizeof($validIPs) > 0){
 			$opts['liveTraf_ignoreIPs'] = implode(',', $validIPs);
@@ -1114,7 +1114,7 @@ class wordfence {
 					throw new Exception("We could not understand the Wordfence server's response because it did not contain an 'ok' and 'apiKey' element.");
 				}
 			} catch(Exception $e){
-				return array('errorMsg' => "Your options have been saved, but we encountered a problem. You left your API key blank, so we tried to get you a free API key from the Wordfence servers. However we encountered a problem fetching the free key: " . $e->getMessage());
+				return array('errorMsg' => "Your options have been saved, but we encountered a problem. You left your API key blank, so we tried to get you a free API key from the Wordfence servers. However we encountered a problem fetching the free key: " . htmlentities($e->getMessage()) );
 			}
 		} else if($opts['apiKey'] != wfConfig::get('apiKey')){
 			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
@@ -1131,7 +1131,7 @@ class wordfence {
 					throw new Exception("We could not understand the Wordfence API server reply when updating your API key.");
 				}
 			} catch (Exception $e){
-				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . $e->getMessage());
+				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . htmlentities($e->getMessage()) );
 			}
 		}
 		return array('ok' => 1, 'reload' => $reload, 'paidKeyMsg' => $paidKeyMsg );
@@ -1207,7 +1207,7 @@ class wordfence {
 			}
 			$clientIP = wfUtils::inet_aton(wfUtils::getIP());
 			if($ip1 <= $clientIP && $ip2 >= $clientIP){
-				return array('err' => 1, 'errorMsg' => "You are trying to block yourself. Your IP address is " . wfUtils::getIP() . " which falls into the range $ipRange. This blocking action has been cancelled so that you don't block yourself from your website.");
+				return array('err' => 1, 'errorMsg' => "You are trying to block yourself. Your IP address is " . htmlentities(wfUtils::getIP()) . " which falls into the range " . htmlentities($ipRange) . ". This blocking action has been cancelled so that you don't block yourself from your website.");
 			}
 			$ipRange = $ip1 . '-' . $ip2;
 		}
@@ -1233,7 +1233,7 @@ class wordfence {
 			return array('err' => 1, 'errorMsg' => "You can't block your own IP address.");
 		}
 		if(self::getLog()->isWhitelisted($IP)){
-			return array('err' => 1, 'errorMsg' => "The IP address $IP is whitelisted and can't be blocked or it is in a range of internal IP addresses that Wordfence does not block. You can remove this IP from the whitelist on the Wordfence options page.");
+			return array('err' => 1, 'errorMsg' => "The IP address " . htmlentities($IP) . " is whitelisted and can't be blocked or it is in a range of internal IP addresses that Wordfence does not block. You can remove this IP from the whitelist on the Wordfence options page.");
 		}
 		if(wfConfig::get('neverBlockBG') != 'treatAsOtherCrawlers'){ //Either neverBlockVerified or neverBlockUA is selected which means the user doesn't want to block google 
 			if(wfCrawl::verifyCrawlerPTR('/googlebot\.com$/i', $IP)){
@@ -1358,7 +1358,7 @@ class wordfence {
 				);
 		} else {
 			$err = error_get_last();
-			return array('errorMsg' => "Could not delete file $file. The error was: " . $err['message']);
+			return array('errorMsg' => "Could not delete file " . htmlentities($file) . ". The error was: " . htmlentities($err['message']));
 		}
 	}
 	public static function ajax_restoreFile_callback(){
@@ -1408,7 +1408,7 @@ class wordfence {
 		self::status(4, 'info', "Ajax request received to start scan.");
 		$err = wfScanEngine::startScan();
 		if($err){
-			return array('errorMsg' => $err);
+			return array('errorMsg' => htmlentities($err));
 		} else {
 			return array("ok" => 1);
 		}
@@ -1524,8 +1524,7 @@ class wordfence {
 		exit();
 	}
 	public static function wp_head(){
-		$URL = admin_url('admin-ajax.php');
-		$URL .= '?action=wordfence_logHuman&hid=' . wfUtils::encrypt(self::$hitID);
+		$URL = admin_url('admin-ajax.php?action=wordfence_logHuman&amp;hid=' . wfUtils::encrypt(self::$hitID));
 		echo '<script type="text/javascript">var src="' . $URL . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
 	}
 	public static function shutdownAction(){
@@ -1594,7 +1593,7 @@ class wordfence {
 	public static function wfFunc_diff(){
 		$result = self::getWPFileContent($_GET['file'], $_GET['cType'], $_GET['cName'], $_GET['cVersion']);
 		if( isset( $result['errorMsg'] ) && $result['errorMsg']){
-			echo $result['errorMsg'];
+			echo htmlentities($result['errorMsg']);
 			exit(0);
 		} else if(! $result['fileContent']){
 			echo "We could not get the contents of the original file to do a comparison.";

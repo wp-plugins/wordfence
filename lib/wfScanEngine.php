@@ -869,7 +869,7 @@ class wfScanEngine {
 			}
 		}
 		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
-		$testURL = admin_url('admin-ajax.php') . '?action=wordfence_testAjax';
+		$testURL = admin_url('admin-ajax.php?action=wordfence_testAjax');
 		$testResult = wp_remote_post($testURL, array(
 			'timeout' => $timeout,
 			'blocking' => true,
@@ -881,8 +881,8 @@ class wfScanEngine {
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
 		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
 			//ajax requests can be sent by the server to itself
-			$cronURL = admin_url('admin-ajax.php');
-			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+			$cronURL = 'admin-ajax.php?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
+			$cronURL = admin_url($cronURL);
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
 			$result = wp_remote_post( $cronURL, array(

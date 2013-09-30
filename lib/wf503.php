@@ -13,7 +13,7 @@ will need to regain access to your site, go to the Wordfence "options" page, go 
 if you were blocked because it was detected that you are a fake Google crawler, then disable the rule that blocks fake google crawlers. Or if you were blocked because you 
 were accessing your site too quickly, then increase the number of accesses allowed per minute.
 <br /><br />
-If you're still having trouble, then simply disable the Wordfence firwall and you will 
+If you're still having trouble, then simply disable the Wordfence firewall and you will 
 still benefit from the other security features that Wordfence provides.
 
 <br /><br />
