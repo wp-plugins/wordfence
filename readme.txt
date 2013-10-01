@@ -153,8 +153,8 @@ cause a security hole on your site.
 = 3.8.4 =
 * Removed Wordfence .htaccess because it doesn't offer any security functionality and increases incompatibility.
 * Fixed spelling errors.
-* Added check to see if $_SERVER['HTTP_USER_AGENT'] is defined before using it to suppress large number of warnings on some sites.
-* Changed the way we call admin_url() to the correct syntax.
+* Added check to see if HTTP_USER_AGENT server variable is defined before using it to suppress large number of warnings on some sites.
+* Changed the way we call admin_url to the correct syntax.
 * Correctly escaped HTML on error messages.
 * Fixed issue that generated non-compliant query string.
 * Updated GeoIP database to newest version.
