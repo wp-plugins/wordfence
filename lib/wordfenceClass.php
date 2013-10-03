@@ -1524,7 +1524,7 @@ class wordfence {
 		exit();
 	}
 	public static function wp_head(){
-		$URL = admin_url('admin-ajax.php?action=wordfence_logHuman&amp;hid=' . wfUtils::encrypt(self::$hitID));
+		$URL = admin_url('admin-ajax.php?action=wordfence_logHuman&hid=' . wfUtils::encrypt(self::$hitID));
 		echo '<script type="text/javascript">var src="' . $URL . '"; if(window.location.protocol == "https:"){ src = src.replace("http:", "https:"); } var wfHTImg = new Image();  wfHTImg.src=src;</script>';
 	}
 	public static function shutdownAction(){
