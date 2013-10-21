@@ -628,7 +628,7 @@ class wordfence {
 			}
 		}
 		if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
-			return new WP_Error( 'incorrect_password', sprintf( __( '<strong>ERROR</strong>: The username or password you entered is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?' ), $username, wp_lostpassword_url() ) );
+			return new WP_Error( 'incorrect_password', sprintf( __( '<strong>ERROR</strong>: The username or password you entered is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?' ), $_POST['log'], wp_lostpassword_url() ) );
 		}
 		return $authResult;
 	}
@@ -849,6 +849,12 @@ class wordfence {
 		return ($nextTime ? date('l jS \of F Y H:i:s A', $nextTime + (3600 * get_option('gmt_offset'))) : '');
 	}
 	public static function wordfenceStartScheduledScan(){
+		
+		//If scheduled scans are not enabled in the global config option, then don't run a scheduled scan.
+		if(wfConfig::get('scheduledScansEnabled') != '1'){
+			return;
+		}
+
 		//This prevents scheduled scans from piling up on low traffic blogs and all being run at once.
 		//Only one scheduled scan runs within a given 60 min window. Won't run if another scan has run within 30 mins.
 		$lastScanStart = wfConfig::get('lastScheduledScanStart', 0);
@@ -1788,7 +1794,8 @@ class wordfence {
 			self::getLog()->addStatus($level, $type, $msg);
 		}
 	}
-	public static function profileUpdateAction($userID, $newDat){
+	public static function profileUpdateAction($userID, $newDat = false){
+		if(! $newDat){ return; }
 		if(wfConfig::get('other_pwStrengthOnUpdate')){
 			$oldDat = get_userdata($userID);
 			if($newDat->user_pass != $oldDat->user_pass){

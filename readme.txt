@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
 Tested up to: 3.6.1
-Stable tag: 3.8.5
+Stable tag: 3.8.6
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -20,6 +20,7 @@ Wordfence Security is now Multi-Site compatible and includes Cellphone Sign-in w
 Wordfence Security:
 
 * Sign-in using your password and your cellphone to vastly improve login security. This is called Two Factor Authentication and is used by banks, government agencies and military world-wide for highest security authentication. 
+* Includes two-factor authentication, also referred to as cellphone sign-in. 
 * Enforce strong passwords among your administrators, publishers and users. Improve login security.
 * Scans core files, themes and plugins against WordPress.org repository versions to check their integrity. Verify security of your source.
 * Includes a firewall to block common security threats like fake Googlebots, malicious scans from hackers and botnets.
@@ -81,6 +82,7 @@ To install Wordfence Security on WordPress Multi-Site installations (support is 
 * Wordfence Security scans check all your files, comments and posts for URL's in Google's Safe Browsing list. We are the only plugin to offer this very important security enhancement.
 * Wordfence Security scans do not consume large amounts of your precious bandwidth because all security scans happen on your web server which makes them very fast.
 * Wordfence Security fully supports WordPress Multi-Site which means you can security scan every blog in your Multi-Site installation with one click.
+* Wordfence Security includes Two-Factor authentication, the most secure way to stop brute force attackers in their tracks. 
 
 = Does Wordfence Security support Multi-Site installations? =
 
@@ -149,6 +151,10 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.8.6 =
+* Fixed issue that caused scheduled scans to run even if disabled.
+* Fixed display bug when signin fails.
 
 = 3.8.5 =
 * Fixed issue that caused Human traffic to not be logged in Wordfence Security live traffic view. 
