@@ -642,7 +642,7 @@ class wordfence {
 			require('wfLockedOut.php');
 		}
 	}
-	public static function authAction($username, $passwd){
+	public static function authAction($username, &$passwd){ //As of php 5.4 we must denote passing by ref in the function definition, not the function call (as WordPress core does, which is a bug in WordPress).
 		if(self::isLockedOut(wfUtils::getIP())){
 			require('wfLockedOut.php');
 		}
@@ -1222,7 +1222,9 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_whois_callback(){
-		require_once('whois/whois.main.php');
+		if( ! class_exists( 'Whois' )){
+			require_once('whois/whois.main.php');
+		}
 		$val = trim($_POST['val']);
 		$val = preg_replace('/[^a-zA-Z0-9\.\-]+/', '', $val);
 		$whois = new Whois();
