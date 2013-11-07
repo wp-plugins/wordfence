@@ -374,7 +374,7 @@ class wordfence {
 		}
 		return $errors;
 	}
-	function isStrongPasswd($passwd, $username ) {
+	public static function isStrongPasswd($passwd, $username ) {
 		$strength = 0; 
 		if(strlen( trim( $passwd ) ) < 5)
 			return false;
@@ -642,7 +642,7 @@ class wordfence {
 			require('wfLockedOut.php');
 		}
 	}
-	public static function authAction($username, $passwd){
+	public static function authAction($username, &$passwd){ //As of php 5.4 we must denote passing by ref in the function definition, not the function call (as WordPress core does, which is a bug in WordPress).
 		if(self::isLockedOut(wfUtils::getIP())){
 			require('wfLockedOut.php');
 		}
@@ -984,6 +984,8 @@ class wordfence {
 			if($keyData['ok'] && $keyData['apiKey']){
 				wfConfig::set('apiKey', $keyData['apiKey']);
 				wfConfig::set('isPaid', 0);
+				//When downgrading we must disable all two factor authentication because it can lock an admin out if we don't. 
+				wfConfig::set_ser('twoFactorUsers', array());
 			} else {
 				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
 			}
@@ -1222,7 +1224,9 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_whois_callback(){
-		require_once('whois/whois.main.php');
+		if( ! class_exists( 'Whois' )){
+			require_once('whois/whois.main.php');
+		}
 		$val = trim($_POST['val']);
 		$val = preg_replace('/[^a-zA-Z0-9\.\-]+/', '', $val);
 		$whois = new Whois();

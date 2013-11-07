@@ -12,7 +12,7 @@
 <tr><th>URL:</th><td><a href="<?php echo $v['URL']; ?>" target="_blank"><?php echo $v['URL']; ?></a></td></tr>
 <tr><th>Type:</th><td><?php if($v['type'] == 'hit'){ echo 'Normal request'; } else if($v['type'] == '404'){ echo '<span style="color: #F00;">Page not found</span>'; } ?></td></tr>
 <?php if($v['referer']){ ?><tr><th>Referrer:</th><td><a href="<?php echo $v['referer']; ?>" target="_blank"><?php echo $v['referer']; ?></a></td></tr><?php } ?>
-<tr><th>Full Browser ID:</th><td><?php echo $v['UA']; ?></td></tr>
+<tr><th>Full Browser ID:</th><td><?php echo esc_html($v['UA']); ?></td></tr>
 <?php if($v['user']){ ?>
 <tr><th>User:</th><td><a href="<?php echo $v['user']['editLink']; ?>" target="_blank"><?php echo $v['user']['avatar'] . ' ' . $v['user']['display_name']; ?></a></td></tr>
 <?php } ?>
