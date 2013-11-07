@@ -319,6 +319,7 @@ class wfScanEngine {
 			throw new Exception($this->hoover->errorMsg);
 		
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -411,6 +412,7 @@ class wfScanEngine {
 			wordfence::statusEndErr();
 			throw new Exception($this->hoover->errorMsg);
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -474,6 +476,7 @@ class wfScanEngine {
 		if($h->errorMsg){
 			return false;
 		}
+		$h->cleanup();
 		if(sizeof($hooverResults) > 0 && isset($hooverResults[1])){
 			$hresults = $hooverResults[1];	
 			foreach($hresults as $result){

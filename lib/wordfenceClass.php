@@ -374,7 +374,7 @@ class wordfence {
 		}
 		return $errors;
 	}
-	function isStrongPasswd($passwd, $username ) {
+	public static function isStrongPasswd($passwd, $username ) {
 		$strength = 0; 
 		if(strlen( trim( $passwd ) ) < 5)
 			return false;
@@ -984,6 +984,8 @@ class wordfence {
 			if($keyData['ok'] && $keyData['apiKey']){
 				wfConfig::set('apiKey', $keyData['apiKey']);
 				wfConfig::set('isPaid', 0);
+				//When downgrading we must disable all two factor authentication because it can lock an admin out if we don't. 
+				wfConfig::set_ser('twoFactorUsers', array());
 			} else {
 				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
 			}

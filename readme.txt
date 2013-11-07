@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
-Tested up to: 3.7
-Stable tag: 3.8.7
+Tested up to: 3.7.1
+Stable tag: 3.8.8
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -151,6 +151,13 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 3.8.8 =
+* Fix: We now truncate the wfHoover table after scans to save disk space on servers with huge numbers of URLs in files.
+* Fix: isStrongPasswd function was being called statically but not declared as static.
+* Fix: Improved error reporting when we can't connect to Wordfence API servers.
+* Fix: Fixed code that was causing an error log warning when we read the requested URL.
+* Fix: Disable and clear cellphone sign-in if you downgrade to free from paid to prevent lockouts.
 
 = 3.8.7 =
 * Fixed issue that caused cellphone sign-in to not work with PHP version 5.4 or greater.
