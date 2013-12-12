@@ -175,7 +175,11 @@ class wfUtils {
 		} else {
 			$host = $_SERVER['SERVER_NAME'];
 		}
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
+		$prefix = 'http';
+		if( isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ){
+			$prefix = 'https';
+		}
+		return $prefix . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){

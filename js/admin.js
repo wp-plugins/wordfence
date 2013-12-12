@@ -512,7 +512,11 @@ window['wordfenceAdmin'] = {
 	},
 	displayIssues: function(res, callback){
 		var self = this;
-		res.summary['lastScanCompleted'] = res['lastScanCompleted'];
+		try {
+			res.summary['lastScanCompleted'] = res['lastScanCompleted'];
+		} catch(err){ 
+			res.summary['lastScanCompleted'] = 'Never';
+		}
 		jQuery('.wfIssuesContainer').hide();
 		for(issueStatus in res.issuesLists){ 
 			var containerID = 'wfIssues_dataTable_' + issueStatus;

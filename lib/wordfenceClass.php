@@ -260,7 +260,11 @@ class wordfence {
 		add_action('init', 'wordfence::initAction');
 		add_action('template_redirect', 'wordfence::templateRedir');
 		add_action('shutdown', 'wordfence::shutdownAction');
-		add_action('wp_authenticate','wordfence::authAction', 1, 2);
+		if(version_compare(PHP_VERSION, '5.4.0') >= 0){
+			add_action('wp_authenticate','wordfence::authActionNew', 1, 2);
+		} else {
+			add_action('wp_authenticate','wordfence::authActionOld', 1, 2);
+		}
 		add_action('login_init','wordfence::loginInitAction');
 		add_action('wp_login','wordfence::loginAction');
 		add_action('wp_logout','wordfence::logoutAction');
@@ -374,7 +378,7 @@ class wordfence {
 		}
 		return $errors;
 	}
-	function isStrongPasswd($passwd, $username ) {
+	public static function isStrongPasswd($passwd, $username ) {
 		$strength = 0; 
 		if(strlen( trim( $passwd ) ) < 5)
 			return false;
@@ -642,7 +646,7 @@ class wordfence {
 			require('wfLockedOut.php');
 		}
 	}
-	public static function authAction($username, $passwd){
+	public static function authActionNew($username, &$passwd){ //As of php 5.4 we must denote passing by ref in the function definition, not the function call (as WordPress core does, which is a bug in WordPress).
 		if(self::isLockedOut(wfUtils::getIP())){
 			require('wfLockedOut.php');
 		}
@@ -665,6 +669,30 @@ class wordfence {
 			self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
 		}
 	}
+	public static function authActionOld($username, $passwd){ //Code is identical to Newer function above except passing by ref ampersand. Some versions of PHP are throwing an error if we include the ampersand in PHP prior to 5.4.
+		if(self::isLockedOut(wfUtils::getIP())){
+			require('wfLockedOut.php');
+		}
+		if(! $username){ return; } 
+		$userDat = get_user_by('login', $username);
+		$_POST['wordfence_userDat'] = $userDat;
+		if(preg_match(self::$passwordCodePattern, $passwd, $matches)){ 
+			$_POST['wordfence_authFactor'] = $matches[1];
+			$passwd = preg_replace('/^(.+)\s+(wf[a-z0-9]+)$/i', '$1', $passwd);
+			$_POST['pwd'] = $passwd;
+		}
+
+		if($userDat){
+			require_once( ABSPATH . 'wp-includes/class-phpass.php');
+			$hasher = new PasswordHash(8, TRUE);
+			if(! $hasher->CheckPassword($_POST['pwd'], $userDat->user_pass)){
+				self::getLog()->logLogin('loginFailValidUsername', 1, $username); 
+			}
+		} else {
+			self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
+		}
+	}
+
 	public static function getWPFileContent($file, $cType, $cName, $cVersion){
 		if($cType == 'plugin'){
 			if(preg_match('#^/?wp-content/plugins/[^/]+/#', $file)){
@@ -984,6 +1012,8 @@ class wordfence {
 			if($keyData['ok'] && $keyData['apiKey']){
 				wfConfig::set('apiKey', $keyData['apiKey']);
 				wfConfig::set('isPaid', 0);
+				//When downgrading we must disable all two factor authentication because it can lock an admin out if we don't. 
+				wfConfig::set_ser('twoFactorUsers', array());
 			} else {
 				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
 			}
@@ -1222,7 +1252,9 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_whois_callback(){
-		require_once('whois/whois.main.php');
+		if( ! class_exists( 'Whois' )){
+			require_once('whois/whois.main.php');
+		}
 		$val = trim($_POST['val']);
 		$val = preg_replace('/[^a-zA-Z0-9\.\-]+/', '', $val);
 		$whois = new Whois();
