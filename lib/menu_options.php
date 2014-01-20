@@ -102,7 +102,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<?php if(wfConfig::get('isPaid')){ ?>
 	<tr><th>Scan public facing site for vulnerabilities?</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" <?php $w->cb('scansEnabled_public'); ?></td></tr>
 	<?php } else { ?>
-	<tr><th style="color: #F00;">Scan public facing site for vulnerabilities? (<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid members only</a>)</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" DISABLED ?></td></tr>
+	<tr><th style="color: #F00;">Scan public facing site for vulnerabilities? (<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid members only</a>)</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" DISABLED ?></td></tr>
 	<?php } ?>
 	<tr><th>Scan core files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_core" class="wfConfigElem" name="scansEnabled_core" value="1" <?php $w->cb('scansEnabled_core'); ?>/></td></tr>
 	
@@ -268,7 +268,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	We give you a few basic security levels to choose from, depending on your needs. Remember to hit the "Save" button to save any changes you make. 
 </p>
 <p>
-	If you use the free edition of Wordfence, you don't need to worry about entering an API key in the "API Key" field above. One is automatically created for you. If you choose to <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to Wordfence premium edition</a>, you will receive an API key. You will need to copy and paste that key into the "API Key"
+	If you use the free edition of Wordfence, you don't need to worry about entering an API key in the "API Key" field above. One is automatically created for you. If you choose to <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to Wordfence Premium edition</a>, you will receive an API key. You will need to copy and paste that key into the "API Key"
 	field above and hit "Save" to activate your key.
 </p>
 </div>

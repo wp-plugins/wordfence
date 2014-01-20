@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
 Tested up to: 3.8
-Stable tag: 3.8.9
+Stable tag: 3.9.1
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -152,16 +152,25 @@ cause a security hole on your site.
 
 == Changelog ==
 
+= 3.9.1 =
+* Fixed issue that caused Wordfence security to not log 404's.
+* Made 404's more visible on the live traffic page. 
+* Fixed panel width that was too narrow for WP 3.8 on live traffic and issues pages.
+* Report hack attempts to Wordfence Security scanning server for DDoS protection. 
+* Remind admin if security alert email is blank and tour is closed.
+* Updated links to new Wordfence Security support website at support.wordfence.com.
+* Made Wordfence Security paid-users-only message a little more user friendly.
+
 = 3.8.9 =
-* Fix: Fixed issue that caused certain Wordfence login functions to not work. Was a PHP 5.4 vs older version incompatability issue.
+* Fix: Fixed issue that caused certain Wordfence Security login functions to not work. Was a PHP 5.4 vs older version incompatability issue.
 * Updated GeoIP location database to new version for country blocking.
-* Fix: Resolved issue that caused the Issues that Wordfence found to not be displayed in some cases.
-* Updated to WordPress 3.8 Compatability.
+* Fix: Resolved issue that caused the Issues that Wordfence Security found to not be displayed in some cases.
+* Updated Wordfence Security to WordPress 3.8 Compatability.
 
 = 3.8.8 =
 * Fix: We now truncate the wfHoover table after scans to save disk space on servers with huge numbers of URLs in files.
 * Fix: isStrongPasswd function was being called statically but not declared as static.
-* Fix: Improved error reporting when we can't connect to Wordfence API servers.
+* Fix: Improved error reporting when we can't connect to Wordfence Security API servers.
 * Fix: Fixed code that was causing an error log warning when we read the requested URL.
 * Fix: Disable and clear cellphone sign-in if you downgrade to free from paid to prevent lockouts.
 
@@ -180,7 +189,7 @@ cause a security hole on your site.
 * Fixed issue that caused Human traffic to not be logged in Wordfence Security live traffic view. 
 
 = 3.8.4 =
-* Removed Wordfence .htaccess because it doesn't offer any security functionality and increases incompatibility.
+* Removed Wordfence Security .htaccess because it doesn't offer any security functionality and increases incompatibility.
 * Fixed spelling errors.
 * Added check to see if HTTP_USER_AGENT server variable is defined before using it to suppress large number of warnings on some sites.
 * Changed the way we call admin_url to the correct syntax.

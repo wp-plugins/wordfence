@@ -609,6 +609,9 @@ class wordfence {
 		if(self::getLog()->isWhitelisted($IP)){
 			return $authResult;
 		}
+		if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
+			self::reportHackAttempt($IP, 'brute');
+		}
 		if($secEnabled){
 			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username' && wfConfig::get('loginSec_lockInvalidUsers')){
 				self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
@@ -635,6 +638,17 @@ class wordfence {
 			return new WP_Error( 'incorrect_password', sprintf( __( '<strong>ERROR</strong>: The username or password you entered is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?' ), $_POST['log'], wp_lostpassword_url() ) );
 		}
 		return $authResult;
+	}
+	private static function reportHackAttempt($IP, $type){
+		$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+		curl_setopt($curl, CURLOPT_TIMEOUT, 1);
+		curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
+		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
+		curl_setopt ($curl, CURLOPT_HEADER, 0);
+		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($curl, CURLOPT_POST, false);
+		curl_exec($curl);
 	}
 	public static function logoutAction(){
 		$userID = get_current_user_id();
@@ -731,6 +745,9 @@ class wordfence {
 		}
 	}
 	public static function ajax_addTwoFactor_callback(){
+		if(! wfConfig::get('isPaid')){
+			return array('errorMsg' => 'Cellphone Sign-in is only available to paid members. <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade now.</a>');
+		}
 		$username = $_POST['username'];
 		$phone = $_POST['phone'];
 		$user = get_user_by('login', $username);
@@ -1371,6 +1388,14 @@ class wordfence {
 			'currentScanID' => $issues->getScanTime()
 			);
 	}
+	public static function ajax_updateAlertEmail_callback(){
+		$email = trim($_POST['email']);
+		if(! preg_match('/[^\@]+\@[^\.]+\.[^\.]+/', $email)){
+			return array( 'err' => "Invalid email address given.");
+		}
+		wfConfig::set('alertEmails', $email);
+		return array('ok' => 1, 'email' => $email);
+	}
 	public static function ajax_deleteFile_callback(){
 		$issueID = $_POST['issueID'];
 		$wfIssues = new wfIssues();
@@ -1458,7 +1483,7 @@ class wordfence {
 		$wfFunc = get_query_var('_wfsf');		
 		$wfLog = self::getLog();
 		if($wfLog->logHitOK()){
-			if( (! empty($wfFunc)) && is_404() ){
+			if( empty($wfFunc) && is_404() ){
 				$wfLog->logLeechAndBlock('404');
 			} else {
 				$wfLog->logLeechAndBlock('hit');
@@ -1672,7 +1697,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -1727,6 +1752,10 @@ class wordfence {
 	public static function noKeyError(){
 		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence could not get an API key from the Wordfence scanning servers when it activated.</strong> You can try to fix this by going to the Wordfence "options" page and hitting "Save Changes". This will cause Wordfence to retry fetching an API key for you. If you keep seeing this error it usually means your WordPress server can\'t connect to our scanning servers. You can try asking your WordPress host to allow your WordPress server to connect to noc1.wordfence.com.</p></div>';
 	}
+	public static function adminEmailWarning(){
+		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>You have not set an administrator email address to receive alerts for Wordfence.</strong> Please <a href="' . self::getMyOptionsURL() . '">click here to go to the Wordfence Options Page</a> and set an email address where you will receive security alerts from this site.</p></div>';
+	}
+
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
 		$warningAdded = false;
@@ -1746,6 +1775,16 @@ class wordfence {
 			}
 			$warningAdded = true;
 		}
+		if(! $warningAdded){
+			if(wfConfig::get('tourClosed') == '1' && (! wfConfig::get('alertEmails')) ){
+				if(wfUtils::isAdminPageMU()){
+					add_action('network_admin_notices', 'wordfence::adminEmailWarning');
+				} else {
+					add_action('admin_notices', 'wordfence::adminEmailWarning');
+				}
+			}
+		}
+			
 		/*
 		if(is_plugin_active('w3-total-cache/w3-total-cache.php') && wfConfig::get('liveTrafficEnabled')){
 			wfConfig::set('liveTrafficEnabled', 0);
@@ -1779,6 +1818,11 @@ class wordfence {
 		add_submenu_page("Wordfence", "Options", "Options", "activate_plugins", "WordfenceSecOpt", 'wordfence::menu_options');
 	}
 	public static function menu_options(){
+		if(! wfConfig::get('alertEmails')){
+			foreach(array('alertOn_block', 'alertOn_loginLockout', 'alertOn_lostPasswdForm', 'alertOn_adminLogin') as $opt){
+				wfConfig::set($opt, '1');
+			}
+		}
 		require 'menu_options.php';
 	}
 	public static function menu_blockedIPs(){
@@ -1889,6 +1933,7 @@ class wordfence {
 			}
 		}	
 		$content = wfUtils::tmpl('email_genericAlert.php', array(
+			'isPaid' => wfConfig::get('isPaid'),
 			'subject' => $subject,
 			'blogName' => get_bloginfo('name', 'raw'),
 			'alertMsg' => $alertMsg,

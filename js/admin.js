@@ -331,7 +331,7 @@ window['wordfenceAdmin'] = {
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_PAIDONLY:') != -1){
 			var msg = item.msg.replace('SUM_PAIDONLY:', '');
-			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_FINAL:') != -1){
 			var msg = item.msg.replace('SUM_FINAL:', '');
@@ -1208,7 +1208,7 @@ window['wordfenceAdmin'] = {
 		var pos = jQuery('#paidWrap').position();
 		var width = jQuery('#paidWrap').width();
 		var height = jQuery('#paidWrap').height();
-		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
+		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
 	},
 	sched_modeChange: function(){
 		var self = this;
