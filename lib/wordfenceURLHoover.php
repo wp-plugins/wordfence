@@ -41,6 +41,9 @@ class wordfenceURLHoover {
 		}
 		$this->db->truncate($this->table);
 	}
+	public function cleanup(){
+		$this->db->truncate($this->table);
+	}
 	public function hoover($id, $data){
 		if(strpos($data, '.') === false){
 			return;
