@@ -609,8 +609,11 @@ class wordfence {
 		if(self::getLog()->isWhitelisted($IP)){
 			return $authResult;
 		}
-		if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
-			self::reportHackAttempt($IP, 'brute');
+		if(wfConfig::get('other_WFNet') && is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
+			if($maxBlockTime = self::wfsnIsBlocked($IP, 'brute')){
+				self::getLog()->blockIP($IP, "Blocked by Wordfence Security Network", true, false, $maxBlockTime);
+			}
+				
 		}
 		if($secEnabled){
 			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username' && wfConfig::get('loginSec_lockInvalidUsers')){
@@ -639,16 +642,39 @@ class wordfence {
 		}
 		return $authResult;
 	}
-	private static function reportHackAttempt($IP, $type){
-		$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
-		curl_setopt($curl, CURLOPT_TIMEOUT, 1);
-		curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
-		curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
-		curl_setopt ($curl, CURLOPT_HEADER, 0);
-		curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
-		curl_setopt($curl, CURLOPT_POST, false);
-		curl_exec($curl);
+	public static function wfsnReportBlockedAttempt($IP, $type){
+		try {
+			$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?blocked=1&k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+			curl_setopt($curl, CURLOPT_TIMEOUT, 1);
+			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
+			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
+			curl_setopt ($curl, CURLOPT_HEADER, 0);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($curl, CURLOPT_POST, false);
+			curl_exec($curl);
+		} catch(Exception $err){
+			return false;
+		}
+	}
+	private static function wfsnIsBlocked($IP, $type){
+		try {
+			$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+			curl_setopt($curl, CURLOPT_TIMEOUT, 3);
+			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
+			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
+			curl_setopt ($curl, CURLOPT_HEADER, 0);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($curl, CURLOPT_POST, false);
+			$result = curl_exec($curl);
+			if(preg_match('/BLOCKED:(\d+)/', $result, $matches) && (! self::getLog()->isWhitelisted($IP)) ){
+				return $matches[1];
+			}
+			return false;
+		} catch(Exception $err){
+			return false;
+		}
 	}
 	public static function logoutAction(){
 		$userID = get_current_user_id();

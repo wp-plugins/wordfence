@@ -11,6 +11,7 @@ class wordfenceURLHoover {
 	private $useDB = true;
 	private $hostKeys = array();
 	private $hostList = array();
+	public $currentHooverID = false;
 	private $dRegex = 'aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|ss|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|za|zm|zw|xn--lgbbat1ad8j|xn--fiqs8s|xn--fiqz9s|xn--wgbh1c|xn--j6w193g|xn--h2brj9c|xn--mgbbh1a71e|xn--fpcrj9c3d|xn--gecrj9c|xn--s9brj9c|xn--xkc2dl3a5ee0h|xn--45brj9c|xn--mgba3a4f16a|xn--mgbayh7gpa|xn--mgbc0a9azcg|xn--ygbi2ammx|xn--wgbl6a|xn--p1ai|xn--mgberp4a5d4ar|xn--90a3ac|xn--yfro4i67o|xn--clchc0ea0b2g2a9gcd|xn--3e0b707e|xn--fzc2c9e2c|xn--xkc2al3hye2a|xn--mgbtf8fl|xn--kprw13d|xn--kpry57d|xn--o3cw4h|xn--pgbs0dh|xn--mgbaam7a8h|xn--54b7fta0cc|xn--90ae|xn--node|xn--4dbrk0ce|xn--80ao21a|xn--mgb9awbf|xn--mgbai9azgqp6j|xn--j1amh|xn--mgb2ddes|xn--kgbechtv|xn--hgbk6aj7f53bba|xn--0zwm56d|xn--g6w251d|xn--80akhbyknj4f|xn--11b5bs3a9aj6g|xn--jxalpdlp|xn--9t4b11yi5a|xn--deba0ad|xn--zckzah|xn--hlcj6aya9esc7a';
 	private $api = false;
 	private $db = false;
@@ -48,12 +49,17 @@ class wordfenceURLHoover {
 		if(strpos($data, '.') === false){
 			return;
 		}
+		$this->currentHooverID = $id;
 		try {
-			@preg_replace("/(?<=^|[^a-zA-Z0-9\-])((?:[a-zA-Z0-9\-]+\.)+)(" . $this->dRegex . ")((?:$|[^a-zA-Z0-9\-\.\'\"])[^\r\n\s\t\"\'\$\{\}<>]*)/ie", "\$this->" . "addHost(\$id, '$1$2', '$3')", $data);
+			@preg_replace_callback("/(?<=^|[^a-zA-Z0-9\-])((?:[a-zA-Z0-9\-]+\.)+)(" . $this->dRegex . ")($|[\r\n\s\t]|\/[^\r\n\s\t\"\'\$\{\}<>]*)/i", array($this, 'addHost'), $data);
+			//((?:$|[^a-zA-Z0-9\-\.\'\"])[^\r\n\s\t\"\'\$\{\}<>]*)
+			//"\$this->" . "addHost(\$id, '$1$2', '$3')", $data);
 		} catch(Exception $e){ 
 			//error_log("Regex error 1: $e"); 
 		}
-		@preg_replace("/(?<=[^\d]|^)(\d{8,10}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})([^\d\'\"][^\r\n\s\t\"\'\$\{\}<>]*)/e", "\$this->" . "addIP(\$id, \"$1\",\"$2\")", $data);
+		@preg_replace_callback("/(?<=[^\d]|^)(\d{8,10}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})($|[\r\n\s\t]|\/[^\r\n\s\t\"\'\$\{\}<>]*)/", array($this, 'addIP'), $data);
+		//([^\d\'\"][^\r\n\s\t\"\'\$\{\}<>]*)
+		//"\$this->" . "addIP(\$id, \"$1\",\"$2\")", $data);
 		$this->writeHosts();
 	}
 	private function dbg($msg){ 
@@ -61,7 +67,10 @@ class wordfenceURLHoover {
 			//error_log("DEBUG: $msg\n"); 
 		} 
 	}
-	public function addHost($id, $host, $path){
+	public function addHost($matches){
+		$id = $this->currentHooverID;
+		$host = $matches[1] . $matches[2];
+		$path = $matches[3];
 		if(strpos($path, '/') !== 0){
 			$path = '/';
 		} else {
@@ -80,33 +89,35 @@ class wordfenceURLHoover {
 		}
 		if($this->hostsToAdd->size() > 1000){ $this->writeHosts(); }	
 	}
-	public function addIP($id, $ipdata, $path){
+	public function addIP($matches){
+		$id = $this->currentHooverID;
+		$ipdata = $matches[1];
+		$path = $matches[2];
 		$this->dbg("Add IP called with $ipdata $path");
-		if(strpos($path, '/') !== 0){
-			$path = '/';
-		} else {
-			$path = preg_replace_callback('/([^A-Za-z0-9\-\.\_\~:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,;\=]+)/', 'wordfenceURLHoover::urlenc', $path);
-		}
-		if(strstr($ipdata, '.') === false && $ipdata >= 16777216 && $ipdata <= 4026531840){
-			$ipdata = long2ip($ipdata);
+		if(strstr($ipdata, '.') === false){
+			if($ipdata >= 16777216 && $ipdata <= 4026531840){
+				$ipdata = long2ip($ipdata);
+			} else {
+				return; //Is int but invalid address.
+			}
 		} 
 		$parts = explode('.', $ipdata);
-		$isValid = true;
-		if($parts[0] >= 240 || $parts[0] == '10' || $parts[0] == '172' || $parts[0] == '192' || $parts[0] == '127'){
-			$isValid = false;
-		}
-		if($isValid){
-			foreach($parts as $part){
-				if($part < 1 || $part > 255){
-					$isValid = false;
-				}
+		foreach($parts as $part){
+			if($part < 0 || $part > 255){
+				return;
 			}
 		}
-		if($isValid && $ipdata){
-			$hostKey = substr(hash('sha256', $ipdata . '/', true), 0, 4);
-			$this->hostsToAdd->push(array('owner' => $id, 'host' => $ipdata, 'path' => $path, 'hostKey' => $hostKey));
-			if($this->hostsToAdd->size() > 1000){ $this->writeHosts(); }	
+		if($parts[0] >= 240 || $parts[0] == '10' || $parts[0] == '172' || $parts[0] == '192' || $parts[0] == '127' || $parts[0] == 0){
+			return;
 		}
+		if(strlen($path) == 1){
+			$path = '/'; //Because it's either a whitespace char or a / anyway. 
+		} else if(strlen($path) > 1){
+			$path = preg_replace_callback('/([^A-Za-z0-9\-\.\_\~:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,;\=]+)/', 'wordfenceURLHoover::urlenc', $path);
+		}
+		$hostKey = substr(hash('sha256', $ipdata . '/', true), 0, 4);
+		$this->hostsToAdd->push(array('owner' => $id, 'host' => $ipdata, 'path' => $path, 'hostKey' => $hostKey));
+		if($this->hostsToAdd->size() > 1000){ $this->writeHosts(); }	
 	}
 	public static function urlenc($m){
 		return urlencode($m[1]);

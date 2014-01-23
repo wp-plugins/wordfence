@@ -215,6 +215,9 @@ class wordfenceScanner {
 		$this->urlHoover->cleanup();
 		foreach($hooverResults as $file => $hresults){
 			foreach($hresults as $result){
+				if(preg_match('/wfBrowscapCache\.php$/', $file)){
+					continue;
+				}
 				if($result['badList'] == 'goog-malware-shavar'){
 					$this->addResult(array(
 						'type' => 'file',
