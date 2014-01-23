@@ -11,7 +11,7 @@
 				</td>
 				<td>
 					<div style="border: 1px solid #CCC; padding: 4px;">
-						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://www.wordfence.com/forums/">visit our support forums for help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a>. Spreading the word helps us keep the best features free.
+						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://support.wordfence.com/">visit our support website help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a> or <a href="http://www.wordfence.com/" target="_blank">www.wordfence.com</a>. Spreading the word helps us keep the best features free.
 					</div>
 				</td>
 			</tr>
@@ -38,7 +38,7 @@
 			</div>
 			<?php } else { ?>
 			<div style="margin: 0 0 20px 5px; width: 795px;">
-				<strong>How to upgrade:</strong> If you would like to control how often your site is checked for security vulnerabilities and infections, and you would like to be able to block countries, <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">visit www.wordfence.com</a> and sign up for our paid option. Then go to the Wordfence options page on this site and replace your free API key with your new premium key. You will then be able to activate the premium scanning options on the Wordfence options page.
+				<strong style="color: #F00;">How to upgrade:</strong> If you would like access to our <a href="http://support.wordfence.com/" target="_blank">Premium Support help system</a> and features like Cellphone Sign-in, Country Blocking, external site scanning and the ability to schedule scans, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">visit our Wordfence Premium sign-up page</a> and sign up for a Premium Wordfence API key. Then go to the Wordfence options page on this site and replace your free API key with your new premium key. You will immediately be upgraded to Wordfence Premium with all the features it includes and you will have instant access to our ticketing system on <a href="http://support.wordfence.com/" target="_blank">support.wordfence.com</a>.
 			</div>
 
 			<?php } ?>
@@ -79,7 +79,7 @@
 				<a href="#" target="_blank" class="wfALogViewLink" id="wfALogViewLink">View activity log</a>
 			</div>
 			<div style="margin: 0 0 20px 5px; width: 795px;">
-				<strong>Docs:</strong> Our <a href="http://www.wordfence.com/docs/" target="_blank">Wordfence Documentation</a> has tips on <a href="http://www.wordfence.com/docs/using-wordfence-to-analyze-changes-in-wordpress-files/" target="_blank">dealing with changed files</a>, <a href="http://www.wordfence.com/docs/how-to-clean-a-hacked-wordpress-site-using-wordfence/" target="_blank">how to clean a hacked site</a> and our <a href="http://www.wordfence.com/docs/frequently-asked-questions/" target="_blank">FAQ</a>.
+				<strong>Docs:</strong> Our <a href="http://support.wordfence.com/" target="_blank">Support Site</a> can answer many common (and some less common) questions. It also includes our priority support ticketing system for Premium Wordfence users. 
 				<?php $unknownFilesLink = wfUtils::siteURLRelative() . '?_wfsf=unknownFiles&nonce=' . wp_create_nonce('wp-ajax'); ?>
 				<br /><strong>Tools:</strong> Cleaning a hacked system? See a <a href="<?php echo $unknownFilesLink ?>&sort=3&dir=rev" target="_blank">list of files that are not in the WordPress core, plugin or theme repositories</a> after your first scan.
 			</div>

@@ -204,27 +204,36 @@ class wfLog {
 		}
 		return $results;
 	}
-	public function blockIP($IP, $reason, $wfsn = false, $permanent = false){ //wfsn indicates it comes from Wordfence secure network
+	public function blockIP($IP, $reason, $wfsn = false, $permanent = false, $maxTimeBlocked = false){ //wfsn indicates it comes from Wordfence secure network
 		if($this->isWhitelisted($IP)){ return false; }
 		$wfsn = $wfsn ? 1 : 0;
+		$timeBlockOccurred = $this->getDB()->querySingle("select unix_timestamp() as ctime");
+		$durationOfBlocks = wfConfig::get('blockedTime');
+		if($maxTimeBlocked && $durationOfBlocks > $maxTimeBlocked){
+			$timeBlockOccurred -= ($durationOfBlocks - $maxTimeBlocked);
+		}
 		if($permanent){
 			//Insert permanent=1 or update existing perm or non-per block to be permanent
-			$this->getDB()->queryWrite("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d, permanent=%d",
+			$this->getDB()->queryWrite("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, %d, '%s', %d, %d) ON DUPLICATE KEY update blockedTime=%d, reason='%s', wfsn=%d, permanent=%d",
 				wfUtils::inet_aton($IP),
+				$timeBlockOccurred,
 				$reason,
 				$wfsn,
 				1,
+				$timeBlockOccurred,
 				$reason,
 				$wfsn,
 				1
 				);
 		} else {
 			//insert perm=0 but don't update and make perm blocks non-perm. 
-			$this->getDB()->queryWrite("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, unix_timestamp(), '%s', %d, %d) ON DUPLICATE KEY update blockedTime=unix_timestamp(), reason='%s', wfsn=%d",
+			$this->getDB()->queryWrite("insert into " . $this->blocksTable . " (IP, blockedTime, reason, wfsn, permanent) values (%s, %d, '%s', %d, %d) ON DUPLICATE KEY update blockedTime=%d, reason='%s', wfsn=%d",
 				wfUtils::inet_aton($IP),
+				$timeBlockOccurred,
 				$reason,
 				$wfsn,
 				0,
+				$timeBlockOccurred,
 				$reason,
 				$wfsn
 				);
@@ -627,6 +636,9 @@ class wfLog {
 			$this->getDB()->queryWrite("update " . $this->blocksTable . " set lastAttempt=unix_timestamp(), blockedHits = blockedHits + 1 where IP=%s", $IPnum);
 			$now = $this->getDB()->querySingle("select unix_timestamp()");
 			$secsToGo = ($rec['blockedTime'] + wfConfig::get('blockedTime')) - $now;
+			if(wfConfig::get('other_WFNet') && strpos($_SERVER['REQUEST_URI'], '/wp-login.php') !== false){ //We're on the login page and this IP has been blocked
+				wordfence::wfsnReportBlockedAttempt($IP, 'login');
+			}
 			$this->do503($secsToGo, $rec['reason']); 
 		}
 	}

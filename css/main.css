@@ -91,9 +91,10 @@ div.wordfenceScanButton input.button-wf-grey {
 .wordfenceScanButton table td { vertical-align: top; }
 
 .wfTabsContainer {
+	background-color: #FFF;
 	overflow: hidden;
 	border: 1px solid #CCC;
-	max-width: 870px;
+	max-width: 900px;
 	padding: 15px;
 	min-height: 200px;
 	-webkit-font-smoothing: antialiased;
@@ -308,4 +309,10 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 	height: 1px;
 	width: 1px;
 }
-
+.wfPaidOnlyNotice {
+	width: 500px; 
+	background-color: #FFFFE0; 
+	border: 1px solid #000; 
+	padding: 10px; 
+	margin: 20px;
+}

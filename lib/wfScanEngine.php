@@ -119,7 +119,7 @@ class wfScanEngine {
 		$this->status(1, 'info', '-------------------');
 		$this->status(1, 'info', "Scan Complete. Scanned " . $summary['totalFiles'] . " files, " . $summary['totalPlugins'] . " plugins, " . $summary['totalThemes'] . " themes, " . ($summary['totalPages'] + $summary['totalPosts']) . " pages, " . $summary['totalComments'] . " comments and " . $summary['totalRows'] . " records in " . (time() - $this->startTime) . " seconds.");
 		if($this->i->totalIssues  > 0){
-			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below for details.");
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below.");
 		} else {
 			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, there were no problems found.");
 		}
@@ -319,6 +319,7 @@ class wfScanEngine {
 			throw new Exception($this->hoover->errorMsg);
 		
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -411,6 +412,7 @@ class wfScanEngine {
 			wordfence::statusEndErr();
 			throw new Exception($this->hoover->errorMsg);
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -474,6 +476,7 @@ class wfScanEngine {
 		if($h->errorMsg){
 			return false;
 		}
+		$h->cleanup();
 		if(sizeof($hooverResults) > 0 && isset($hooverResults[1])){
 			$hresults = $hooverResults[1];	
 			foreach($hresults as $result){
