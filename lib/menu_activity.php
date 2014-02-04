@@ -134,16 +134,10 @@
 			left <a href="${referer}" target="_blank" style="color: #999; font-weight: normal;">${referer}</a> and
 		{{/if}}
 	{{/if}}
-	{{if activityMode == 'hit'}}
-		landed on 
-	{{else activityMode == 'human' || activityMode == 'ruser'}}
+	{{if is404 == '1'}}
+		tried to access <span style="color: #F00;">non-existent page</span>
+	{{else}}
 		visited
-	{{else activityMode == '404'}}
-		tried to access
-	{{else activityMode == 'gCrawler'}}
-		crawled
-	{{else activityMode == 'crawler'}}
-		crawled
 	{{/if}}
 <a href="${URL}" target="_blank">${URL}</a>
 </td></tr>

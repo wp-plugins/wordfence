@@ -260,7 +260,11 @@ class wordfence {
 		add_action('init', 'wordfence::initAction');
 		add_action('template_redirect', 'wordfence::templateRedir');
 		add_action('shutdown', 'wordfence::shutdownAction');
-		add_action('wp_authenticate','wordfence::authAction', 1, 2);
+		if(version_compare(PHP_VERSION, '5.4.0') >= 0){
+			add_action('wp_authenticate','wordfence::authActionNew', 1, 2);
+		} else {
+			add_action('wp_authenticate','wordfence::authActionOld', 1, 2);
+		}
 		add_action('login_init','wordfence::loginInitAction');
 		add_action('wp_login','wordfence::loginAction');
 		add_action('wp_logout','wordfence::logoutAction');
@@ -374,7 +378,7 @@ class wordfence {
 		}
 		return $errors;
 	}
-	function isStrongPasswd($passwd, $username ) {
+	public static function isStrongPasswd($passwd, $username ) {
 		$strength = 0; 
 		if(strlen( trim( $passwd ) ) < 5)
 			return false;
@@ -605,6 +609,12 @@ class wordfence {
 		if(self::getLog()->isWhitelisted($IP)){
 			return $authResult;
 		}
+		if(wfConfig::get('other_WFNet') && is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
+			if($maxBlockTime = self::wfsnIsBlocked($IP, 'brute')){
+				self::getLog()->blockIP($IP, "Blocked by Wordfence Security Network", true, false, $maxBlockTime);
+			}
+				
+		}
 		if($secEnabled){
 			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username' && wfConfig::get('loginSec_lockInvalidUsers')){
 				self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
@@ -632,6 +642,40 @@ class wordfence {
 		}
 		return $authResult;
 	}
+	public static function wfsnReportBlockedAttempt($IP, $type){
+		try {
+			$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?blocked=1&k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+			curl_setopt($curl, CURLOPT_TIMEOUT, 1);
+			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
+			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
+			curl_setopt ($curl, CURLOPT_HEADER, 0);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($curl, CURLOPT_POST, false);
+			curl_exec($curl);
+		} catch(Exception $err){
+			return false;
+		}
+	}
+	private static function wfsnIsBlocked($IP, $type){
+		try {
+			$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+			curl_setopt($curl, CURLOPT_TIMEOUT, 3);
+			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
+			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
+			curl_setopt ($curl, CURLOPT_HEADER, 0);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($curl, CURLOPT_POST, false);
+			$result = curl_exec($curl);
+			if(preg_match('/BLOCKED:(\d+)/', $result, $matches) && (! self::getLog()->isWhitelisted($IP)) ){
+				return $matches[1];
+			}
+			return false;
+		} catch(Exception $err){
+			return false;
+		}
+	}
 	public static function logoutAction(){
 		$userID = get_current_user_id();
 		$userDat = get_user_by('id', $userID);
@@ -642,7 +686,7 @@ class wordfence {
 			require('wfLockedOut.php');
 		}
 	}
-	public static function authAction($username, $passwd){
+	public static function authActionNew($username, &$passwd){ //As of php 5.4 we must denote passing by ref in the function definition, not the function call (as WordPress core does, which is a bug in WordPress).
 		if(self::isLockedOut(wfUtils::getIP())){
 			require('wfLockedOut.php');
 		}
@@ -665,6 +709,30 @@ class wordfence {
 			self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
 		}
 	}
+	public static function authActionOld($username, $passwd){ //Code is identical to Newer function above except passing by ref ampersand. Some versions of PHP are throwing an error if we include the ampersand in PHP prior to 5.4.
+		if(self::isLockedOut(wfUtils::getIP())){
+			require('wfLockedOut.php');
+		}
+		if(! $username){ return; } 
+		$userDat = get_user_by('login', $username);
+		$_POST['wordfence_userDat'] = $userDat;
+		if(preg_match(self::$passwordCodePattern, $passwd, $matches)){ 
+			$_POST['wordfence_authFactor'] = $matches[1];
+			$passwd = preg_replace('/^(.+)\s+(wf[a-z0-9]+)$/i', '$1', $passwd);
+			$_POST['pwd'] = $passwd;
+		}
+
+		if($userDat){
+			require_once( ABSPATH . 'wp-includes/class-phpass.php');
+			$hasher = new PasswordHash(8, TRUE);
+			if(! $hasher->CheckPassword($_POST['pwd'], $userDat->user_pass)){
+				self::getLog()->logLogin('loginFailValidUsername', 1, $username); 
+			}
+		} else {
+			self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
+		}
+	}
+
 	public static function getWPFileContent($file, $cType, $cName, $cVersion){
 		if($cType == 'plugin'){
 			if(preg_match('#^/?wp-content/plugins/[^/]+/#', $file)){
@@ -703,6 +771,9 @@ class wordfence {
 		}
 	}
 	public static function ajax_addTwoFactor_callback(){
+		if(! wfConfig::get('isPaid')){
+			return array('errorMsg' => 'Cellphone Sign-in is only available to paid members. <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade now.</a>');
+		}
 		$username = $_POST['username'];
 		$phone = $_POST['phone'];
 		$user = get_user_by('login', $username);
@@ -984,6 +1055,8 @@ class wordfence {
 			if($keyData['ok'] && $keyData['apiKey']){
 				wfConfig::set('apiKey', $keyData['apiKey']);
 				wfConfig::set('isPaid', 0);
+				//When downgrading we must disable all two factor authentication because it can lock an admin out if we don't. 
+				wfConfig::set_ser('twoFactorUsers', array());
 			} else {
 				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
 			}
@@ -1222,7 +1295,9 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_whois_callback(){
-		require_once('whois/whois.main.php');
+		if( ! class_exists( 'Whois' )){
+			require_once('whois/whois.main.php');
+		}
 		$val = trim($_POST['val']);
 		$val = preg_replace('/[^a-zA-Z0-9\.\-]+/', '', $val);
 		$whois = new Whois();
@@ -1339,6 +1414,103 @@ class wordfence {
 			'currentScanID' => $issues->getScanTime()
 			);
 	}
+	public static function ajax_updateAlertEmail_callback(){
+		$email = trim($_POST['email']);
+		if(! preg_match('/[^\@]+\@[^\.]+\.[^\.]+/', $email)){
+			return array( 'err' => "Invalid email address given.");
+		}
+		wfConfig::set('alertEmails', $email);
+		return array('ok' => 1, 'email' => $email);
+	}
+	public static function ajax_bulkOperation_callback(){
+		$op = $_POST['op'];
+		if($op == 'del' || $op == 'repair'){
+			$ids = $_POST['ids'];
+			$filesWorkedOn = 0;
+			$errors = array();
+			$issues = new wfIssues();
+			foreach($ids as $id){
+				$issue = $issues->getIssueByID($id);
+				if(! $issue){
+					array_push($errors, "Could not delete one of the files because we could not find the issue. Perhaps it's been resolved?");
+					continue;
+				}
+				$file = $issue['data']['file'];
+				$localFile = ABSPATH . '/' . preg_replace('/^[\.\/]+/', '', $file);
+				$localFile = realpath($localFile);
+				if(strpos($localFile, ABSPATH) !== 0){
+					array_push($errors, "An invalid file was requested: " . htmlentities($file));
+					continue;
+				}
+				if($op == 'del'){
+					if(@unlink($localFile)){
+						$issues->updateIssue($id, 'delete');
+						$filesWorkedOn++;
+					} else {
+						$err = error_get_last();
+						array_push($errors, "Could not delete file " . htmlentities($file) . ". Error was: " . htmlentities($err['message']));
+					}
+				} else if($op == 'repair'){
+					$dat = $issue['data'];	
+					$result = self::getWPFileContent($dat['file'], $dat['cType'], $dat['cName'], $dat['cVersion']);
+					if($result['cerrorMsg']){
+						array_push($errors, $result['cerrorMsg']);
+						continue;
+					} else if(! $result['fileContent']){
+						array_push($errors, "We could not get the original file of " . htmlentities($file) . " to do a repair.");
+						continue;
+					}
+					
+					if(preg_match('/\.\./', $file)){
+						array_push($errors, "An invalid file " . htmlentities($file) . " was specified for repair.");
+						continue;
+					}
+					$fh = fopen($localFile, 'w');
+					if(! $fh){
+						$err = error_get_last();
+						if(preg_match('/Permission denied/i', $err['message'])){
+							$errMsg = "You don't have permission to repair " . htmlentities($file) . ". You need to either fix the file manually using FTP or change the file permissions and ownership so that your web server has write access to repair the file.";
+						} else {
+							$errMsg = "We could not write to " . htmlentities($file) . ". The error was: " . $err['message'];
+						}
+						array_push($errors, $errMsg);
+						continue;
+					}
+					flock($fh, LOCK_EX);
+					$bytes = fwrite($fh, $result['fileContent']);
+					flock($fh, LOCK_UN);
+					fclose($fh);
+					if($bytes < 1){
+						array_push($errors, "We could not write to " . htmlentities($file) . ". ($bytes bytes written) You may not have permission to modify files on your WordPress server.");
+						continue;
+					}
+					$filesWorkedOn++;
+					$issues->updateIssue($id, 'delete');
+				}
+			}
+			$headMsg = "";
+			$bodyMsg = "";
+			$verb = $op == 'del' ? 'Deleted' : 'Repaired';
+			$verb2 = $op == 'del' ? 'delete' : 'repair';
+			if($filesWorkedOn > 0 && sizeof($errors) > 0){
+				$headMsg = "$verb some files with errors";
+				$bodyMsg = "$verb $filesWorkedOn files but we encountered the following errors with other files: " . implode('<br />', $errors);
+			} else if($filesWorkedOn > 0){
+				$headMsg = "$verb $filesWorkedOn files successfully";
+				$bodyMsg = "$verb $filesWorkedOn files successfully. No errors were encountered.";
+			} else if(sizeof($errors) > 0){
+				$headMsg = "Could not $verb2 files";
+				$bodyMsg = "We could not $verb2 any of the files you selected. We encountered the following errors: " . implode('<br />', $errors);
+			} else {
+				$headMsg = "Nothing done";
+				$bodyMsg = "We didn't $verb2 anything and no errors were found.";
+			}
+
+			return array('ok' => 1, 'bulkHeading' => $headMsg, 'bulkBody' => $bodyMsg);
+		} else {
+			return array('errorMsg' => "Invalid bulk operation selected");
+		}
+	}
 	public static function ajax_deleteFile_callback(){
 		$issueID = $_POST['issueID'];
 		$wfIssues = new wfIssues();
@@ -1426,7 +1598,7 @@ class wordfence {
 		$wfFunc = get_query_var('_wfsf');		
 		$wfLog = self::getLog();
 		if($wfLog->logHitOK()){
-			if( (! empty($wfFunc)) && is_404() ){
+			if( empty($wfFunc) && is_404() ){
 				$wfLog->logLeechAndBlock('404');
 			} else {
 				$wfLog->logLeechAndBlock('hit');
@@ -1640,7 +1812,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -1688,13 +1860,17 @@ class wordfence {
 			$activationError = substr($activationError, 0, 400) . '...[output truncated]';
 		}
 		if($activationError){
-			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. Please report this on <a href="http://www.wordfence.com/forums/" target="_blank">our support forum</a>. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
+			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
 		}
 		delete_option('wf_plugin_act_error');
 	}
 	public static function noKeyError(){
 		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>Wordfence could not get an API key from the Wordfence scanning servers when it activated.</strong> You can try to fix this by going to the Wordfence "options" page and hitting "Save Changes". This will cause Wordfence to retry fetching an API key for you. If you keep seeing this error it usually means your WordPress server can\'t connect to our scanning servers. You can try asking your WordPress host to allow your WordPress server to connect to noc1.wordfence.com.</p></div>';
 	}
+	public static function adminEmailWarning(){
+		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>You have not set an administrator email address to receive alerts for Wordfence.</strong> Please <a href="' . self::getMyOptionsURL() . '">click here to go to the Wordfence Options Page</a> and set an email address where you will receive security alerts from this site.</p></div>';
+	}
+
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
 		$warningAdded = false;
@@ -1714,6 +1890,16 @@ class wordfence {
 			}
 			$warningAdded = true;
 		}
+		if(! $warningAdded){
+			if(wfConfig::get('tourClosed') == '1' && (! wfConfig::get('alertEmails')) ){
+				if(wfUtils::isAdminPageMU()){
+					add_action('network_admin_notices', 'wordfence::adminEmailWarning');
+				} else {
+					add_action('admin_notices', 'wordfence::adminEmailWarning');
+				}
+			}
+		}
+			
 		/*
 		if(is_plugin_active('w3-total-cache/w3-total-cache.php') && wfConfig::get('liveTrafficEnabled')){
 			wfConfig::set('liveTrafficEnabled', 0);
@@ -1747,6 +1933,11 @@ class wordfence {
 		add_submenu_page("Wordfence", "Options", "Options", "activate_plugins", "WordfenceSecOpt", 'wordfence::menu_options');
 	}
 	public static function menu_options(){
+		if(! wfConfig::get('alertEmails')){
+			foreach(array('alertOn_block', 'alertOn_loginLockout', 'alertOn_lostPasswdForm', 'alertOn_adminLogin') as $opt){
+				wfConfig::set($opt, '1');
+			}
+		}
 		require 'menu_options.php';
 	}
 	public static function menu_blockedIPs(){
@@ -1840,6 +2031,9 @@ class wordfence {
 	}
 
 	public static function alert($subject, $alertMsg, $IP){
+		$emails = wfConfig::getAlertEmails();
+		if(sizeof($emails) < 1){ return; }
+
 		$IPMsg = "";
 		if($IP){
 			$IPMsg = "User IP: $IP\n";
@@ -1857,18 +2051,36 @@ class wordfence {
 			}
 		}	
 		$content = wfUtils::tmpl('email_genericAlert.php', array(
+			'isPaid' => wfConfig::get('isPaid'),
 			'subject' => $subject,
 			'blogName' => get_bloginfo('name', 'raw'),
+			'adminURL' => get_admin_url(),
 			'alertMsg' => $alertMsg,
 			'IPMsg' => $IPMsg,
 			'date' => wfUtils::localHumanDate(),
 			'myHomeURL' => self::getMyHomeURL(),
 			'myOptionsURL' => self::getMyOptionsURL()
 			));
-		$emails = wfConfig::getAlertEmails();
-		if(sizeof($emails) < 1){ return; }
 		$shortSiteURL = preg_replace('/^https?:\/\//i', '', site_url());
 		$subject = "[Wordfence Alert] $shortSiteURL " . $subject;
+
+		$sendMax = wfConfig::get('alert_maxHourly', 0);
+		if($sendMax > 0){
+			$sendArr = wfConfig::get_ser('alertFreqTrack', array());
+			if(! is_array($sendArr)){
+				$sendArr = array();
+			}
+			$minuteTime = floor(time() / 60);
+			$totalSent = 0;
+			for($i = $minuteTime; $i > $minuteTime - 60; $i--){
+				$totalSent += isset($sendArr[$i]) ? $sendArr[$i] : 0;
+			}
+			if($totalSent >= $sendMax){
+				return;
+			}
+			$sendArr[$minuteTime] = isset($sendArr[$minuteTime]) ? $sendArr[$minuteTime] + 1 : 1;
+			wfConfig::set_ser('alertFreqTrack', $sendArr);
+		}
 		wp_mail(implode(',', $emails), $subject, $content);
 	}
 	private static function getLog(){

@@ -331,7 +331,7 @@ window['wordfenceAdmin'] = {
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_PAIDONLY:') != -1){
 			var msg = item.msg.replace('SUM_PAIDONLY:', '');
-			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_FINAL:') != -1){
 			var msg = item.msg.replace('SUM_FINAL:', '');
@@ -512,7 +512,11 @@ window['wordfenceAdmin'] = {
 	},
 	displayIssues: function(res, callback){
 		var self = this;
-		res.summary['lastScanCompleted'] = res['lastScanCompleted'];
+		try {
+			res.summary['lastScanCompleted'] = res['lastScanCompleted'];
+		} catch(err){ 
+			res.summary['lastScanCompleted'] = 'Never';
+		}
 		jQuery('.wfIssuesContainer').hide();
 		for(issueStatus in res.issuesLists){ 
 			var containerID = 'wfIssues_dataTable_' + issueStatus;
@@ -638,6 +642,39 @@ window['wordfenceAdmin'] = {
 	},
 	scanRunningMsg: function(){ this.colorbox('400px', "A scan is running", "A scan is currently in progress. Please wait until it finishes before starting another scan."); },
 	errorMsg: function(msg){ this.colorbox('400px', "An error occurred:", msg); },
+	bulkOperation: function(op){
+		var self = this;
+		if(op == 'del' || op == 'repair'){
+			var ids = jQuery('input.wf' + op + 'Checkbox:checked').map(function(){ return jQuery(this).val(); }).get();
+			if(ids.length < 1){
+				this.colorbox('400px', "No files were selected", "You need to select files to perform a bulk operation. There is a checkbox in each issue that lets you select that file. You can then select a bulk operation and hit the button to perform that bulk operation.");
+				return;
+			}
+			if(op == 'del'){
+				this.colorbox('400px', "Are you sure you want to delete?", "Are you sure you want to delete a total of " + ids.length + " files? Do not delete files on your system unless you're ABSOLUTELY sure you know what you're doing. If you delete the wrong file it could cause your WordPress website to stop functioning and you will probably have to restore from backups. If you're unsure, Cancel and work with your hosting provider to clean your system of infected files.<br /><br /><input type=\"button\" value=\"Delete Files\" onclick=\"WFAD.bulkOperationConfirmed('" + op + "');\" />&nbsp;&nbsp;<input type=\"button\" value=\"Cancel\" onclick=\"jQuery.colorbox.close();\" /><br />");
+			} else if(op == 'repair'){
+				this.colorbox('400px', "Are you sure you want to repair?", "Are you sure you want to repair a total of " + ids.length + " files? Do not repair files on your system unless you're sure you have reviewed the differences between the original file and your version of the file in the files you are repairing. If you repair a file that has been customized for your system by a developer or your hosting provider it may leave your system unusable. If you're unsure, Cancel and work with your hosting provider to clean your system of infected files.<br /><br /><input type=\"button\" value=\"Repair Files\" onclick=\"WFAD.bulkOperationConfirmed('" + op + "');\" />&nbsp;&nbsp;<input type=\"button\" value=\"Cancel\" onclick=\"jQuery.colorbox.close();\" /><br />");
+			}
+		} else {
+			return;
+		}
+	},
+	bulkOperationConfirmed: function(op){
+		jQuery.colorbox.close();
+		var self = this;
+		this.ajax('wordfence_bulkOperation', {
+			op: op,
+			ids: jQuery('input.wf' + op + 'Checkbox:checked').map(function(){ return jQuery(this).val(); }).get()
+			}, function(res){ self.doneBulkOperation(res); });
+	},
+	doneBulkOperation: function(res){
+		var self = this;
+		if(res.ok){
+			this.loadIssues(function(){ self.colorbox('400px', res.bulkHeading, res.bulkBody); });
+		} else {
+			this.loadIssues(function(){});
+		}
+	},
 	deleteFile: function(issueID){
 		var self = this;
 		this.ajax('wordfence_deleteFile', {
@@ -1204,7 +1241,7 @@ window['wordfenceAdmin'] = {
 		var pos = jQuery('#paidWrap').position();
 		var width = jQuery('#paidWrap').width();
 		var height = jQuery('#paidWrap').height();
-		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
+		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
 	},
 	sched_modeChange: function(){
 		var self = this;
