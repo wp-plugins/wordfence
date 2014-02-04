@@ -28,7 +28,7 @@
 			<?php if(sizeof($events) < 1){ ?>
 				<div style="width: 500px;">
 					Welcome to Wordfence!<br /><br />
-					To get started, simply click the blue button at the top of this page to start your first scan.
+					To get started, simply click the "Scan" button at the top of this page to start your first scan.
 				</div>
 			<?php } ?>
 			</div></div></div>
@@ -97,6 +97,18 @@
 						The list below shows new problems or warnings that Wordfence found with your site.
 						If you have fixed all the issues below, you can <a href="#" onclick="WFAD.updateAllIssues('deleteNew'); return false;">click here to mark all new issues as fixed</a>.
 						You can also <a href="#" onclick="WFAD.updateAllIssues('ignoreAllNew'); return false;">ignore all new issues</a> which will exclude all issues listed below from future scans.
+					</p>
+					<p>
+						<a href="#" onclick="jQuery('#wfBulkOps').toggle(); return false;">Bulk operation&raquo;&raquo;</a>
+						<div id="wfBulkOps" style="display: none;">
+							<input type="button" name="but2" value="Select All Repairable files" onclick="jQuery('input.wfrepairCheckbox').prop('checked', true); return false;" />
+							&nbsp;<input type="button" name="but1" value="Bulk Repair Selected Files" onclick="WFAD.bulkOperation('repair'); return false;" />
+							<br />
+							<br />
+							<input type="button" name="but2" value="Select All Deletable files" onclick="jQuery('input.wfdelCheckbox').prop('checked', true); return false;" />
+							&nbsp;<input type="button" name="but1" value="Bulk Delete Selected Files" onclick="WFAD.bulkOperation('del'); return false;" />
+						</div>
+
 					</p>
 					 <div id="wfIssues_dataTable_new">
 					 </div>
@@ -518,6 +530,12 @@
 		{{if data.canDiff}}
 		<a href="${WFAD.makeDiffLink(data)}" target="_blank">See how the file has changed.</a>
 		{{/if}}
+		{{if data.canFix}}
+		<br />&nbsp;<input type="checkbox" class="wfrepairCheckbox" value="${id}" />&nbsp;Select for bulk repair
+		{{/if}}
+		{{if data.canDelete}}
+		<br />&nbsp;<input type="checkbox" class="wfdelCheckbox" value="${id}" />&nbsp;Select for bulk delete
+		{{/if}}
 	</div>
 	<div class="wfIssueOptions">
 		{{if status == 'new'}}
@@ -615,8 +633,6 @@
 		<tr><td>
 			Your first Wordfence scan should be automatically starting now
 			and you will see the scan details in the "Activity Log" above in a few seconds.
-			While you're waiting, why not visit the <a href="http://www.wordfence.com/forums/" target="_blank">Wordfence Forums</a>
-			where you can post your comments or questions. We would love to hear from you.
 		</td></tr>
 		<tr><td>
 			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" id="wfStartScanButton2" class="wfStartScanButton button-primary" /></div>

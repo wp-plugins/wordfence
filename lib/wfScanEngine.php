@@ -879,7 +879,7 @@ class wfScanEngine {
 			'sslverify' => false,
 			'headers' => array()
 			));
-		
+		wordfence::status(4, 'info', "Test result of scan start URL fetch: " . var_export($testResult, true));	
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
 		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
@@ -888,7 +888,7 @@ class wfScanEngine {
 			$cronURL = admin_url($cronURL);
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
-			$result = wp_remote_post( $cronURL, array(
+			$result = wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
@@ -901,12 +901,15 @@ class wfScanEngine {
 			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron via proxy at URL $cronURL");
-			$result = wp_remote_post( $cronURL, array(
+
+			$result = wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
 				'headers' => $headers 
 				) );
+			wordfence::status(4, 'info', "Proxy scan start headers: " . var_export($result['headers'], true));	
+			wordfence::status(4, 'info', "Proxy scan start response: " . var_export($result['response'], true));	
 			wordfence::status(4, 'info', "Scan process ended after forking.");
 		}
 		return false; //No error

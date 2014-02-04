@@ -91,7 +91,7 @@ class wfLog {
 				if($pat){
 					$URL = wfUtils::getRequestedURL();
 					if(preg_match($pat, $URL)){
-						$this->getDB()->queryWrite("insert IGNORE into $p"."wfVulnScanners (IP, ctime, hits) values (INET_ATON('%s'), unix_timestamp(), 1) ON DUPLICATE KEY UPDATE ctime = unix_timestamp, hits = hits + 1", $IP);
+						$this->getDB()->queryWrite("insert IGNORE into $p"."wfVulnScanners (IP, ctime, hits) values (INET_ATON('%s'), unix_timestamp(), 1) ON DUPLICATE KEY UPDATE ctime = unix_timestamp(), hits = hits + 1", $IP);
 						if(wfConfig::get('maxScanHits') != 'DISABLED'){
 							if( empty($_SERVER['HTTP_REFERER'] )){
 								$this->getDB()->queryWrite("insert into " . $this->badLeechersTable . " (eMin, IP, hits) values (floor(unix_timestamp() / 60), %s, 1) ON DUPLICATE KEY update hits = IF(@wfblcurrenthits := hits + 1, hits + 1, hits + 1)", $IPnum); 
@@ -124,16 +124,9 @@ class wfLog {
 		if($IPnum > 1160651777 && $IPnum < 1160651808){ //IP is in Wordfence's IP block which would prevent our scanning server manually kicking off scans that are stuck
 			return true;
 		}
-		//We now whitelist all RFC1918 IP addresses and loopback
-		if(strpos($IP, '127.') === 0 || strpos($IP, '10.') === 0 || strpos($IP, '192.168.') === 0 || strpos($IP, '172.') === 0){
-			if(strpos($IP, '172.') === 0){
-				$parts = explode('.', $IP);
-				if($parts[1] >= 16 && $parts[1] <= 31){
-					return true;
-				}
-			} else {
-				return true;
-			}
+		//We now whitelist all private addrs 
+		if(wfUtils::isPrivateAddress($IP)){
+			return true;
 		}
 		$list = wfConfig::get('whitelisted');
 		if(! $list){ return false; }

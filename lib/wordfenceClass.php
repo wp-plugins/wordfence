@@ -1422,6 +1422,95 @@ class wordfence {
 		wfConfig::set('alertEmails', $email);
 		return array('ok' => 1, 'email' => $email);
 	}
+	public static function ajax_bulkOperation_callback(){
+		$op = $_POST['op'];
+		if($op == 'del' || $op == 'repair'){
+			$ids = $_POST['ids'];
+			$filesWorkedOn = 0;
+			$errors = array();
+			$issues = new wfIssues();
+			foreach($ids as $id){
+				$issue = $issues->getIssueByID($id);
+				if(! $issue){
+					array_push($errors, "Could not delete one of the files because we could not find the issue. Perhaps it's been resolved?");
+					continue;
+				}
+				$file = $issue['data']['file'];
+				$localFile = ABSPATH . '/' . preg_replace('/^[\.\/]+/', '', $file);
+				$localFile = realpath($localFile);
+				if(strpos($localFile, ABSPATH) !== 0){
+					array_push($errors, "An invalid file was requested: " . htmlentities($file));
+					continue;
+				}
+				if($op == 'del'){
+					if(@unlink($localFile)){
+						$issues->updateIssue($id, 'delete');
+						$filesWorkedOn++;
+					} else {
+						$err = error_get_last();
+						array_push($errors, "Could not delete file " . htmlentities($file) . ". Error was: " . htmlentities($err['message']));
+					}
+				} else if($op == 'repair'){
+					$dat = $issue['data'];	
+					$result = self::getWPFileContent($dat['file'], $dat['cType'], $dat['cName'], $dat['cVersion']);
+					if($result['cerrorMsg']){
+						array_push($errors, $result['cerrorMsg']);
+						continue;
+					} else if(! $result['fileContent']){
+						array_push($errors, "We could not get the original file of " . htmlentities($file) . " to do a repair.");
+						continue;
+					}
+					
+					if(preg_match('/\.\./', $file)){
+						array_push($errors, "An invalid file " . htmlentities($file) . " was specified for repair.");
+						continue;
+					}
+					$fh = fopen($localFile, 'w');
+					if(! $fh){
+						$err = error_get_last();
+						if(preg_match('/Permission denied/i', $err['message'])){
+							$errMsg = "You don't have permission to repair " . htmlentities($file) . ". You need to either fix the file manually using FTP or change the file permissions and ownership so that your web server has write access to repair the file.";
+						} else {
+							$errMsg = "We could not write to " . htmlentities($file) . ". The error was: " . $err['message'];
+						}
+						array_push($errors, $errMsg);
+						continue;
+					}
+					flock($fh, LOCK_EX);
+					$bytes = fwrite($fh, $result['fileContent']);
+					flock($fh, LOCK_UN);
+					fclose($fh);
+					if($bytes < 1){
+						array_push($errors, "We could not write to " . htmlentities($file) . ". ($bytes bytes written) You may not have permission to modify files on your WordPress server.");
+						continue;
+					}
+					$filesWorkedOn++;
+					$issues->updateIssue($id, 'delete');
+				}
+			}
+			$headMsg = "";
+			$bodyMsg = "";
+			$verb = $op == 'del' ? 'Deleted' : 'Repaired';
+			$verb2 = $op == 'del' ? 'delete' : 'repair';
+			if($filesWorkedOn > 0 && sizeof($errors) > 0){
+				$headMsg = "$verb some files with errors";
+				$bodyMsg = "$verb $filesWorkedOn files but we encountered the following errors with other files: " . implode('<br />', $errors);
+			} else if($filesWorkedOn > 0){
+				$headMsg = "$verb $filesWorkedOn files successfully";
+				$bodyMsg = "$verb $filesWorkedOn files successfully. No errors were encountered.";
+			} else if(sizeof($errors) > 0){
+				$headMsg = "Could not $verb2 files";
+				$bodyMsg = "We could not $verb2 any of the files you selected. We encountered the following errors: " . implode('<br />', $errors);
+			} else {
+				$headMsg = "Nothing done";
+				$bodyMsg = "We didn't $verb2 anything and no errors were found.";
+			}
+
+			return array('ok' => 1, 'bulkHeading' => $headMsg, 'bulkBody' => $bodyMsg);
+		} else {
+			return array('errorMsg' => "Invalid bulk operation selected");
+		}
+	}
 	public static function ajax_deleteFile_callback(){
 		$issueID = $_POST['issueID'];
 		$wfIssues = new wfIssues();
@@ -1723,7 +1812,7 @@ class wordfence {
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -1771,7 +1860,7 @@ class wordfence {
 			$activationError = substr($activationError, 0, 400) . '...[output truncated]';
 		}
 		if($activationError){
-			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. Please report this on <a href="http://www.wordfence.com/forums/" target="_blank">our support forum</a>. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
+			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
 		}
 		delete_option('wf_plugin_act_error');
 	}
@@ -1942,6 +2031,9 @@ class wordfence {
 	}
 
 	public static function alert($subject, $alertMsg, $IP){
+		$emails = wfConfig::getAlertEmails();
+		if(sizeof($emails) < 1){ return; }
+
 		$IPMsg = "";
 		if($IP){
 			$IPMsg = "User IP: $IP\n";
@@ -1962,16 +2054,33 @@ class wordfence {
 			'isPaid' => wfConfig::get('isPaid'),
 			'subject' => $subject,
 			'blogName' => get_bloginfo('name', 'raw'),
+			'adminURL' => get_admin_url(),
 			'alertMsg' => $alertMsg,
 			'IPMsg' => $IPMsg,
 			'date' => wfUtils::localHumanDate(),
 			'myHomeURL' => self::getMyHomeURL(),
 			'myOptionsURL' => self::getMyOptionsURL()
 			));
-		$emails = wfConfig::getAlertEmails();
-		if(sizeof($emails) < 1){ return; }
 		$shortSiteURL = preg_replace('/^https?:\/\//i', '', site_url());
 		$subject = "[Wordfence Alert] $shortSiteURL " . $subject;
+
+		$sendMax = wfConfig::get('alert_maxHourly', 0);
+		if($sendMax > 0){
+			$sendArr = wfConfig::get_ser('alertFreqTrack', array());
+			if(! is_array($sendArr)){
+				$sendArr = array();
+			}
+			$minuteTime = floor(time() / 60);
+			$totalSent = 0;
+			for($i = $minuteTime; $i > $minuteTime - 60; $i--){
+				$totalSent += isset($sendArr[$i]) ? $sendArr[$i] : 0;
+			}
+			if($totalSent >= $sendMax){
+				return;
+			}
+			$sendArr[$minuteTime] = isset($sendArr[$minuteTime]) ? $sendArr[$minuteTime] + 1 : 1;
+			wfConfig::set_ser('alertFreqTrack', $sendArr);
+		}
 		wp_mail(implode(',', $emails), $subject, $content);
 	}
 	private static function getLog(){

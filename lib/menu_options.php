@@ -69,7 +69,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<h2>Advanced Options:</h2>
 		<p style="width: 600px;">
 			Wordfence works great out of the box for most websites. Simply install Wordfence and your site and content is protected. For finer granularity of control, we have provided advanced options.
-			If you need help with advanced options, <a href="http://www.wordfence.com/forums/forum/wordfence-support-questions/" target="_blank">please ask in the Wordfence support forum</a>.
 		</p>
 	</div>
 	<div id="wfConfigAdvanced">
@@ -88,6 +87,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Alert when the "lost password" form is used for a valid user</th><td><input type="checkbox" id="alertOn_lostPasswdForm" class="wfConfigElem" name="alertOn_lostPasswdForm" value="1" <?php $w->cb('alertOn_lostPasswdForm'); ?>/></td></tr>
 	<tr><th>Alert me when someone with administrator access signs in</th><td><input type="checkbox" id="alertOn_adminLogin" class="wfConfigElem" name="alertOn_adminLogin" value="1" <?php $w->cb('alertOn_adminLogin'); ?>/></td></tr>
 	<tr><th>Alert me when a non-admin user signs in</th><td><input type="checkbox" id="alertOn_nonAdminLogin" class="wfConfigElem" name="alertOn_nonAdminLogin" value="1" <?php $w->cb('alertOn_nonAdminLogin'); ?>/></td></tr>
+	<tr><th>Maximum email alerts to send per hour</th><td>&nbsp;<input type="text" id="alert_maxHourly" name="alert_maxHourly" value="<?php $w->f('alert_maxHourly'); ?>" size="4" />0 or empty means unlimited alerts will be sent.</td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerLiveTrafficOptions"></div>
 		<h3 class="wfConfigHeading">Live Traffic View</h3>
@@ -118,6 +118,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Monitor disk space</th><td><input type="checkbox" id="scansEnabled_diskSpace" class="wfConfigElem" name="scansEnabled_diskSpace" value="1" <?php $w->cb('scansEnabled_diskSpace'); ?>/></td></tr>
 	<tr><th>Scan for unauthorized DNS changes</th><td><input type="checkbox" id="scansEnabled_dns" class="wfConfigElem" name="scansEnabled_dns" value="1" <?php $w->cb('scansEnabled_dns'); ?>/></td></tr>
 	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
+	<tr><th>Scan image files as if they were executable</th><td><input type="checkbox" id="scansEnabled_scanImages" class="wfConfigElem" name="scansEnabled_scanImages" value="1" <?php $w->cb('scansEnabled_scanImages'); ?> /></td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerFirewallRules"></div>
 		<h3 class="wfConfigHeading">Firewall Rules</h3>

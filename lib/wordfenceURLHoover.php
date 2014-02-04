@@ -107,7 +107,7 @@ class wordfenceURLHoover {
 				return;
 			}
 		}
-		if($parts[0] >= 240 || $parts[0] == '10' || $parts[0] == '172' || $parts[0] == '192' || $parts[0] == '127' || $parts[0] == 0){
+		if(wfUtils::isPrivateAddress($ipdata) ){
 			return;
 		}
 		if(strlen($path) == 1){

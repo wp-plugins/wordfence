@@ -81,7 +81,7 @@ class wordfenceScanner {
 					$isPHP = true;
 				}
 
-				if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt)){
+				if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt) && (! wfConfig::get('scansEnabled_scanImages')) ){
 					continue;
 				}
 				if(wfUtils::fileTooBig($this->path . $file)){ //We can't use filesize on 32 bit systems for files > 2 gigs
@@ -114,7 +114,7 @@ class wordfenceScanner {
 					if($totalRead < 1){
 						break;
 					}
-					if($isPHP){
+					if($isPHP || wfConfig::get('scansEnabled_scanImages') ){
 						if(strpos($data, '$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false && strpos($data, "TimThum"."b script created by") !== false){
 							$this->addResult(array(
 								'type' => 'file',
@@ -177,6 +177,32 @@ class wordfenceScanner {
 								'ignoreC' => $fileSum,
 								'shortMsg' => "This file may contain malicious executable code",
 								'longMsg' => "This file is a PHP executable file and contains an " . $this->patterns['word1'] . " function and " . $this->patterns['word2'] . " decoding function on the same line. This is a common technique used by hackers to hide and execute code. If you know about this file you can choose to ignore it to exclude it from future scans.",
+								'data' => array(
+									'file' => $file,
+									'canDiff' => false,
+									'canFix' => false,
+									'canDelete' => true
+								)
+								));
+							break;
+						}
+						$badStringFound = false;
+						if(strpos($data, $this->patterns['badstrings'][0]) !== false){
+							for($i = 1; $i < sizeof($this->patterns['badstrings']); $i++){
+								if(strpos($data, $this->patterns['badstrings'][$i]) !== false){
+									$badStringFound = $this->patterns['badstrings'][$i];
+									break;
+								}
+							}
+						}
+						if($badStringFound){
+							$this->addResult(array(
+								'type' => 'file',
+								'severity' => 1,
+								'ignoreP' => $this->path . $file,
+								'ignoreC' => $fileSum,
+								'shortMsg' => "This file may contain malicious executable code",
+								'longMsg' => "This file is a PHP executable file and contains the word 'eval' (without quotes) and the word '" . $badStringFound . "' (without quotes). The eval() function along with an encoding function like the one mentioned are commonly used by hackers to hide their code. If you know about this file you can choose to ignore it to exclude it from future scans.",
 								'data' => array(
 									'file' => $file,
 									'canDiff' => false,

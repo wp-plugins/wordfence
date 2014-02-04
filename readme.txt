@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
 Tested up to: 3.8
-Stable tag: 4.0.1
+Stable tag: 4.0.2
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -43,7 +43,6 @@ Wordfence Security:
 * Wordfence Security for multi-site also scans all posts and comments across all blogs from one admin panel.
 * WordPress Multi-Site (or WordPress MU in the older parlance) compatible.
 * Premium users can also block countries and schedule scans for specific times and a higher frequency.
-* Our online forums are available 24/7 to answer your WordPress security questions. 
 
 Wordfence Security is full-featured and constantly updated by our team to incorporate the latest security features and to hunt for the 
 newest security threats to your WordPress website.
@@ -51,8 +50,6 @@ newest security threats to your WordPress website.
 == Installation ==
 
 To install Wordfence Security and start protecting your WordPress website:
-
-[Remember to visit our support forums if you have questions or comments.](http://wordfence.com/forums/)
 
 1. Install Wordfence Security automatically or by uploading the ZIP file. 
 1. Activate the security plugin through the 'Plugins' menu in WordPress.
@@ -105,7 +102,7 @@ that we can blog any security threat as soon as it emerges in the wild.
 = What if I need support? =
 
 All our paid customers receive priority support. Excellent customer service is a key part
-of being a Wordfence Security member. You can also [visit our support forums where we provide free support for all Wordfence Security users](http://wordfence.com/forums/) and answer any security releated questions you may have.
+of being a Wordfence Security member. As free or Premium member can visit [support.wordfence.com](http://support.wordfence.com/) and where you will find out knowledgebase. If you're a Premium member you can also open a support ticket.
 
 = Can I disable certain security features of Wordfence Security? =
 
@@ -152,6 +149,26 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 4.0.2 =
+* Feature: Ability to bulk repair or delete files when cleaning a site.
+* Feature: You can now limit the number of emails per hour that Wordfence sends.
+* Feature: You can now scan image files as if they are executables when cleaning a site. See the option under scanning options.
+* Feature: New connectivity test for wp_remote_post to our servers.
+* Feature: New detection for backdoors that were previously missed in scans. 
+* Improvement: Added a link to the Wordfence admin URL for a site when an email alert is received.
+* Improvement: Removed "buy premium" message from the alert emails which was causing confusion and irritation.
+* Improvement: Improved private address detection by making it faster and adding all private subnets, not just RFC1918 nets. 
+* Improvement: Switched to wp_remote_get for triggering scans instead of wp_remote_post()
+* Improvement: Added some more verbose debugging for scan starts when in debug mode.
+* Improvement: No longer include private addresses when checking malware URL's and scanning IP's.
+* Improvement: Added code to disable Wordfence if WordPress is installing. 
+* Fix: Text change because not all "scan" buttons are blue.
+* Fix: Removed URL from wfBrowscapCache.php which was causing false positives during scans.
+* Fix: Fixed SQL bug that triggered when we logged a vulnerability scan.
+* Fix: IP range blocks where a digit is preceded by a '0' char will no longer generate an error. 
+* Fix: The getIP() routine will no longer use the IP closest to a visitor in network topology if that IP is a private address and behind a proxy. 
+
 
 = 4.0.1 =
 * Real-time WordPress Security Network Launched. 
@@ -759,7 +776,6 @@ cause a security hole on your site.
 = 1.3.3 =
 * Made real-time server polling more efficient.
 * Entering your API key now automatically starts your first scan. Was causing some confusion.
-* Link to forums added for free customer support.
 
 = 1.3.2 =
 * Reduced the number of database connections that Wordfence Security makes to one.
