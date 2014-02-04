@@ -1,6 +1,15 @@
 <div class="wordfenceModeElem" id="wordfenceMode_twoFactor"></div>
 <div class="wrap" id="paidWrap">
 	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Cellphone Sign-in</h2>
+<?php if(! wfConfig::get('isPaid')){ ?>
+			<div class="wfPaidOnlyNotice">
+				<strong>Cellphone Sign-in is only available to Premium Members at this time</strong><br /><br />
+				Cellphone Sign-in is a premium feature because we are charged per SMS we send when a user signs in. If you would like to
+				activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options
+				page.
+			</div>
+<?php } ?>
+
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p style="width: 500px;">
 			Wordfence's Cellphone Sign-in uses a technique called "Two Factor Authentication" which is used by banks, government agencies and military world-wide as one of the most secure forms of remote system authentication. 
@@ -61,13 +70,6 @@
 	</table>
 </div>
 </script>
-<script type="text/javascript">
-<?php
-if( (! wfConfig::get('isPaid')) && (wfConfig::get('tourClosed', 0) == '1') ){
-	echo 'WFAD.paidUsersOnly("Wordfence Cellphone Sign-in uses a technique called \'Two Factor Authentication\'. Two Factor Authentication is used by banks, government agencies and military world-wide as one of the most secure forms of remote system authentication. It\'s now available for all paid Wordfence members to permanently stop all brute force hacks. <br /><br />When you enable Cellphone Sign-in on a member\'s account, they complete a two-step process to sign in. First they enter their username and password as per normal. If the username and password are correct, we send a code to their phone. Then they enter their username and their password again but this time they add a space and the code to the end of their password. This form of authentication provides the highest level of security. It is called Two Factor in the security industry because it relies on two factors: Something you know (your password) and something you have (your phone).");';
-}
-?>
-</script>
 <script type="text/x-jquery-template" id="wfWelcomeTwoFactor">
 <div>
 <h3>Secure Sign-in using your Cellphone</h3>
@@ -96,7 +98,7 @@ if(wfConfig::get('isPaid')){
 } else {
 ?>
 	If you would like access to this premium feature, please 
-	<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to our premium version</a>.
+	<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
 <?php
 }
 ?>

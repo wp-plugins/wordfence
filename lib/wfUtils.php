@@ -2,6 +2,24 @@
 require_once('wfConfig.php');
 require_once('wfCountryMap.php');
 class wfUtils {
+	private static $privateAddrs = array(
+		array('0.0.0.0/8',0,16777215),
+		array('10.0.0.0/8',167772160,184549375),
+		array('100.64.0.0/10',1681915904,1686110207),
+		array('127.0.0.0/8',2130706432,2147483647),
+		array('169.254.0.0/16',2851995648,2852061183),
+		array('172.16.0.0/12',2886729728,2887778303),
+		array('192.0.0.0/29',3221225472,3221225479),
+		array('192.0.2.0/24',3221225984,3221226239),
+		array('192.88.99.0/24',3227017984,3227018239),
+		array('192.168.0.0/16',3232235520,3232301055),
+		array('198.18.0.0/15',3323068416,3323199487),
+		array('198.51.100.0/24',3325256704,3325256959),
+		array('203.0.113.0/24',3405803776,3405804031),
+		array('224.0.0.0/4',3758096384,4026531839),
+		array('240.0.0.0/4',4026531840,4294967295),
+		array('255.255.255.255/32',4294967295,4294967295)
+	);
 	private static $isWindows = false;
 	public static $scanLockFH = false;
 	private static $lastErrorReporting = false;
@@ -65,6 +83,7 @@ class wfUtils {
 		return long2ip(-$long);
 	}
 	public static function inet_aton($ip){
+		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
 	}
 	public static function getBaseURL(){
@@ -90,6 +109,15 @@ class wfUtils {
 		}
 		return $IP;
 	}
+	public static function isPrivateAddress($addr){
+		$num = self::inet_aton($addr);
+		foreach(self::$privateAddrs as $a){
+			if($num >= $a[1] && $num <= $a[2]){
+				return true;
+			}
+		}
+		return false;
+	}
 	public static function getIP(){
 		$howGet = wfConfig::get('howGetIPs', false);
 		if($howGet){
@@ -103,7 +131,7 @@ class wfUtils {
 		if(preg_match('/,/', $IP)){
 			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
 			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part) && (! self::isPrivateAddress($part)) ){
 					$IP = trim($part);
 					break;
 				}
@@ -111,7 +139,7 @@ class wfUtils {
 		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
 			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
 			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part) && (! self::isPrivateAddress($part)) ){
 					$IP = trim($part);
 					break;
 				}
@@ -123,7 +151,7 @@ class wfUtils {
 		}
 		if(self::isValidIP($IP)){
 			if(wfConfig::get('IPGetFail', false)){
-				if(preg_match('/^(?:10\.|192\.168|127\.|172\.)/', $IP)){
+				if(self::isPrivateAddress($IP) ){
 					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
 				} else {
 					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
@@ -146,7 +174,7 @@ class wfUtils {
 				}
 			}
 			if(sizeof($possible) > 0){
-				$msg .= "  Report the following on the Wordfence forums and they may be able to help. Headers that may contain the client IP: ";
+				$msg .= "  Headers that may contain the client IP: ";
 				foreach($possible as $key => $val){
 					$msg .= "$key => $val   ";
 				}
@@ -175,7 +203,11 @@ class wfUtils {
 		} else {
 			$host = $_SERVER['SERVER_NAME'];
 		}
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
+		$prefix = 'http';
+		if( isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ){
+			$prefix = 'https';
+		}
+		return $prefix . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){

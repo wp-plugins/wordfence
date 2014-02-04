@@ -119,7 +119,7 @@ class wfScanEngine {
 		$this->status(1, 'info', '-------------------');
 		$this->status(1, 'info', "Scan Complete. Scanned " . $summary['totalFiles'] . " files, " . $summary['totalPlugins'] . " plugins, " . $summary['totalThemes'] . " themes, " . ($summary['totalPages'] + $summary['totalPosts']) . " pages, " . $summary['totalComments'] . " comments and " . $summary['totalRows'] . " records in " . (time() - $this->startTime) . " seconds.");
 		if($this->i->totalIssues  > 0){
-			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below for details.");
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below.");
 		} else {
 			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, there were no problems found.");
 		}
@@ -319,6 +319,7 @@ class wfScanEngine {
 			throw new Exception($this->hoover->errorMsg);
 		
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -411,6 +412,7 @@ class wfScanEngine {
 			wordfence::statusEndErr();
 			throw new Exception($this->hoover->errorMsg);
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -474,6 +476,7 @@ class wfScanEngine {
 		if($h->errorMsg){
 			return false;
 		}
+		$h->cleanup();
 		if(sizeof($hooverResults) > 0 && isset($hooverResults[1])){
 			$hresults = $hooverResults[1];	
 			foreach($hresults as $result){
@@ -876,7 +879,7 @@ class wfScanEngine {
 			'sslverify' => false,
 			'headers' => array()
 			));
-		
+		wordfence::status(4, 'info', "Test result of scan start URL fetch: " . var_export($testResult, true));	
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
 		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
@@ -885,7 +888,7 @@ class wfScanEngine {
 			$cronURL = admin_url($cronURL);
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
-			$result = wp_remote_post( $cronURL, array(
+			$result = wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
@@ -898,7 +901,8 @@ class wfScanEngine {
 			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron via proxy at URL $cronURL");
-			$result = wp_remote_post( $cronURL, array(
+
+			$result = wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
