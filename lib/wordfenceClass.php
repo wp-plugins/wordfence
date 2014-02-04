@@ -434,10 +434,12 @@ class wordfence {
 		}
 	}
 	public static function lockOutIP($IP, $reason){
+		//First we lock out IP
+		self::getLog()->lockOutIP(wfUtils::getIP(), $reason);
+		//Then we send the email because email sending takes time and we want to block the baddie asap. If we don't users can get a lot of emails about a single attacker getting locked out.
 		if(wfConfig::get('alertOn_loginLockout')){
 			wordfence::alert("User locked out from signing in", "A user with IP address $IP has been locked out from the signing in or using the password recovery form for the following reason: $reason", $IP);
 		}
-		self::getLog()->lockOutIP(wfUtils::getIP(), $reason);
 	}
 	public static function isLockedOut($IP){
 		return self::getLog()->isIPLockedOut($IP);

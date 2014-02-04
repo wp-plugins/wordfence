@@ -186,31 +186,33 @@ class wordfenceScanner {
 								));
 							break;
 						}
-						$badStringFound = false;
-						if(strpos($data, $this->patterns['badstrings'][0]) !== false){
-							for($i = 1; $i < sizeof($this->patterns['badstrings']); $i++){
-								if(strpos($data, $this->patterns['badstrings'][$i]) !== false){
-									$badStringFound = $this->patterns['badstrings'][$i];
-									break;
+						if(wfConfig::get('scansEnabled_highSense')){
+							$badStringFound = false;
+							if(strpos($data, $this->patterns['badstrings'][0]) !== false){
+								for($i = 1; $i < sizeof($this->patterns['badstrings']); $i++){
+									if(strpos($data, $this->patterns['badstrings'][$i]) !== false){
+										$badStringFound = $this->patterns['badstrings'][$i];
+										break;
+									}
 								}
 							}
-						}
-						if($badStringFound){
-							$this->addResult(array(
-								'type' => 'file',
-								'severity' => 1,
-								'ignoreP' => $this->path . $file,
-								'ignoreC' => $fileSum,
-								'shortMsg' => "This file may contain malicious executable code",
-								'longMsg' => "This file is a PHP executable file and contains the word 'eval' (without quotes) and the word '" . $badStringFound . "' (without quotes). The eval() function along with an encoding function like the one mentioned are commonly used by hackers to hide their code. If you know about this file you can choose to ignore it to exclude it from future scans.",
-								'data' => array(
-									'file' => $file,
-									'canDiff' => false,
-									'canFix' => false,
-									'canDelete' => true
-								)
-								));
-							break;
+							if($badStringFound){
+								$this->addResult(array(
+									'type' => 'file',
+									'severity' => 1,
+									'ignoreP' => $this->path . $file,
+									'ignoreC' => $fileSum,
+									'shortMsg' => "This file may contain malicious executable code",
+									'longMsg' => "This file is a PHP executable file and contains the word 'eval' (without quotes) and the word '" . $badStringFound . "' (without quotes). The eval() function along with an encoding function like the one mentioned are commonly used by hackers to hide their code. If you know about this file you can choose to ignore it to exclude it from future scans.",
+									'data' => array(
+										'file' => $file,
+										'canDiff' => false,
+										'canFix' => false,
+										'canDelete' => true
+									)
+									));
+								break;
+							}
 						}
 						$this->urlHoover->hoover($file, $data);
 					} else {

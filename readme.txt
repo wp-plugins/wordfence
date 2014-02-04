@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
-Tested up to: 3.8
-Stable tag: 4.0.2
+Tested up to: 3.8.1
+Stable tag: 4.0.3
 
 Wordfence Security is a free enterprise class security plugin that includes a firewall, virus scanning, real-time traffic with geolocation and more. 
 
@@ -149,6 +149,13 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 4.0.3 =
+* Improvement: Added "high sensitivity" scanning which catches evals with other bad functions but may give false positives. Not enabled by default.
+* Fix: Removed code that caused error message during scan initialization. 
+* Fix: IP to number conversation code had a problem with IP's with a single 0 in them. Bug was introduced in 4.0.2. 
+* Fix: Very fast attacks would generate a lot of email alerts due to race condition. Fixed. 
+
 
 = 4.0.2 =
 * Feature: Ability to bulk repair or delete files when cleaning a site.

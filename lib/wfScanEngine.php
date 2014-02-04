@@ -908,8 +908,6 @@ class wfScanEngine {
 				'sslverify' => false,
 				'headers' => $headers 
 				) );
-			wordfence::status(4, 'info', "Proxy scan start headers: " . var_export($result['headers'], true));	
-			wordfence::status(4, 'info', "Proxy scan start response: " . var_export($result['response'], true));	
 			wordfence::status(4, 'info', "Scan process ended after forking.");
 		}
 		return false; //No error

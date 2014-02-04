@@ -119,6 +119,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Scan for unauthorized DNS changes</th><td><input type="checkbox" id="scansEnabled_dns" class="wfConfigElem" name="scansEnabled_dns" value="1" <?php $w->cb('scansEnabled_dns'); ?>/></td></tr>
 	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
 	<tr><th>Scan image files as if they were executable</th><td><input type="checkbox" id="scansEnabled_scanImages" class="wfConfigElem" name="scansEnabled_scanImages" value="1" <?php $w->cb('scansEnabled_scanImages'); ?> /></td></tr>
+	<tr><th>Enable HIGH SENSITIVITY scanning. May give false positives.</th><td><input type="checkbox" id="scansEnabled_highSense" class="wfConfigElem" name="scansEnabled_highSense" value="1" <?php $w->cb('scansEnabled_highSense'); ?> /></td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerFirewallRules"></div>
 		<h3 class="wfConfigHeading">Firewall Rules</h3>

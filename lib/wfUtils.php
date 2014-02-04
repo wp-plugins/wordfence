@@ -83,7 +83,7 @@ class wfUtils {
 		return long2ip(-$long);
 	}
 	public static function inet_aton($ip){
-		$ip = preg_replace('/(?<=^|\.)0+/', '', $ip);
+		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
 	}
 	public static function getBaseURL(){
