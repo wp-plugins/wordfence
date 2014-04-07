@@ -509,16 +509,16 @@ class wfScanEngine {
 				} else {
 					$row['table'] = $prefix . $row['blog_id'] . '_' . $table;
 				}
-				array_push($blogsToScan, $row); 
+				$blogsToScan[] = $row; 
 			}
 		} else {
-			array_push($blogsToScan, array(
+			$blogsToScan[] = array(
 				'isMultisite' => false,
 				'table' => $prefix . $table,
 				'blog_id' => '1',
 				'domain' => '',
 				'path' => '',
-				));
+				);
 		}
 		return $blogsToScan;
 	}
@@ -706,7 +706,7 @@ class wfScanEngine {
 			foreach($cnameArrRec as $elem){ 
 				$this->status(2, 'info', "Scanning CNAME DNS record for " . $elem['host']);
 				if($elem['host'] == $host){ 
-					array_push($cnameArr, $elem); 
+					$cnameArr[] = $elem; 
 					$cnamesWeMustTrack[] = $elem['target'];
 				} 
 			}
@@ -734,7 +734,7 @@ class wfScanEngine {
 			foreach($aArrRec as $elem){ 
 				$this->status(2, 'info', "Scanning DNS A record for " . $elem['host']);
 				if($elem['host'] == $host || in_array($elem['host'], $cnamesWeMustTrack) ){ 
-					array_push($aArr, $elem); 
+					$aArr[] = $elem; 
 				} 
 			}
 			function wfAnonFunc2($a){ return $a['host'] . ' points to ' . $a['ip']; }
@@ -762,7 +762,7 @@ class wfScanEngine {
 			foreach($mxArrRec as $elem){
 				$this->status(2, 'info', "Scanning DNS MX record for " . $elem['host']); 
 				if($elem['host'] == $host){ 
-					array_push($mxArr, $elem); 
+					$mxArr[] = $elem; 
 				} 
 			}
 			function wfAnonFunc3($a){ return $a['target']; }
@@ -873,16 +873,19 @@ class wfScanEngine {
 		}
 		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
 		$testURL = admin_url('admin-ajax.php?action=wordfence_testAjax');
-		$testResult = wp_remote_post($testURL, array(
-			'timeout' => $timeout,
-			'blocking' => true,
-			'sslverify' => false,
-			'headers' => array()
-			));
-		wordfence::status(4, 'info', "Test result of scan start URL fetch: " . var_export($testResult, true));	
+		$testResults = false;
+		if(! wfConfig::get('startScansRemotely', false)){
+			$testResult = wp_remote_post($testURL, array(
+				'timeout' => $timeout,
+				'blocking' => true,
+				'sslverify' => false,
+				'headers' => array()
+				));
+			wordfence::status(4, 'info', "Test result of scan start URL fetch: " . var_export($testResult, true));	
+		}
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
-		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
+		if( (! wfConfig::get('startScansRemotely', false)) && (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
 			//ajax requests can be sent by the server to itself
 			$cronURL = 'admin-ajax.php?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
 			$cronURL = admin_url($cronURL);

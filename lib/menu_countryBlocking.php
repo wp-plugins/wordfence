@@ -6,6 +6,7 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 </script>
 <div class="wordfenceModeElem" id="wordfenceMode_countryBlocking"></div>
 <div class="wrap" id="paidWrap">
+	<?php require('menuHeader.php'); ?>
 	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Block specific countries from accessing your site</h2>
 <?php if(! wfConfig::get('isPaid')){ ?>
 		<div class="wfPaidOnlyNotice">
@@ -15,6 +16,18 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 			page.
 		</div>
 <?php } ?>
+		<?php if(wfConfig::get('cacheType') == 'falcon'){ ?>
+		<div class="wfFalconNotice">
+			<b>Note regarding country blocking with Falcon Engine enabled:</b><br /><br />
+			Country blocking will only work on the login page and other dynamic pages with
+			Wordfence Falcon Engine enabled. We do this to keep your site fast and avoid
+			a country lookup on every request. 
+			Serving cached pages only uses 2 to 3% of the resources that a non-cached page uses,
+			so malicious countries won't eat up your server resources when they load cached pages.
+			If you would like full country blocking, you can enable Basic Caching on the "Site Performance" page.
+		</div>
+		<?php } ?>
+
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<table class="wfConfigForm">
 		<tr><td colspan="2"><h2>Country Blocking Options</h2></td></tr>

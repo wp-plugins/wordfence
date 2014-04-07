@@ -156,7 +156,7 @@ class wordfenceURLHoover {
 		if($this->useDB){
 			$q1 = $this->db->querySelect("select distinct hostKey as hostKey from $this->table");
 			foreach($q1 as $hRec){
-				array_push($allHostKeys, $hRec['hostKey']);
+				$allHostKeys[] = $hRec['hostKey'];
 			}
 		} else {
 			$allHostKeys = $this->hostKeys;
@@ -189,7 +189,7 @@ class wordfenceURLHoover {
 						$idxArr = unpack('n', substr($resp['data'], $i, 2));
 						$idx = $idxArr[1];
 						if(isset($allHostKeys[$idx]) ){
-							array_push($badHostKeys, $allHostKeys[$idx]);
+							$badHostKeys[] = $allHostKeys[$idx];
 							$this->dbg("Got bad hostkey for record: " . var_export($allHostKeys[$idx], true));
 						} else {
 							$this->dbg("Bad allHostKeys index: $idx");
@@ -251,10 +251,10 @@ class wordfenceURLHoover {
 								$finalResults[$file] = array();
 							}
 							foreach($badSiteList as $badSite){
-								array_push($finalResults[$file], array(
+								$finalResults[$file][] = array(
 									'URL' => $badSite[0],
 									'badList' => $badSite[1]
-									));
+									);
 							}
 						}
 						return $finalResults;

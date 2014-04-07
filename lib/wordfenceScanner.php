@@ -53,6 +53,15 @@ class wordfenceScanner {
 		}
 		$db = new wfDB();
 		$lastCount = 'whatever';
+		$excludePattern = false;
+		if(wfConfig::get('scan_exclude', false)){
+			$exParts = explode(',', wfConfig::get('scan_exclude'));
+			foreach($exParts as &$exPart){
+				$exPart = preg_quote($exPart);
+				$exPart = preg_replace('/\\\\\*/', '.*', $exPart);
+			}
+			$excludePattern = '/^(?:' . implode('|', $exParts) . ')$/i';
+		}
 		while(true){
 			$thisCount = $db->querySingle("select count(*) from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0");
 			if($thisCount == $lastCount){
@@ -67,6 +76,9 @@ class wordfenceScanner {
 			foreach($res1 as $rec1){
 				$db->queryWrite("update " . $db->prefix() . "wfFileMods set oldMD5 = newMD5 where filenameMD5='%s'", $rec1['filenameMD5']); //A way to mark as scanned so that if we come back from a sleep we don't rescan this one.
 				$file = $rec1['filename'];
+				if($excludePattern && preg_match($excludePattern, $file)){
+					continue;
+				}
 				$fileSum = $rec1['newMD5'];
 
 				if(! file_exists($this->path . $file)){
@@ -79,6 +91,10 @@ class wordfenceScanner {
 				$isPHP = false;
 				if(preg_match('/^(?:php|phtml|php\d+)$/', $fileExt)){ 
 					$isPHP = true;
+				}
+				$dontScanForURLs = false;
+				if( (! wfConfig::get('scansEnabled_highSense')) && (preg_match('/^(?:\.htaccess|wp\-config\.php)$/', $file) || preg_match('/^(?:sql|tbz|tgz|gz|tar|log|err\d+)$/', $fileExt)) ){
+					$dontScanForURLs = true;
 				}
 
 				if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt) && (! wfConfig::get('scansEnabled_scanImages')) ){
@@ -214,9 +230,13 @@ class wordfenceScanner {
 								break;
 							}
 						}
-						$this->urlHoover->hoover($file, $data);
+						if(! $dontScanForURLs){
+							$this->urlHoover->hoover($file, $data);
+						}
 					} else {
-						$this->urlHoover->hoover($file, $data);
+						if(! $dontScanForURLs){
+							$this->urlHoover->hoover($file, $data);
+						}
 					}
 
 					if($totalRead > 2 * 1024 * 1024){

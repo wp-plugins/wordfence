@@ -1,6 +1,23 @@
 <div class="wordfenceModeElem" id="wordfenceMode_activity"></div>
 <div class="wrap wordfence">
-	<?php $pageTitle = "Live Site Activity"; include('pageTitle.php'); ?>
+	<?php require('menuHeader.php'); ?>
+
+	<h2 id="wfHeading">
+		<div style="float: left;">
+			Your Site Activity in Real-Time	
+		</div>
+		<div class="wordfenceWrap" style="margin: 5px 0 0 15px; float: left;">
+			<div class="wfOnOffSwitch" id="wfOnOffSwitchID">
+				<input type="checkbox" name="wfOnOffSwitch" class="wfOnOffSwitch-checkbox" id="wfLiveTrafficOnOff" <?php if(wfConfig::liveTrafficEnabled()){ echo ' checked '; } ?>>
+				<label class="wfOnOffSwitch-label" for="wfLiveTrafficOnOff">
+					<div class="wfOnOffSwitch-inner"></div>
+					<div class="wfOnOffSwitch-switch"></div>
+				</label>
+			</div>
+		</div>
+	</h2>
+	<br clear="both" />
+
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>
@@ -8,16 +25,26 @@
 	</div>
 	<div class="wordfenceWrap">
 		<div>
+			<?php if(! wfConfig::liveTrafficEnabled()){ ?>
+			<div style="color: #F00;">
+				Live Traffic is disabled.
+				<?php if(wfConfig::get('cacheType') == 'falcon'){ ?>This is done to improve performance because you have Wordfence Falcon Engine enabled.<?php } ?>
+			</div>
+			<?php } ?>
 			<div id="wfTabs">
+				<?php if(wfConfig::liveTrafficEnabled()){ ?>
 				<a href="#" class="wfTab1 wfTabSwitch selected" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_hit', function(){ WFAD.activityTabChanged(); }); return false;">All Hits</a>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_human', function(){ WFAD.activityTabChanged(); }); return false;">Humans</a>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_ruser', function(){ WFAD.activityTabChanged(); }); return false;">Registered Users</a>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_crawler', function(){ WFAD.activityTabChanged(); }); return false;">Crawlers</a>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_gCrawler', function(){ WFAD.activityTabChanged(); }); return false;">Google Crawlers</a>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_404', function(){ WFAD.activityTabChanged(); }); return false;">Pages Not Found</a>
-				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_loginLogout', function(){ WFAD.activityTabChanged(); }); return false;">Logins and Logouts</a>
+				<?php } ?>
+				<a href="#" id="wfLoginLogoutTab" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_loginLogout', function(){ WFAD.activityTabChanged(); }); return false;">Logins and Logouts</a>
+				<?php if(wfConfig::liveTrafficEnabled()){ ?>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_topLeechers', function(){ WFAD.staticTabChanged(); }); return false;">Top Consumers</a>
 				<a href="#" class="wfTab1 wfTabSwitch" onclick="wordfenceAdmin.switchTab(this, 'wfTab1', 'wfDataPanel', 'wfActivity_topScanners', function(){ WFAD.staticTabChanged(); }); return false;">Top 404s</a>
+				<?php } ?>
 			</div>
 			<div class="wfTabsContainer">
 				<div id="wfActivity_hit" class="wfDataPanel"><div class="wfLoadingWhite32"></div></div>

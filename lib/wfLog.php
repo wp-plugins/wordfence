@@ -23,6 +23,26 @@ class wfLog {
 		$this->throttleTable = $wpdb->base_prefix . 'wfThrottleLog';
 		$this->statusTable = $wpdb->base_prefix . 'wfStatus';
 		$this->ipRangesTable = $wpdb->base_prefix . 'wfBlocksAdv';
+		$this->perfTable = $wpdb->base_prefix . 'wfPerfLog';
+	}
+	public function logPerf($IP, $UA, $URL, $data){
+		$IP = wfUtils::inet_aton($IP); 
+		$this->getDB()->queryWrite("insert into " . $this->perfTable . " (IP, userID, UA, URL, ctime, fetchStart, domainLookupStart, domainLookupEnd, connectStart, connectEnd, requestStart, responseStart, responseEnd, domReady, loaded) values (%s, %d, '%s', '%s', unix_timestamp(), %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)", 
+			$IP, 
+			$this->getCurrentUserID(), 
+			$UA, 
+			$URL,
+			$data['fetchStart'],
+			$data['domainLookupStart'],
+			$data['domainLookupEnd'],
+			$data['connectStart'],
+			$data['connectEnd'],
+			$data['requestStart'],
+			$data['responseStart'],
+			$data['responseEnd'],
+			$data['domReady'],
+			$data['loaded']
+			);
 	}
 	public function logLogin($action, $fail, $username){
 		$user = get_user_by('login', $username);
@@ -74,8 +94,8 @@ class wfLog {
 
 			if(wfConfig::get('blockFakeBots')){
 				if(wfCrawl::isGooglebot() && (! wfCrawl::verifyCrawlerPTR($this->googlePattern, $IP) )){
-					wordfence::status(2, 'info', "Blocking fake Googlebot at IP $IP");
 					$this->blockIP($IP, "Fake Google crawler automatically blocked");
+					wordfence::status(2, 'info', "Blocking fake Googlebot at IP $IP");
 				}
 			}
 
@@ -157,19 +177,35 @@ class wfLog {
 	}
 	public function unblockAllIPs(){
 		$this->getDB()->queryWrite("delete from " . $this->blocksTable);
+		wfCache::updateBlockedIPs('add');
 	}
 	public function unlockAllIPs(){
 		$this->getDB()->queryWrite("delete from " . $this->lockOutTable);
 	}
 	public function unblockIP($IP){
 		$this->getDB()->queryWrite("delete from " . $this->blocksTable . " where IP=%s", wfUtils::inet_aton($IP));
+		wfCache::updateBlockedIPs('add');
 	}
 	public function unblockRange($id){
 		$this->getDB()->queryWrite("delete from " . $this->ipRangesTable . " where id=%d", $id);
+		wfCache::updateBlockedIPs('add');
 	}
 	public function blockRange($blockType, $range, $reason){
 		$this->getDB()->queryWrite("insert IGNORE into " . $this->ipRangesTable . " (blockType, blockString, ctime, reason, totalBlocked, lastBlocked) values ('%s', '%s', unix_timestamp(), '%s', 0, 0)", $blockType, $range, $reason);
+		wfCache::updateBlockedIPs('add');
 		return true;
+	}
+	public function getRangesBasic(){
+		$results = $this->getDB()->querySelect("select blockString from " . $this->ipRangesTable);
+		if(is_array($results) && sizeof($results) > 0){
+			$ret = array();
+			foreach($results as $r){
+				$ret[] = $r['blockString'];
+			}
+			return $ret;
+		} else {
+			return false;
+		}
 	}
 	public function getRanges(){
 		$results = $this->getDB()->querySelect("select id, blockType, blockString, unix_timestamp() - ctime as ctimeAgo, reason, totalBlocked, unix_timestamp() - lastBlocked as lastBlockedAgo, lastBlocked from " . $this->ipRangesTable . " order by ctime desc");
@@ -183,17 +219,22 @@ class wfLog {
 			}
 			$blockDat = explode('|', $elem['blockString']);
 			$elem['ipPattern'] = "";
+			$haveIPBLock = false;
+			$haveBrowserBlock = false;
 			if($blockDat[0]){
+				$haveIPBlock = true;
 				$ipDat = explode('-', $blockDat[0]);
 				$elem['ipPattern'] = "Block visitors with IP addresses in the range: " . wfUtils::inet_ntoa($ipDat[0]) . ' - ' . wfUtils::inet_ntoa($ipDat[1]);
 			} else {
 				$elem['ipPattern'] = 'Allow all IP addresses';
 			}
 			if($blockDat[1]){
+				$haveBrowserBlock = true;
 				$elem['browserPattern'] = "Block visitors whos browsers match the pattern: " . $blockDat[1];
 			} else {
 				$elem['browserPattern'] = 'Allow all browsers';
 			}
+			$elem['patternDisabled'] = (wfConfig::get('cacheType') == 'falcon' && $haveIPBlock && $haveBrowserBlock) ? true : false;
 		}
 		return $results;
 	}
@@ -231,6 +272,7 @@ class wfLog {
 				$wfsn
 				);
 		}
+		wfCache::updateBlockedIPs('add');
 		return true;
 	}
 	public function lockOutIP($IP, $reason){
@@ -277,6 +319,14 @@ class wfLog {
 			$elem['IP'] = wfUtils::inet_ntoa($elem['IP']);
 		}
 		return $results;
+	}
+	public function getBlockedIPsAddrOnly(){
+		$results = $this->getDB()->querySelect("select INET_NTOA(IP) as IP from " . $this->blocksTable . " where (permanent=1 OR (blockedTime + %s > unix_timestamp()))", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
+		$ret = array();
+		foreach($results as $elem){
+			$ret[] = $elem['IP'];
+		}
+		return $ret;
 	}
 	public function getBlockedIPs(){
 		$results = $this->getDB()->querySelect("select IP, unix_timestamp() - blockedTime as createdAgo, reason, unix_timestamp() - lastAttempt as lastAttemptAgo, lastAttempt, blockedHits, (blockedTime + %s) - unix_timestamp() as blockedFor, permanent from " . $this->blocksTable . " where (permanent=1 OR (blockedTime + %s > unix_timestamp())) order by blockedTime desc", wfConfig::get('blockedTime'), wfConfig::get('blockedTime'));
@@ -330,7 +380,7 @@ class wfLog {
 		return $results;
 	}
 	public function logHit(){
-		if(! wfConfig::get('liveTrafficEnabled')){ return; }	
+		if(! wfConfig::liveTrafficEnabled()){ return; }	
 		$headers = array();
 		foreach($_SERVER as $h=>$v){
 			if(preg_match('/^HTTP_(.+)$/', $h, $matches) ){
@@ -349,6 +399,43 @@ class wfLog {
 			(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '')
 			);
 		return $this->getDB()->querySingle("select last_insert_id()");
+	}
+	public function getPerfStats($afterTime, $limit = 50){
+		$serverTime = $this->getDB()->querySingle("select unix_timestamp()");
+		$results = $this->getDB()->querySelect("select * from " . $this->perfTable . " where ctime > %f order by ctime desc limit %d", $afterTime, $limit);
+		$this->resolveIPs($results);
+		$browscap = new wfBrowscap();
+		foreach($results as &$res){
+			$res['timeAgo'] = wfUtils::makeTimeAgo($serverTime - $res['ctime']);
+			$res['IP'] = wfUtils::inet_ntoa($res['IP']);
+			$res['browser'] = false;
+			if($res['UA']){
+				$b = $browscap->getBrowser($res['UA']);
+				if($b){
+					$res['browser'] = array(
+						'browser' => $b['Browser'],
+						'version' => $b['Version'],
+						'platform' => $b['Platform'],
+						'isMobile' => $b['isMobileDevice'],
+						'isCrawler' => $b['Crawler']
+						);
+				}
+			}
+			if($res['userID']){
+				$ud = get_userdata($res['userID']);
+				if($ud){
+					$res['user'] = array(
+						'editLink' => wfUtils::editUserLink($res['userID']),
+						'display_name' => $ud->display_name,
+						'ID' => $res['userID']
+						);
+					$res['user']['avatar'] = get_avatar($res['userID'], 16);
+				}
+			} else {
+				$res['user'] = false;
+			}
+		}
+		return $results;
 	}
 	public function getHits($hitType /* 'hits' or 'logins' */, $type, $afterTime, $limit = 50, $IP = false){
 		$serverTime = $this->getDB()->querySingle("select unix_timestamp()");
@@ -644,7 +731,7 @@ class wfLog {
 		return $val;
 	}
 	public function setCBLCookieBypass(){
-		@setcookie('wfCBLBypass', self::getCBLCookieVal(), time() + (86400 * 365), '/');
+		wfUtils::setcookie('wfCBLBypass', self::getCBLCookieVal(), time() + (86400 * 365), '/', null, null, true);
 	}
 	public function isCBLBypassCookieSet(){
 		if(isset($_COOKIE['wfCBLBypass']) && $_COOKIE['wfCBLBypass'] == wfConfig::get('cbl_cookieVal')){
@@ -662,12 +749,13 @@ class wfLog {
 			$secsToGo = 0;
 			if($action == 'block'){
 				$IP = wfUtils::getIP();
+				$this->blockIP($IP, $reason);
+				$secsToGo = wfConfig::get('blockedTime');
+				//Moved the following code AFTER the block to prevent multiple emails.
 				if(wfConfig::get('alertOn_block')){
 					wordfence::alert("Blocking IP $IP", "Wordfence has blocked IP address $IP.\nThe reason is: \"$reason\".", $IP);
 				}
 				wordfence::status(2, 'info', "Blocking IP $IP. $reason");
-				$this->blockIP($IP, $reason);
-				$secsToGo = wfConfig::get('blockedTime');
 			} else if($action == 'throttle'){
 				$IP = wfUtils::getIP();
 				$this->getDB()->queryWrite("insert into " . $this->throttleTable . " (IP, startTime, endTime, timesThrottled, lastReason) values (%s, unix_timestamp(), unix_timestamp(), 1, '%s') ON DUPLICATE KEY UPDATE endTime=unix_timestamp(), timesThrottled = timesThrottled + 1, lastReason='%s'", wfUtils::inet_aton($IP), $reason, $reason);

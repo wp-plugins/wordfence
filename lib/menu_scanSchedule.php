@@ -1,5 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scanScheduling"></div>
 <div class="wrap" id="paidWrap">
+	<?php require('menuHeader.php'); ?>
 	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Schedule Wordfence Scanning</h2>
 <?php if(! wfConfig::get('isPaid')){ ?>
 			<div class="wfPaidOnlyNotice">

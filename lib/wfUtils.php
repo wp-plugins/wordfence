@@ -86,6 +86,18 @@ class wfUtils {
 		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
 	}
+	public static function hasLoginCookie(){
+		if(isset($_COOKIE)){
+			if(is_array($_COOKIE)){
+				foreach($_COOKIE as $key => $val){
+					if(strpos($key, 'wordpress_logged_in') == 0){
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
 	public static function getBaseURL(){
 		return plugins_url() . '/wordfence/';
 	}
@@ -118,7 +130,14 @@ class wfUtils {
 		}
 		return false;
 	}
+	public static function makeRandomIP(){
+		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
+	}
 	public static function getIP(){
+		//You can use the following examples to force Wordfence to think a visitor has a certain IP if you're testing. Remember to re-comment this out or you will break Wordfence badly. 
+		//return '1.2.3.8';
+		//return self::makeRandomIP();
+
 		$howGet = wfConfig::get('howGetIPs', false);
 		if($howGet){
 			$IP = $_SERVER[$howGet];
@@ -458,6 +477,7 @@ class wfUtils {
 		self::iniSet('display_errors', self::$lastDisplayErrors);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
+	//Note this function may report files that are too big which actually are not too big but are unseekable and throw an error on fseek(). But that's intentional
 	public static function fileTooBig($file){ //Deals with files > 2 gigs on 32 bit systems which are reported with the wrong size due to integer overflow
 		wfUtils::errorsOff();
 		$fh = @fopen($file, 'r');
@@ -465,25 +485,28 @@ class wfUtils {
 		if(! $fh){ return false; }
 		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1; 
 		$tooBig = false;
-		if(fseek($fh, $offset, SEEK_SET) === 0){
-			if(strlen(fread($fh, 1)) === 1){
-				$tooBig = true;
-			}
-		} //Otherwise we couldn't seek there so it must be smaller
-		fclose($fh);
-		return $tooBig;
+		try {
+			if(@fseek($fh, $offset, SEEK_SET) === 0){
+				if(strlen(fread($fh, 1)) === 1){
+					$tooBig = true;
+				}
+			} //Otherwise we couldn't seek there so it must be smaller
+			fclose($fh);
+			return $tooBig;
+		} catch(Exception $e){ return true; } //If we get an error don't scan this file, report it's too big.
 	}
-	public static function fileOver2Gigs($file){
+	public static function fileOver2Gigs($file){ //Surround calls to this func with try/catch because fseek may throw error.
 		$fh = @fopen($file, 'r');
 		if(! $fh){ return false; }
 		$offset = 2147483647; 
 		$tooBig = false;
-		if(fseek($fh, $offset, SEEK_SET) === 0){
+		//My throw an error so surround calls to this func with try/catch
+		if(@fseek($fh, $offset, SEEK_SET) === 0){
 			if(strlen(fread($fh, 1)) === 1){
 				$tooBig = true;
 			}
 		} //Otherwise we couldn't seek there so it must be smaller
-		fclose($fh);
+		@fclose($fh);
 		return $tooBig;
 	}
 	public static function countryCode2Name($code){
@@ -545,6 +568,30 @@ class wfUtils {
 	}
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
 		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
+	}
+	public static function rangeToCIDRs($startIP, $endIP){
+		$startIPBin = sprintf('%032b', $startIP);
+		$endIPBin = sprintf('%032b', $endIP);
+		$IPIncBin = $startIPBin;
+		$CIDRs = array();
+		while(strcmp($IPIncBin, $endIPBin) <= 0){
+			$longNetwork = 32;
+			$IPNetBin = $IPIncBin;
+			while(($IPIncBin[$longNetwork - 1] == '0') && (strcmp(substr_replace($IPNetBin, '1', $longNetwork - 1, 1), $endIPBin) <= 0)){
+				$IPNetBin[$longNetwork - 1] = '1';
+				$longNetwork--;
+			}
+			$CIDRs[] = long2ip(bindec($IPIncBin)) . ($longNetwork < 32 ? '/' . $longNetwork : '');
+			$IPIncBin = sprintf('%032b', bindec($IPNetBin) + 1);
+		}
+		return $CIDRs;
+	}
+	public static function setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly){
+		if(version_compare(PHP_VERSION, '5.2.0') >= 0){
+			@setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly);
+		} else {
+			@setcookie($name, $value, $expire, $path);
+		}
 	}
 }
 

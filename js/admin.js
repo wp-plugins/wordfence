@@ -33,6 +33,8 @@ window['wordfenceAdmin'] = {
 	currentPointer: false,
 	countryMap: false,
 	countryCodesToSave: "",
+	performanceScale: 3,
+	performanceMinWidth: 20,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
 		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
@@ -51,11 +53,27 @@ window['wordfenceAdmin'] = {
 			}
 		} else if(jQuery('#wordfenceMode_activity').length > 0){
 			this.mode = 'activity';
-			this.activityMode = 'hit';
+			var self = this;	
+			this.setupSwitches('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){});			
+			jQuery('#wfLiveTrafficOnOff').change(function(){
+				if(WordfenceAdminVars.cacheType == 'falcon'){
+					jQuery('#wfLiveTrafficOnOff').attr('checked', false);
+					self.colorbox('400px', "Falcon doesn't support live traffic", "Please note that you can't enable live traffic when Falcon Engine is enabled. This is done for performance reasons. If you want live traffic, go to the 'Performance Setup' menu and disable Wordfence Falcon Engine.");
+				} else {
+					self.updateSwitch('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){ window.location.reload(true); }); 
+				}
+				});
+
+			if(WordfenceAdminVars.liveTrafficEnabled){
+				this.activityMode = 'hit';
+			} else {
+				this.activityMode = 'loginLogout';
+				this.switchTab(jQuery('#wfLoginLogoutTab'), 'wfTab1', 'wfDataPanel', 'wfActivity_loginLogout', function(){ WFAD.activityTabChanged(); });
+			}
 			startTicker = true;
 			if(! this.tourClosed){
 				var self = this;
-				this.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+				this.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about Site Performance", function(){ self.tourRedir('WordfenceSitePerf'); });
 			}
 		} else if(jQuery('#wordfenceMode_options').length > 0){
 			this.mode = 'options';
@@ -128,16 +146,66 @@ window['wordfenceAdmin'] = {
 				var self = this;	
 				this.tour('wfWelcomeContentScanSched', 'wfHeading', 'top', 'left', "Learn about WHOIS", function(){ self.tourRedir('WordfenceWhois'); });
 			}
+		} else if(jQuery('#wordfenceMode_caching').length > 0){
+			this.mode = 'caching';
+			startTicker = false;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfWelcomeContentCaching', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+			}
+			this.loadCacheExclusions();
+//		} else if(jQuery('#wordfenceMode_perfStats').length > 0){
+//			var self = this;
+//			this.loadAvgSitePerf();
+//			this.setupSwitches('wfPerfOnOff', 'perfLoggingEnabled', function(){});			
+//			jQuery('#wfPerfOnOff').change(function(){ self.updateSwitch('wfPerfOnOff', 'perfLoggingEnabled', function(){}); });
+//			this.mode = 'perfStats';
+//			startTicker = true;
+//			if(! this.tourClosed){
+//				var self = this;
+//				this.tour('wfWelcomeContentCaching', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+//			}
 		} else {
 			this.mode = false;
 		}
 		if(this.mode){ //We are in a Wordfence page
 			var self = this;
 			if(startTicker){
+				this.updateTicker();
 				this.liveInt = setInterval(function(){ self.updateTicker(); }, WordfenceAdminVars.actUpdateInterval);
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
+	},
+	loadAvgSitePerf: function(){
+		var self = this;
+		this.ajax('wordfence_loadAvgSitePerf', { limit: jQuery('#wfAvgPerfNum').val() }, function(res){
+			res['scale'] = self.performanceScale;
+			res['min'] = self.performanceMinWidth;
+			jQuery('#wfAvgSitePerfContent').empty();
+			var newElem = jQuery('#wfAvgPerfTmpl').tmpl(res);
+			newElem.prependTo('#wfAvgSitePerfContent').fadeIn();
+			});
+	},
+	updateSwitch: function(elemID, configItem, cb){
+		var setting = jQuery('#' + elemID).is(':checked');
+		this.updateConfig(configItem, jQuery('#' + elemID).is(':checked') ? 1 : 0, cb);
+	},
+	setupSwitches: function(elemID, configItem, cb){
+		jQuery('.wfOnOffSwitch-checkbox').change(function(){ 
+			jQuery.data(this, 'lastSwitchChange', (new Date()).getTime()); 
+		});
+		var self = this;
+		jQuery('div.wfOnOffSwitch').mouseup( function(){ 
+			var elem = jQuery(this); 
+			setTimeout(function(){ 
+				var checkedElem = elem.find('.wfOnOffSwitch-checkbox');
+				if((new Date()).getTime() - jQuery.data(checkedElem[0], 'lastSwitchChange') > 300){ 
+					checkedElem.prop('checked', ! checkedElem.is(':checked') ); 
+					self.updateSwitch(elemID, configItem, cb);
+				}
+			}, 50); 
+		});
 	},
 	scanTourStart: function(){
 		var self = this;
@@ -149,6 +217,9 @@ window['wordfenceAdmin'] = {
 	},
 	tourRedir: function(menuItem){
 		window.location.href = 'admin.php?page=' + menuItem;
+	},
+	updateConfig: function(key, val, cb){
+		this.ajax('wordfence_updateConfig', { key: key, val: val }, function(){ cb(); });
 	},
 	tourFinish: function(){
 		this.ajax('wordfence_tourClosed', {}, function(res){});
@@ -369,6 +440,9 @@ window['wordfenceAdmin'] = {
 		if(this.mode == 'activity' && /^(?:404|hit|human|ruser|gCrawler|crawler|loginLogout)$/.test(this.activityMode)){
 			alsoGet = 'logList_' + this.activityMode;
 			otherParams = this.newestActivityTime;
+		} else if(this.mode == 'perfStats'){
+			alsoGet = 'perfStats';
+			otherParams = this.newestActivityTime;
 		}
 		this.ajax('wordfence_ticker', { 
 			alsoGet: alsoGet,
@@ -419,6 +493,36 @@ window['wordfenceAdmin'] = {
 			} else {
 				if(! haveEvents){
 					jQuery('#wfActivity_' + this.activityMode).html('<div>No events to report yet.</div>');
+				}
+			}
+			var self = this;
+			jQuery('.wfTimeAgo').each(function(idx, elem){
+				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
+				});
+		} else if(this.mode == 'perfStats'){
+			var haveEvents = false;
+			if(jQuery('#wfPerfStats .wfPerfEvent').length > 0){
+				haveEvents = true;
+			}
+			if(res.events.length > 0){
+				if(! haveEvents){
+					jQuery('#wfPerfStats').empty();
+				}
+				var curLength = parseInt(jQuery('#wfPerfStats').css('width'));
+				if(res.longestLine > curLength){
+					jQuery('#wfPerfStats').css('width', (res.longestLine + 200) + 'px');
+				}
+				this.newestActivityTime = res.events[0]['ctime'];
+				for(var i = res.events.length - 1; i >= 0; i--){
+					res.events[i]['scale'] = this.performanceScale;
+					res.events[i]['min'] = this.performanceMinWidth;
+					var newElem = jQuery('#wfPerfStatTmpl').tmpl(res.events[i]);
+					jQuery(newElem).find('.wfTimeAgo').data('wfctime', res.events[i].ctime);
+					newElem.prependTo('#wfPerfStats').fadeIn();
+				}
+			} else {
+				if(! haveEvents){
+					jQuery('#wfPerfStats').html('<p>No events to report yet.</p>');
 				}
 			}
 			var self = this;
@@ -1098,6 +1202,66 @@ window['wordfenceAdmin'] = {
 			setTimeout(function(){ jQuery(sel).fadeOut(); }, 2000);
 			});
 	},
+	getCacheStats: function(){
+		var self = this;
+		this.ajax('wordfence_getCacheStats', {}, function(res){
+			if(res.ok){
+				self.colorbox('400px', res.heading, res.body);
+			}
+			});
+	},
+	clearPageCache: function(){
+		var self = this;
+		this.ajax('wordfence_clearPageCache', {}, function(res){
+			if(res.ok){
+				self.colorbox('400px', res.heading, res.body);
+			}
+			});
+	},
+	switchToFalcon: function(){		
+		this.colorbox('400px', "Enabling Falcon Engine", 'First read this <a href="http://www.wordfence.com/introduction-to-wordfence-falcon-engine/" target="_blank">Introduction to Falcon Engine</a>. Falcon modifies your website configuration file which is called your .htaccess file. To enable Falcon we ask that you make a backup of this file. This is a safety precaution in case for some reason Falcon is not compatible with your site.<br /><br /><a href="' + WordfenceAdminVars.ajaxURL + '?action=wordfence_downloadHtaccess&nonce=' + this.nonce + '" onclick="jQuery(\'#wfNextBut\').prop(\'disabled\', false); return true;">Click here to download a backup copy of your .htaccess file now</a><br /><br /><input type="button" name="but1" id="wfNextBut" value="Click to Enable Falcon Engine" disabled="disabled" onclick="WFAD.confirmSwitchToFalcon();" />');
+	},
+	switchToFalconTwo: function(){
+	},
+	confirmSwitchToFalcon: function(){
+		jQuery.colorbox.close();	
+		var cacheType = 'falcon';
+		var self = this;
+		this.ajax('wordfence_saveCacheConfig', {
+			cacheType: cacheType
+			}, function(res){
+				if(res.ok){
+					self.colorbox('400px', res.heading, res.body);
+				}
+			}
+		);
+	},
+	saveCacheConfig: function(){
+		var cacheType = jQuery('input:radio[name=cacheType]:checked').val();
+		if(cacheType == 'falcon'){
+			return this.switchToFalcon();
+		}
+		var self = this;
+		this.ajax('wordfence_saveCacheConfig', {
+			cacheType: cacheType
+			}, function(res){
+				if(res.ok){
+					self.colorbox('400px', res.heading, res.body);
+				}
+			}
+		);
+	},
+	saveCacheOptions: function(){
+		this.ajax('wordfence_saveCacheOptions', {
+			allowHTTPSCaching: (jQuery('#wfallowHTTPSCaching').is(':checked') ? 1 : 0),
+			addCacheComment: (jQuery('#wfaddCacheComment').is(':checked') ? 1 : 0)
+			}, function(res){
+				//if(res.ok){
+				//	self.colorbox('400px', res.heading, res.body);
+				//}
+			}
+		);
+	},
 	saveConfig: function(){
 		var qstr = jQuery('#wfConfigForm').serialize();
 		var self = this;
@@ -1394,6 +1558,36 @@ window['wordfenceAdmin'] = {
 			d = num%256 + '.' + d;
 		}
 		return d;
+	},
+	removeCacheExclusion: function(id){
+		this.ajax('wordfence_removeCacheExclusion', { id: id }, function(res){ window.location.reload(true); });
+	},
+	addCacheExclusion: function(patternType, pattern){
+		if(/^https?:\/\//.test(pattern)){
+			this.colorbox('400px', "Incorrect pattern for exclusion", "You can not enter full URL's for exclusion from caching. You entered a full URL that started with http:// or https://. You must enter relative URL's e.g. /exclude/this/page/. You can also enter text that might be contained in the path part of a URL or at the end of the path part of a URL.");
+			return;
+		}
+			
+		this.ajax('wordfence_addCacheExclusion', {
+			patternType: patternType,
+			pattern: pattern
+			}, function(res){
+				window.location.reload(true);
+			});
+	},
+	loadCacheExclusions: function(){
+		this.ajax('wordfence_loadCacheExclusions', {}, function(res){
+			if(res.ex instanceof Array && res.ex.length > 0){
+				for(var i = 0; i < res.ex.length; i++){
+					var newElem = jQuery('#wfCacheExclusionTmpl').tmpl(res.ex[i]);
+					newElem.prependTo('#wfCacheExclusions').fadeIn();
+				}
+				jQuery('<h2>Cache Exclusions</h2>').prependTo('#wfCacheExclusions');
+			} else {
+				jQuery('<h2>Cache Exclusions</h2><p style="width: 500px;">There are not currently any exclusions. If you have a site that does not change often, it is perfectly normal to not have any pages you want to exclude from the cache.</p>').prependTo('#wfCacheExclusions');
+			}
+
+			});
 	}
 };
 window['WFAD'] = window['wordfenceAdmin'];

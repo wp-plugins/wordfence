@@ -316,3 +316,107 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 	padding: 10px; 
 	margin: 20px;
 }
+.wfFalconNotice {
+	width: 500px;
+	background-color: #FFD7CE;
+	border: 1px solid #000;
+	padding: 10px;
+	margin: 20px;
+}
+.wfFalcon {
+	width: 63px;
+	height: 63px;
+	border-width: 0px;
+	background-color: transparent;
+	background-image: url(../images/wordfenceFalcon.png);
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	position: absolute;
+	right: 2px;
+	top: 3px;
+}
+.wfFalconImage {
+	width: 63px;
+	height: 63px;
+	border-width: 0px;
+	background-color: transparent;
+	background-image: url(../images/wordfenceFalcon.png);
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	margin: 5px auto 15px auto;
+}
+.wfSmallFalcon {
+	width: 33px;
+	height: 16px;
+	border-width: 0px;
+	background-color: transparent;
+	background-image: url(../images/wordfenceFalconSmall.png);
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	margin: 0px;
+	padding: 0px;
+	display: inline;
+	float: right;
+}
+
+
+
+.wfOnOffSwitch {
+    position: relative !important ; width: 69px !important ;
+    -webkit-user-select:none !important ; -moz-user-select:none !important ; -ms-user-select: none !important ;
+}
+.wfOnOffSwitch-checkbox {
+    display: none !important ;
+}
+.wfOnOffSwitch-label {
+    display: block !important ; overflow: hidden !important ; cursor: pointer !important ;
+    border: 2px solid #999999 !important ; border-radius: 19px !important ;
+}
+.wfOnOffSwitch-inner {
+    width: 200% !important ; margin-left: -100% !important ;
+    -moz-transition: margin 0.3s ease-in 0s !important ; -webkit-transition: margin 0.3s ease-in 0s !important ;
+    -o-transition: margin 0.3s ease-in 0s !important ; transition: margin 0.3s ease-in 0s !important ;
+}
+.wfOnOffSwitch-inner:before, .wfOnOffSwitch-inner:after {
+    float: left !important ; width: 50% !important ; height: 19px !important ; padding: 0 !important ; line-height: 19px !important ;
+    font-size: 14px !important ; color: white !important ; font-family: Trebuchet, Arial, sans-serif !important ; font-weight: bold !important ;
+    -moz-box-sizing: border-box !important ; -webkit-box-sizing: border-box !important ; box-sizing: border-box !important ;
+    border-radius: 19px !important ;
+    box-shadow: 0px 9.5px 0px rgba(0,0,0,0.08) inset !important ;
+}
+.wfOnOffSwitch-inner:before {
+    content: "ON" !important ;
+    padding-left: 10px !important ;
+    background-color: #30D965 !important ; color: #FFFFFF !important ;
+    border-radius: 19px 0 0 19px !important ;
+}
+.wfOnOffSwitch-inner:after {
+    content: "OFF" !important ;
+    padding-right: 10px !important ;
+    background-color: #EEEEEE !important ; color: #999999 !important ;
+    text-align: right !important ;
+    border-radius: 0 19px 19px 0 !important ;
+}
+.wfOnOffSwitch-switch {
+    width: 19px !important ; margin: 0px !important ;
+    background: #FFFFFF !important ;
+    border: 2px solid #999999 !important ; border-radius: 19px !important ;
+    position: absolute !important ; top: 0 !important ; bottom: 0 !important ; right: 46px !important ;
+    -moz-transition: all 0.3s ease-in 0s !important ; -webkit-transition: all 0.3s ease-in 0s !important ;
+    -o-transition: all 0.3s ease-in 0s !important ; transition: all 0.3s ease-in 0s !important ; 
+    background-image: -moz-linear-gradient(center top, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 80%) !important ; 
+    background-image: -webkit-linear-gradient(center top, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 80%) !important ; 
+    background-image: -o-linear-gradient(center top, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 80%) !important ; 
+    background-image: linear-gradient(center top, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 80%) !important ;
+    box-shadow: 0 1px 1px white inset !important ;
+}
+.wfOnOffSwitch-checkbox:checked + .wfOnOffSwitch-label .wfOnOffSwitch-inner {
+    margin-left: 0 !important ;
+}
+.wfOnOffSwitch-checkbox:checked + .wfOnOffSwitch-label .wfOnOffSwitch-switch {
+    right: 0px !important ; 
+}
+#wordfenceConfigWarning {
+	clear: left;
+	margin-top: 5px;
+}
