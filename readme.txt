@@ -162,7 +162,7 @@ cause a security hole on your site.
 == Changelog ==
 
 = 5.0.2 =
-* Fix: Issue that caused users running WordPress in debug mode to see a is_404() warning message.
+* Fix: Issue that caused users running WordPress in debug mode to see a is_404 warning message.
 * Fix: Issue that caused Call to undefined function wp_get_current_user warning.
 * Fix: Issue that caused caching to not work on sites using subdirectories. 
 * Fix: Issue that caused SQL errors to periodically appear about wfPerfLog table.
