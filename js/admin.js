@@ -56,9 +56,9 @@ window['wordfenceAdmin'] = {
 			var self = this;	
 			this.setupSwitches('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){});			
 			jQuery('#wfLiveTrafficOnOff').change(function(){
-				if(WordfenceAdminVars.cacheType == 'falcon'){
+				if(/^(?:falcon|php)$/.test(WordfenceAdminVars.cacheType) ){
 					jQuery('#wfLiveTrafficOnOff').attr('checked', false);
-					self.colorbox('400px', "Falcon doesn't support live traffic", "Please note that you can't enable live traffic when Falcon Engine is enabled. This is done for performance reasons. If you want live traffic, go to the 'Performance Setup' menu and disable Wordfence Falcon Engine.");
+					self.colorbox('400px', "Live Traffic not available in high performance mode", "Please note that you can't enable live traffic when Falcon Engine or basic caching is enabled. This is done for performance reasons. If you want live traffic, go to the 'Performance Setup' menu and disable caching.");
 				} else {
 					self.updateSwitch('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){ window.location.reload(true); }); 
 				}

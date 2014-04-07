@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security
 Requires at least: 3.3.1
 Tested up to: 3.8.1
-Stable tag: 5.0.1
+Stable tag: 5.0.2
 
 Wordfence Security is a free enterprise class security plugin that makes your site up to 50 times faster and more secure. Wordfence includes a firewall, virus scanning, real-time traffic with geolocation and two very fast caching engines. 
 
@@ -160,6 +160,13 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.0.2 =
+* Fix: Issue that caused users running WordPress in debug mode to see a is_404() warning message.
+* Fix: Issue that caused Call to undefined function wp_get_current_user warning.
+* Fix: Issue that caused caching to not work on sites using subdirectories. 
+* Fix: Issue that caused SQL errors to periodically appear about wfPerfLog table.
+* Fix: Issue that caused warnings about array elements not being declared. 
 
 = 5.0.1 =
 * To see a video introduction of Falcon Engine included with Wordfence 5, [please watch this video](https://vimeo.com/91217997)

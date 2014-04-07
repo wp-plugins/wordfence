@@ -153,13 +153,14 @@ class wordfence {
 			$wfdb->queryWrite("delete from $p"."wfHits order by id asc limit %d", ($count - 100));
 		}
 
+/*
 		$count6 = $wfdb->querySingle("select count(*) as cnt from $p"."wfPerfLog");
 		if($count6 > 20000){
 			$wfdb->truncate($p . "wfPerfLog"); //So we don't slow down sites that have very large wfHits tables
 		} else if($count6 > 2000){
 			$wfdb->queryWrite("delete from $p"."wfPerfLog order by id asc limit %d", ($count6 - 100));
 		}
-
+*/
 		$maxRows = 1000; //affects stuff further down too
 		foreach(array('wfLeechers', 'wfScanners') as $table){
 			//This is time based per IP so shouldn't get too big
@@ -276,9 +277,11 @@ class wordfence {
 				self::$hitID = $wfLog->logHit();
 				add_action('wp_head', 'wordfence::wfLogHumanHeader');
 			}
+			/*
 			if(wfConfig::get('perfLoggingEnabled', false)){
 				add_action('wp_head', 'wordfence::wfLogPerfHeader');
 			}
+			*/
 		}
 	}
 	public static function install_actions(){
@@ -293,7 +296,6 @@ class wordfence {
 			self::runInstall();
 		}
 		//These access wfConfig::get('apiKey') and will fail if runInstall hasn't executed.
-		self::doEarlyAccessLogging();
 		wfCache::setupCaching();
 
 		if(defined('MULTISITE') && MULTISITE === true){
@@ -1206,6 +1208,10 @@ class wordfence {
 			if(count($badPlugins) > 0){
 				return array('errorMsg' => "You can not enable caching in Wordfence with other caching plugins enabled. This may cause conflicts. You need to disable other caching plugins first. Wordfence caching is very fast and does not require other caching plugins to be active. The plugins you have that conflict are: " . implode(', ', $badPlugins) . ". Disable these plugins, then return to this page and enable Wordfence caching.");
 			}
+			$siteURL = site_url();
+			if(preg_match('/^https?:\/\/[^\/]+\/[^\/]+\/[^\/]+\/.+/i', $siteURL)){
+				return array('errorMsg' => "Wordfence caching currently does not support sites that are installed in a subdirectory and have a home page that is more than 2 directory levels deep. e.g. we don't support sites who's home page is http://example.com/levelOne/levelTwo/levelThree");
+			}
 		}
 		if($cacheType == 'falcon'){
 			if(! get_option('permalink_structure', '')){
@@ -1690,14 +1696,16 @@ class wordfence {
 			$newestEventTime = $_POST['otherParams'];
 			$events = self::getLog()->getPerfStats($newestEventTime);
 		}
+		/*
 		$longest = 0;
 		foreach($events as $e){
 			$length = $e['domainLookupEnd'] + $e['connectEnd'] + $e['responseStart'] + $e['responseEnd'] + $e['domReady'] + $e['loaded'];
 			$longest = $length > $longest ? $length : $longest;
 		}
+		*/
 		$jsonData['events'] = $events;
 		$jsonData['alsoGet'] = $alsoGet; //send it back so we don't load data if panel has changed
-		$jsonData['longestLine'] = $longest;
+		//$jsonData['longestLine'] = $longest;
 		return $jsonData;
 	}
 	public static function ajax_activityLogUpdate_callback(){
@@ -1890,6 +1898,11 @@ class wordfence {
 	}
 	public static function templateRedir(){
 		$wfFunc = get_query_var('_wfsf');		
+		
+		//Logging
+		self::doEarlyAccessLogging();
+		//End logging
+
 
 		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'conntest' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
 			return;

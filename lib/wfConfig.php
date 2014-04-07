@@ -666,7 +666,7 @@ class wfConfig {
 		}
 	}
 	public static function liveTrafficEnabled(){
-		if( (! self::get('liveTrafficEnabled')) || self::get('cacheType') == 'falcon'){ return false; }
+		if( (! self::get('liveTrafficEnabled')) || self::get('cacheType') == 'falcon' || self::get('cacheType') == 'php'){ return false; }
 		return true;
 	}
 }

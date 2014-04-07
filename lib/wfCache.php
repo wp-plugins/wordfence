@@ -379,6 +379,25 @@ class wfCache {
 		return false;
 	}
 	private static function getHtaccessCode(){
+		$siteURL = site_url();
+		$pathPrefix = "";
+		$matchCaps = '$1/$2~$3~$4~$5~$6';
+		if(preg_match('/^https?:\/\/[^\/]+\/(.+)$/i', $siteURL, $matches)){
+			$path = $matches[1];
+			$path = preg_replace('/^\//', '', $path);
+			$path = preg_replace('/\/$/', '', $path);
+			$pieces = explode('/', $path);
+			$pathPrefix = '/' . $path; // Which is: /my/path
+			if(count($pieces) == 1){
+				# No path:       "/wp-content/wfcache/%{HTTP_HOST}_$1/$2~$3~$4~$5~$6_wfcache%{WRDFNC_HTTPS}.html%{ENV:WRDFNC_ENC}" [L]
+				# One path:  "/mdm/wp-content/wfcache/%{HTTP_HOST}_mdm/$1~$2~$3~$4~$5_wfcache%{WRDFNC_HTTPS}.html%{ENV:WRDFNC_ENC}" [L]
+				$matchCaps = $pieces[0] . '/$1~$2~$3~$4~$5';
+			} else if(count($pieces) == 2){
+				$matchCaps = $pieces[0] . '/' . $pieces[1] . '/$1~$2~$3~$4';
+			} else {
+				$matchCaps = '$1/$2~$3~$4~$5~$6'; #defaults to the regular setting but this won't work. However user should already have gotten a warning that we don't support sites more than 2 dirs deep with falcon.
+			}
+		}
 		$sslString = "RewriteCond %{HTTPS} off";
 		if(wfConfig::get('allowHTTPSCaching')){
 			$sslString = "";
@@ -415,14 +434,14 @@ class wfCache {
 	RewriteCond %{HTTP:Accept-Encoding} gzip
 	RewriteRule .* - [E=WRDFNC_ENC:_gzip]
 	RewriteCond %{REQUEST_METHOD} !=POST
-	$sslString
+	{$sslString}
 	RewriteCond %{QUERY_STRING} ^(?:\d+=\d+)?$
 	RewriteCond %{REQUEST_URI} (?:\/|\.html)$ [NC]
 	RewriteCond %{HTTP_COOKIE} !(comment_author|wp\-postpass|wf_logout|wordpress_logged_in|wptouch_switch_toggle|wpmp_switcher) [NC]
 
 	RewriteCond %{REQUEST_URI} \/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)(.*)$
-	RewriteCond "%{DOCUMENT_ROOT}/wp-content/wfcache/%{HTTP_HOST}_%1/%2~%3~%4~%5~%6_wfcache%{WRDFNC_HTTPS}.html%{ENV:WRDFNC_ENC}" -f
-	RewriteRule \/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)(.*)$ "/wp-content/wfcache/%{HTTP_HOST}_$1/$2~$3~$4~$5~$6_wfcache%{WRDFNC_HTTPS}.html%{ENV:WRDFNC_ENC}" [L]
+	RewriteCond "%{DOCUMENT_ROOT}{$pathPrefix}/wp-content/wfcache/%{HTTP_HOST}_%1/%2~%3~%4~%5~%6_wfcache%{WRDFNC_HTTPS}.html%{ENV:WRDFNC_ENC}" -f
+	RewriteRule \/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)(.*)$ "{$pathPrefix}/wp-content/wfcache/%{HTTP_HOST}_{$matchCaps}_wfcache%{WRDFNC_HTTPS}.html%{ENV:WRDFNC_ENC}" [L]
 </IfModule>
 #Do not remove this line. Disable Web caching in Wordfence to remove this data - WFCACHECODE
 EOT;
