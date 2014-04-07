@@ -53,6 +53,15 @@ class wordfenceScanner {
 		}
 		$db = new wfDB();
 		$lastCount = 'whatever';
+		$excludePattern = false;
+		if(wfConfig::get('scan_exclude', false)){
+			$exParts = explode(',', wfConfig::get('scan_exclude'));
+			foreach($exParts as &$exPart){
+				$exPart = preg_quote($exPart);
+				$exPart = preg_replace('/\\\\\*/', '.*', $exPart);
+			}
+			$excludePattern = '/^(?:' . implode('|', $exParts) . ')$/i';
+		}
 		while(true){
 			$thisCount = $db->querySingle("select count(*) from " . $db->prefix() . "wfFileMods where oldMD5 != newMD5 and knownFile=0");
 			if($thisCount == $lastCount){
@@ -67,6 +76,9 @@ class wordfenceScanner {
 			foreach($res1 as $rec1){
 				$db->queryWrite("update " . $db->prefix() . "wfFileMods set oldMD5 = newMD5 where filenameMD5='%s'", $rec1['filenameMD5']); //A way to mark as scanned so that if we come back from a sleep we don't rescan this one.
 				$file = $rec1['filename'];
+				if($excludePattern && preg_match($excludePattern, $file)){
+					continue;
+				}
 				$fileSum = $rec1['newMD5'];
 
 				if(! file_exists($this->path . $file)){
@@ -80,8 +92,12 @@ class wordfenceScanner {
 				if(preg_match('/^(?:php|phtml|php\d+)$/', $fileExt)){ 
 					$isPHP = true;
 				}
+				$dontScanForURLs = false;
+				if( (! wfConfig::get('scansEnabled_highSense')) && (preg_match('/^(?:\.htaccess|wp\-config\.php)$/', $file) || preg_match('/^(?:sql|tbz|tgz|gz|tar|log|err\d+)$/', $fileExt)) ){
+					$dontScanForURLs = true;
+				}
 
-				if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt)){
+				if(preg_match('/^(?:jpg|jpeg|mp3|avi|m4v|gif|png)$/', $fileExt) && (! wfConfig::get('scansEnabled_scanImages')) ){
 					continue;
 				}
 				if(wfUtils::fileTooBig($this->path . $file)){ //We can't use filesize on 32 bit systems for files > 2 gigs
@@ -114,7 +130,7 @@ class wordfenceScanner {
 					if($totalRead < 1){
 						break;
 					}
-					if($isPHP){
+					if($isPHP || wfConfig::get('scansEnabled_scanImages') ){
 						if(strpos($data, '$allowed'.'Sites') !== false && strpos($data, "define ('VER"."SION', '1.") !== false && strpos($data, "TimThum"."b script created by") !== false){
 							$this->addResult(array(
 								'type' => 'file',
@@ -186,9 +202,41 @@ class wordfenceScanner {
 								));
 							break;
 						}
-						$this->urlHoover->hoover($file, $data);
+						if(wfConfig::get('scansEnabled_highSense')){
+							$badStringFound = false;
+							if(strpos($data, $this->patterns['badstrings'][0]) !== false){
+								for($i = 1; $i < sizeof($this->patterns['badstrings']); $i++){
+									if(strpos($data, $this->patterns['badstrings'][$i]) !== false){
+										$badStringFound = $this->patterns['badstrings'][$i];
+										break;
+									}
+								}
+							}
+							if($badStringFound){
+								$this->addResult(array(
+									'type' => 'file',
+									'severity' => 1,
+									'ignoreP' => $this->path . $file,
+									'ignoreC' => $fileSum,
+									'shortMsg' => "This file may contain malicious executable code",
+									'longMsg' => "This file is a PHP executable file and contains the word 'eval' (without quotes) and the word '" . $badStringFound . "' (without quotes). The eval() function along with an encoding function like the one mentioned are commonly used by hackers to hide their code. If you know about this file you can choose to ignore it to exclude it from future scans.",
+									'data' => array(
+										'file' => $file,
+										'canDiff' => false,
+										'canFix' => false,
+										'canDelete' => true
+									)
+									));
+								break;
+							}
+						}
+						if(! $dontScanForURLs){
+							$this->urlHoover->hoover($file, $data);
+						}
 					} else {
-						$this->urlHoover->hoover($file, $data);
+						if(! $dontScanForURLs){
+							$this->urlHoover->hoover($file, $data);
+						}
 					}
 
 					if($totalRead > 2 * 1024 * 1024){
@@ -212,8 +260,12 @@ class wordfenceScanner {
 			$this->errorMsg = $this->urlHoover->errorMsg;
 			return false;
 		}
+		$this->urlHoover->cleanup();
 		foreach($hooverResults as $file => $hresults){
 			foreach($hresults as $result){
+				if(preg_match('/wfBrowscapCache\.php$/', $file)){
+					continue;
+				}
 				if($result['badList'] == 'goog-malware-shavar'){
 					$this->addResult(array(
 						'type' => 'file',

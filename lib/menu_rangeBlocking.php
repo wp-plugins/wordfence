@@ -1,5 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_rangeBlocking"></div>
 <div class="wrap" id="paidWrap">
+	<?php require('menuHeader.php'); ?>
 	<?php $pageTitle = "Advanced Blocking"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p>
@@ -38,6 +39,12 @@
 <table border="0" style="width: 100%">
 {{each(idx, elem) results}}
 <tr><td>
+	{{if patternDisabled}}
+	<div style="width: 500px; margin-top: 20px;">
+		<span style="color: #F00;">Pattern Below has been DISABLED:</span> Falcon engine does not support advanced blocks that include BOTH an IP address range AND a browser pattern.
+	</div>
+	<div style="color: #AAA;">
+	{{/if}}
 	<div>
 		<strong>IP Range:</strong>&nbsp;${ipPattern}
 	</div>
@@ -48,6 +55,9 @@
 		<strong>Reason:</strong>&nbsp;${reason}
 	</div>
 	<div><a href="#" onclick="WFAD.unblockRange('${id}'); return false;">Delete this blocking pattern</a></div>
+	{{if patternDisabled}}
+	</div>
+	{{/if}}
 </td>
 <td style="color: #999;">
 	<ul>
