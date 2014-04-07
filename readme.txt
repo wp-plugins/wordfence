@@ -5,7 +5,7 @@ Requires at least: 3.3.1
 Tested up to: 3.8.1
 Stable tag: 5.0.2
 
-Wordfence Security is a free enterprise class security plugin that makes your site up to 50 times faster and more secure. Wordfence includes a firewall, virus scanning, real-time traffic with geolocation and two very fast caching engines. 
+Wordfence Security is a free enterprise class security plugin that makes your site up to 50 times faster and more secure. 
 
 == Description ==
 
