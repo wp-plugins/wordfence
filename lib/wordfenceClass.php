@@ -337,9 +337,6 @@ class wordfence {
 			add_action('validate_password_reset', 'wordfence::validatePassword', 10, 2 );
 		}
 
-		if(wfConfig::get('other_disableXMLRPC')){
-			add_filter('xmlrpc_enabled', '__return_false');
-		}
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
 		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
