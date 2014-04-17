@@ -71,7 +71,7 @@ class wfAPI {
 			if($data === false){
 				$err = error_get_last();
 				if($err){
-					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . $err);
+					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . var_export($err, true));
 				} else {
 					throw new Exception("We received an empty response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function.");
 				}

@@ -6,6 +6,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 </script>
 <div class="wordfenceModeElem" id="wordfenceMode_options"></div>
 <div class="wrap">
+	<?php require('menuHeader.php'); ?>
 	<?php $pageTitle = "Wordfence Options"; include('pageTitle.php'); ?>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
@@ -38,6 +39,8 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><td colspan="2">&nbsp;</td></tr>
 	<tr><th class="wfConfigEnable">Enable Live Traffic View</th><td><input type="checkbox" id="liveTrafficEnabled" class="wfConfigElem" name="liveTrafficEnabled" value="1" <?php $w->cb('liveTrafficEnabled'); ?> onclick="WFAD.reloadConfigPage = true; return true;" />&nbsp;This option enables live traffic logging.</td></tr>
 	<tr><td colspan="2">&nbsp;</td></tr>
+	<?php /* <tr><th class="wfConfigEnable">Enable Performance Monitoring</th><td><input type="checkbox" id="perfLoggingEnabled" class="wfConfigElem" name="perfLoggingEnabled" value="1" <?php $w->cb('perfLoggingEnabled'); ?> onclick="WFAD.reloadConfigPage = true; return true;" />&nbsp;This option enables performance monitoring.</td></tr> */ ?>
+	<tr><td colspan="2">&nbsp;</td></tr>
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> />&nbsp;Regular scans ensure your site stays secure.</td></tr>
 	<tr><td colspan="2">&nbsp;</td></tr>
 
@@ -69,7 +72,6 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<h2>Advanced Options:</h2>
 		<p style="width: 600px;">
 			Wordfence works great out of the box for most websites. Simply install Wordfence and your site and content is protected. For finer granularity of control, we have provided advanced options.
-			If you need help with advanced options, <a href="http://www.wordfence.com/forums/forum/wordfence-support-questions/" target="_blank">please ask in the Wordfence support forum</a>.
 		</p>
 	</div>
 	<div id="wfConfigAdvanced">
@@ -88,6 +90,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Alert when the "lost password" form is used for a valid user</th><td><input type="checkbox" id="alertOn_lostPasswdForm" class="wfConfigElem" name="alertOn_lostPasswdForm" value="1" <?php $w->cb('alertOn_lostPasswdForm'); ?>/></td></tr>
 	<tr><th>Alert me when someone with administrator access signs in</th><td><input type="checkbox" id="alertOn_adminLogin" class="wfConfigElem" name="alertOn_adminLogin" value="1" <?php $w->cb('alertOn_adminLogin'); ?>/></td></tr>
 	<tr><th>Alert me when a non-admin user signs in</th><td><input type="checkbox" id="alertOn_nonAdminLogin" class="wfConfigElem" name="alertOn_nonAdminLogin" value="1" <?php $w->cb('alertOn_nonAdminLogin'); ?>/></td></tr>
+	<tr><th>Maximum email alerts to send per hour</th><td>&nbsp;<input type="text" id="alert_maxHourly" name="alert_maxHourly" value="<?php $w->f('alert_maxHourly'); ?>" size="4" />0 or empty means unlimited alerts will be sent.</td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerLiveTrafficOptions"></div>
 		<h3 class="wfConfigHeading">Live Traffic View</h3>
@@ -102,8 +105,9 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<?php if(wfConfig::get('isPaid')){ ?>
 	<tr><th>Scan public facing site for vulnerabilities?</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" <?php $w->cb('scansEnabled_public'); ?></td></tr>
 	<?php } else { ?>
-	<tr><th style="color: #F00;">Scan public facing site for vulnerabilities? (<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid members only</a>)</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" DISABLED ?></td></tr>
+	<tr><th style="color: #F00;">Scan public facing site for vulnerabilities? (<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid members only</a>)</th><td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem" name="scansEnabled_public" value="1" DISABLED ?></td></tr>
 	<?php } ?>
+	<tr><th>Scan for the HeartBleed vulnerability?</th><td><input type="checkbox" id="scansEnabled_heartbleed" class="wfConfigElem" name="scansEnabled_heartbleed" value="1" <?php $w->cb('scansEnabled_heartbleed'); ?></td></tr>
 	<tr><th>Scan core files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_core" class="wfConfigElem" name="scansEnabled_core" value="1" <?php $w->cb('scansEnabled_core'); ?>/></td></tr>
 	
 	<tr><th>Scan theme files against repository versions for changes</th><td><input type="checkbox" id="scansEnabled_themes" class="wfConfigElem" name="scansEnabled_themes" value="1" <?php $w->cb('scansEnabled_themes'); ?>/></td></tr>
@@ -118,6 +122,9 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Monitor disk space</th><td><input type="checkbox" id="scansEnabled_diskSpace" class="wfConfigElem" name="scansEnabled_diskSpace" value="1" <?php $w->cb('scansEnabled_diskSpace'); ?>/></td></tr>
 	<tr><th>Scan for unauthorized DNS changes</th><td><input type="checkbox" id="scansEnabled_dns" class="wfConfigElem" name="scansEnabled_dns" value="1" <?php $w->cb('scansEnabled_dns'); ?>/></td></tr>
 	<tr><th>Scan files outside your WordPress installation</th><td><input type="checkbox" id="other_scanOutside" class="wfConfigElem" name="other_scanOutside" value="1" <?php $w->cb('other_scanOutside'); ?> /></td></tr>
+	<tr><th>Scan image files as if they were executable</th><td><input type="checkbox" id="scansEnabled_scanImages" class="wfConfigElem" name="scansEnabled_scanImages" value="1" <?php $w->cb('scansEnabled_scanImages'); ?> /></td></tr>
+	<tr><th>Enable HIGH SENSITIVITY scanning. May give false positives.</th><td><input type="checkbox" id="scansEnabled_highSense" class="wfConfigElem" name="scansEnabled_highSense" value="1" <?php $w->cb('scansEnabled_highSense'); ?> /></td></tr>
+	<tr><th>Exclude files from scan that match these wildcard patterns. Comma separated.</th><td><input type="text" id="scan_exclude" class="wfConfigElem" name="scan_exclude" size="20" value="<?php echo $w->getHTML('scan_exclude'); ?>" />e.g. *.sql,*.tar,backup*.zip</td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerFirewallRules"></div>
 		<h3 class="wfConfigHeading">Firewall Rules</h3>
@@ -246,12 +253,15 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Hold anonymous comments using member emails for moderation</th><td><input type="checkbox" id="other_noAnonMemberComments" class="wfConfigElem" name="other_noAnonMemberComments" value="1" <?php $w->cb('other_noAnonMemberComments'); ?> /></td></tr>
 	<tr><th>Scan comments for malware and phishing URL's</th><td><input type="checkbox" id="other_scanComments" class="wfConfigElem" name="other_scanComments" value="1" <?php $w->cb('other_scanComments'); ?> /></td></tr>
 	<tr><th>Check password strength on profile update</th><td><input type="checkbox" id="other_pwStrengthOnUpdate" class="wfConfigElem" name="other_pwStrengthOnUpdate" value="1" <?php $w->cb('other_pwStrengthOnUpdate'); ?> /></td></tr>
-	<tr><th>Participate in the Wordfence Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
+	<tr><th>Participate in the Real-Time WordPress Security Network</th><td><input type="checkbox" id="other_WFNet" class="wfConfigElem" name="other_WFNet" value="1" <?php $w->cb('other_WFNet'); ?> /></td></tr>
 	<tr><th>Maximum memory Wordfence can use</th><td><input type="text" id="maxMem" name="maxMem" value="<?php $w->f('maxMem'); ?>" size="4" />Megabytes</td></tr>
 	<tr><th>Maximum execution time for each scan stage</th><td><input type="text" id="maxExecutionTime" name="maxExecutionTime" value="<?php $w->f('maxExecutionTime'); ?>" size="4" />Blank for default. Must be greater than 9.</td></tr>
 	<tr><th>Update interval in seconds (2 is default)</th><td><input type="text" id="actUpdateInterval" name="actUpdateInterval" value="<?php $w->f('actUpdateInterval'); ?>" size="4" />Setting higher will reduce browser traffic but slow scan starts, live traffic &amp; status updates.</td></tr>
 	<tr><th>Enable debugging mode (increases database load)</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
 	<tr><th>Delete Wordfence tables and data on deactivation?</th><td><input type="checkbox" id="deleteTablesOnDeact" class="wfConfigElem" name="deleteTablesOnDeact" value="1" <?php $w->cb('deleteTablesOnDeact'); ?> /></td></tr>
+	<tr><th>Disable Wordfence Cookies</th><td><input type="checkbox" id="disableCookies" class="wfConfigElem" name="disableCookies" value="1" <?php $w->cb('disableCookies'); ?> />(when enabled all visits in live traffic will appear to be new visits)</td></tr>
+	<tr><th>Start all scans remotely</th><td><input type="checkbox" id="startScansRemotely" class="wfConfigElem" name="startScansRemotely" value="1" <?php $w->cb('startScansRemotely'); ?> />(Try this if your scans aren't starting and your site is publicly accessible)</td></tr>
+	<tr><th>Add a debugging comment to HTML source of cached pages.</th><td><input type="checkbox" id="addCacheComment" class="wfConfigElem" name="addCacheComment" value="1" <?php $w->cb('addCacheComment'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=conntest&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to test connectivity to the Wordfence API servers</a></th></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=testmem&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's available memory</a></th></tr>
@@ -268,7 +278,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	We give you a few basic security levels to choose from, depending on your needs. Remember to hit the "Save" button to save any changes you make. 
 </p>
 <p>
-	If you use the free edition of Wordfence, you don't need to worry about entering an API key in the "API Key" field above. One is automatically created for you. If you choose to <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to Wordfence premium edition</a>, you will receive an API key. You will need to copy and paste that key into the "API Key"
+	If you use the free edition of Wordfence, you don't need to worry about entering an API key in the "API Key" field above. One is automatically created for you. If you choose to <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to Wordfence Premium edition</a>, you will receive an API key. You will need to copy and paste that key into the "API Key"
 	field above and hit "Save" to activate your key.
 </p>
 </div>

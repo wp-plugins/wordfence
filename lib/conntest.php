@@ -14,6 +14,29 @@ function curlWrite($h, $d){
 	$curlContent .= $d;
 	return strlen($d);
 }
+function doWPostTest($protocol){
+	echo "<br /><b>Starting wp_remote_post() test</b><br />\n";
+	$cronURL = admin_url('admin-ajax.php');
+	$cronURL = preg_replace('/^(https?:\/\/)/i', '://noc1.wordfence.com/scanptest/', $cronURL);
+	$cronURL .= '?action=wordfence_doScan&isFork=0&cronKey=47e9d1fa6a675b5999999333';
+	$cronURL = $protocol . $cronURL;
+	$result = wp_remote_post($cronURL, array(
+		'timeout' => 10, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
+		'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
+		'sslverify' => false,
+		'headers' => array()
+		));
+	if($result['response']['code'] == 200 && strpos($result['body'], "scanptestok") !== false){
+		echo "wp_remote_post() test to noc1.wordfence.com passed!<br />\n";
+	} else {
+		echo "wp_remote_post() test to noc1.wordfence.com failed! Response was: " . $result['response']['code'] . " " . $result['response']['message'] . "<br />\n";
+		echo "This likely means that your hosting provider is blocking requests to noc1.wordfence.com or has set up a proxy that is not behaving itself.<br />\n";
+		echo "This additional info may help you diagnose the issue. The response headers we received were:<br />\n";
+		foreach($result['headers'] as $key => $value){
+			echo "$key => $value<br />\n";
+		}
+	}
+}
 function doCurlTest($protocol){
 	echo "<br /><b>STARTING CURL $protocol CONNECTION TEST....</b><br />\n";
 	global $curlContent;
@@ -39,6 +62,8 @@ function doCurlTest($protocol){
 }
 doCurlTest('http');
 doCurlTest('https');
+doWPostTest('http');
+doWPostTest('https');
 ?>
 </body>
 </html>

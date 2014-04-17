@@ -63,7 +63,7 @@ class wordfenceHash {
 		$this->knownFiles = @json_decode($dataArr['data'], true);
 		if(! is_array($this->knownFiles)){
 			wordfence::statusEndErr();
-			throw new Exception("Invaid response from Wordfence servers.");
+			throw new Exception("Invalid response from Wordfence servers.");
 		}
 		wordfence::statusEnd($fetchCoreHashesStatus, false, true);
 
