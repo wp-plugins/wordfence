@@ -23,6 +23,7 @@ class wfConfig {
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => false,
 				"scansEnabled_public" => false,
+				"scansEnabled_heartbleed" => true,
 				"scansEnabled_core" => false,
 				"scansEnabled_themes" => false,
 				"scansEnabled_plugins" => false,
@@ -96,6 +97,7 @@ class wfConfig {
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_public" => false,
+				"scansEnabled_heartbleed" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
 				"scansEnabled_plugins" => false,
@@ -169,6 +171,7 @@ class wfConfig {
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_public" => false,
+				"scansEnabled_heartbleed" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
 				"scansEnabled_plugins" => false,
@@ -242,6 +245,7 @@ class wfConfig {
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_public" => false,
+				"scansEnabled_heartbleed" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
 				"scansEnabled_plugins" => false,
@@ -315,6 +319,7 @@ class wfConfig {
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
 				"scansEnabled_public" => false,
+				"scansEnabled_heartbleed" => true,
 				"scansEnabled_core" => true,
 				"scansEnabled_themes" => false,
 				"scansEnabled_plugins" => false,
@@ -446,7 +451,7 @@ class wfConfig {
 		// for each request as long as set() isn't called which would start the whole process over again.
 		if(! self::$diskCacheDisabled){ //We haven't had a write error to cache (so the cache is working) and clearDiskCache has not been called already
 			$cacheFile = self::getCacheFile();
-			unlink($cacheFile);
+			@unlink($cacheFile);
 			wfConfig::$diskCache = array();
 		}
 		self::$diskCacheDisabled = true;
@@ -573,7 +578,7 @@ class wfConfig {
 	}
 	private static function deleteOldTempFile($filename){
 		if(file_exists($filename)){
-			unlink($filename);
+			@unlink($filename);
 		}
 	}
 	private static function getTempDir(){

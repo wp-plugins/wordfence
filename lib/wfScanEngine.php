@@ -50,6 +50,7 @@ class wfScanEngine {
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 		$this->jobList[] = 'publicSite';
+		$this->jobList[] = 'heartbleed';
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
 		$this->jobList[] = 'knownFiles_finish';
@@ -127,6 +128,24 @@ class wfScanEngine {
 	}
 	public function getCurrentJob(){
 		return $this->jobList[0];
+	}
+	private function scan_heartbleed(){
+		if(wfConfig::get('scansEnabled_heartbleed')){
+			$this->statusIDX['heartbleed'] = wordfence::statusStart("Scanning your site for the HeartBleed vulnerability");
+			$result = $this->api->call('scan_heartbleed', array(), array(
+				'siteURL' => site_url()
+				));
+			$haveIssues = false;
+			if($result['haveIssues'] && is_array($result['issues']) ){
+				foreach($result['issues'] as $issue){
+					$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+					$haveIssues = true;
+				}
+			}
+			wordfence::statusEnd($this->statusIDX['heartbleed'], $haveIssues);
+		} else {
+			wordfence::statusDisabled("Skipping HeartBleed scan");
+		}
 	}
 	private function scan_publicSite(){
 		if(wfConfig::get('isPaid')){

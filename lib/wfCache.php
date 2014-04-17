@@ -150,7 +150,10 @@ class wfCache {
 		return $buffer;
 	}
 	public static function fileFromRequest($host, $URI){
-		$key = $host . $URI;
+		return self::fileFromURI($host, $URI, self::isHTTPSPage());
+	}
+	public static function fileFromURI($host, $URI, $isHTTPS){
+		$key = $host . $URI . ($isHTTPS ? '_HTTPS' : '');
 		if(isset(self::$fileCache[$key])){ return self::$fileCache[$key]; }
 		$host = preg_replace('/[^a-zA-Z0-9\-\.]+/', '', $host);
 		$URI = preg_replace('/(?:[^a-zA-Z0-9\-\_\.\~\/]+|\.{2,})/', '', $URI); //Strip out bad chars and multiple dots
@@ -161,7 +164,9 @@ class wfCache {
 				$URI .= $i < 6 ? '~' : '';
 			}
 		}
-		$file = WP_CONTENT_DIR . '/wfcache/' . $host . '_' . $URI . '_wfcache' . (self::isHTTPSPage() ? '_https' : '') . '.html';
+		$ext = '';
+		if($isHTTPS){ $ext = '_https'; }
+		$file = WP_CONTENT_DIR . '/wfcache/' . $host . '_' . $URI . '_wfcache' . $ext . '.html';
 		self::$fileCache[$key] = $file;
 		return $file;
 	}
@@ -353,8 +358,11 @@ class wfCache {
 		if($action != 'add' && $action != 'remove'){
 			die("Error: addHtaccessCode must be called with 'add' or 'remove' as param");
 		}
-		$htaccessPath = ABSPATH . '/.htaccess';
-		$fh = fopen($htaccessPath, 'r+');
+		$htaccessPath = self::getHtaccessPath();
+		if(! $htaccessPath){
+			return "Wordfence could not find your .htaccess file.";
+		}
+		$fh = @fopen($htaccessPath, 'r+');
 		if(! $fh){
 			$err = error_get_last();
 			return $err['message'];
@@ -378,7 +386,7 @@ class wfCache {
 		fclose($fh);
 		return false;
 	}
-	private static function getHtaccessCode(){
+	public static function getHtaccessCode(){
 		$siteURL = site_url();
 		$pathPrefix = "";
 		$matchCaps = '$1/$2~$3~$4~$5~$6';
@@ -450,25 +458,28 @@ EOT;
 	public static function scheduleUpdateBlockedIPs(){
 		wp_clear_scheduled_hook('wordfence_update_blocked_IPs');
 		if(wfConfig::get('cacheType') != 'falcon'){ 
-			self::updateBlockedIPs('remove');
+			self::updateBlockedIPs('remove'); //Fail silently if .htaccess is not readable. Will fall back to old blocking via WP
 			return; 
 		}
-		self::updateBlockedIPs('add');
+		self::updateBlockedIPs('add'); //Fail silently if .htaccess is not readable. Will fall back to old blocking via WP
 		wp_schedule_single_event(time() + 300, 'wordfence_update_blocked_IPs');
 	}
 	public static function updateBlockedIPs($action){ //'add' or 'remove'
 		if(wfConfig::get('cacheType') != 'falcon'){ return; }
 
-		$htaccessPath = ABSPATH . '/.htaccess';
+		$htaccessPath = self::getHtaccessPath();
+		if(! $htaccessPath){
+			return "Wordfence could not find your .htaccess file.";
+		}
 		if($action == 'remove'){
-			$fh = fopen($htaccessPath, 'r+');
+			$fh = @fopen($htaccessPath, 'r+');
 			if(! $fh){
 				$err = error_get_last();
 				return $err['message'];
 			}
 			flock($fh, LOCK_EX);
 			fseek($fh, 0, SEEK_SET); //start of file
-			$contents = fread($fh, filesize($htaccessPath));
+			$contents = @fread($fh, filesize($htaccessPath));
 			if(! $contents){
 				fclose($fh);
 				return "Could not read from $htaccessPath";
@@ -478,11 +489,17 @@ EOT;
 
 			ftruncate($fh, 0);
 			fseek($fh, 0, SEEK_SET);
-			fwrite($fh, $contents);
+			@fwrite($fh, $contents);
 			flock($fh, LOCK_UN);
 			fclose($fh);
 			return false;
 		} else if($action == 'add'){
+			$fh = @fopen($htaccessPath, 'r+');
+			if(! $fh){
+				$err = error_get_last();
+				return $err['message'];
+			}
+
 			$lines = array();
 			$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 			$IPs = $wfLog->getBlockedIPsAddrOnly();
@@ -535,16 +552,11 @@ EOT;
 		$blockCode .= implode('', $lines);
 		$blockCode .= "#Do not remove this line. Disable Web Caching in Wordfence to remove this data - WFIPBLOCKS\n";
 
-		$fh = fopen($htaccessPath, 'r+');
-		if(! $fh){
-			$err = error_get_last();
-			return $err['message'];
-		}
 
 		//Minimize time between lock/unlock
 		flock($fh, LOCK_EX);
 		fseek($fh, 0, SEEK_SET); //start of file
-		$contents = fread($fh, filesize($htaccessPath));
+		$contents = @fread($fh, filesize($htaccessPath));
 		if(! $contents){
 			fclose($fh);
 			return "Could not read from $htaccessPath";
@@ -553,9 +565,21 @@ EOT;
 		$contents = $blockCode . $contents;
 		ftruncate($fh, 0);
 		fseek($fh, 0, SEEK_SET);
-		fwrite($fh, $contents);
+		@fwrite($fh, $contents);
 		flock($fh, LOCK_UN);
 		fclose($fh);
+		return false;
+	}
+	public static function getHtaccessPath(){
+		if(file_exists(ABSPATH . '/.htaccess')){
+			return ABSPATH . '/.htaccess';
+		}
+		if(preg_match('/^https?:\/\/[^\/]+\/?$/i', home_url()) && preg_match('/^https?:\/\/[^\/]+\/.+/i', site_url())){
+			$path = realpath(ABSPATH . '/../.htaccess');
+			if(file_exists($path)){
+				return $path;
+			}
+		}
 		return false;
 	}
 }

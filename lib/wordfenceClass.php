@@ -263,6 +263,11 @@ class wordfence {
 			$db->queryWrite("update $prefix"."wfConfig set val='1' where name='scansEnabled_options'");
 		}
 		
+		$optScanEnabled = $db->querySingle("select val from $prefix"."wfConfig where name='scansEnabled_heartbleed'");
+		if($optScanEnabled != '0' && $optScanEnabled != '1'){ //Enable heartbleed if no value is set. 
+			wfConfig::set('scansEnabled_heartbleed', 1);
+		}
+
 		//Must be the final line
 	}
 	private static function doEarlyAccessLogging(){
@@ -358,6 +363,11 @@ class wordfence {
 				add_action('admin_menu', 'wordfence::admin_menus');
 			}
 			add_filter('pre_update_option_permalink_structure', 'wordfence::disablePermalinksFilter', 10, 2);
+			if( preg_match('/^(?:falcon|php)$/', wfConfig::get('cacheType')) ){
+				add_filter('post_row_actions', 'wordfence::postRowActions', 0, 2);
+				add_filter('page_row_actions', 'wordfence::pageRowActions', 0, 2);
+				add_action('post_submitbox_start', 'wordfence::postSubmitboxStart');
+			}
 		}
 	}
 	public static function ajax_testAjax_callback(){
@@ -387,6 +397,16 @@ class wordfence {
 		die(json_encode(array('ok' => 1)));	
 	}
 	public static function ajax_logHuman_callback(){
+		$browscap = new wfBrowscap();
+		$UA = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+		$isCrawler = false;
+		if($UA){
+			$b = $browscap->getBrowser($res['UA']);
+			if($b['Crawler']){
+				$isCrawler = true;
+			}
+		}
+
 		ob_end_clean();
 		if(! headers_sent()){ 
 			header('Content-type: text/javascript');
@@ -394,12 +414,14 @@ class wordfence {
 			header("Content-Length: 0");
 		}
 		flush();
-		$hid = $_GET['hid'];
-		$hid = wfUtils::decrypt($hid);
-		if(! preg_match('/^\d+$/', $hid)){ exit(); }
-		$db = new wfDB();
-		global $wpdb; $p = $wpdb->base_prefix;
-		$db->queryWrite("update $p"."wfHits set jsRun=1 where id=%d", $hid);
+		if(! $isCrawler){
+			$hid = $_GET['hid'];
+			$hid = wfUtils::decrypt($hid);
+			if(! preg_match('/^\d+$/', $hid)){ exit(); }
+			$db = new wfDB();
+			global $wpdb; $p = $wpdb->base_prefix;
+			$db->queryWrite("update $p"."wfHits set jsRun=1 where id=%d", $hid);
+		}
 		die("");
 	}
 	public static function ajaxReceiver(){
@@ -1160,6 +1182,28 @@ class wordfence {
 		wfConfig::set('tourClosed', 1);
 		return array('ok' => 1);
 	}
+	public static function postRowActions($actions, $post){
+		if(wfUtils::isAdmin()){
+			$actions = array_merge($actions, array(
+				'wfCachePurge' => '<a href="#" onclick="wordfenceExt.removeFromCache(\'' . $post->ID . '\'); return false;">Remove from Wordfence cache</a>'
+				));
+		}
+		return $actions;
+	}
+	public static function pageRowActions($actions, $post){
+		if(wfUtils::isAdmin()){
+			$actions = array_merge($actions, array(
+				'wfCachePurge' => '<a href="#" onclick="wordfenceExt.removeFromCache(\'' . $post->ID . '\'); return false;">Remove from Wordfence cache</a>'
+				));
+		}
+		return $actions;
+	}
+	public static function postSubmitboxStart(){
+		if(wfUtils::isAdmin()){
+			global $post;
+			echo '<div><a href="#" onclick="wordfenceExt.removeFromCache(\'' . $post->ID . '\'); return false;">Remove from Wordfence cache</a></div>';
+		}
+	}
 	public static function disablePermalinksFilter($newVal, $oldVal){
 		if(wfConfig::get('cacheType', false) == 'falcon' && $oldVal && (! $newVal) ){ //Falcon is enabled and admin is disabling permalinks
 			$err = wfCache::addHtaccessCode('remove');
@@ -1170,13 +1214,35 @@ class wordfence {
 		}
 		return $newVal;
 	}
+	public static function ajax_removeFromCache_callback(){
+		$id = $_POST['id'];
+		$link = get_permalink($id);
+		if(preg_match('/^https?:\/\/([^\/]+)(.*)$/i', $link, $matches)){
+			$host = $matches[1];
+			$URI = $matches[2];
+			if(! $URI){
+				$URI = '/';
+			}
+			$sslFile = wfCache::fileFromURI($host, $URI, true); //SSL
+			$normalFile = wfCache::fileFromURI($host, $URI, false); //non-SSL
+			@unlink($sslFile);
+			@unlink($sslFile . '_gzip');
+			@unlink($normalFile);
+			@unlink($normalFile . '_gzip');
+		}
+		return array('ok' => 1);
+	}
 	public static function ajax_saveCacheOptions_callback(){
+		$changed = false;
+		if($_POST['allowHTTPSCaching'] != wfConfig::get('allowHTTPSCaching', false)){
+			$changed = true;
+		}
 		wfConfig::set('allowHTTPSCaching', $_POST['allowHTTPSCaching'] == '1' ? 1 : 0);
 		wfConfig::set('addCacheComment', $_POST['addCacheComment'] == 1 ? '1' : 0);
-		if(wfConfig::get('cacheType', false) == 'falcon'){
+		if($changed && wfConfig::get('cacheType', false) == 'falcon'){
 			$err = wfCache::addHtaccessCode('add');
 			if($err){
-				return array('errorMsg' => "Wordfence could not edit your .htaccess code. The error was: " . $err);
+				return array('updateErr' => "Wordfence could not edit your .htaccess file. The error was: " . $err, 'code' => wfCache::getHtaccessCode() );
 			}
 		}
 		wfCache::scheduleCacheClear();
@@ -1215,14 +1281,12 @@ class wordfence {
 				return array('errorMsg' => "You need to enable Permalinks for your site to use Falcon Engine. You can enable Permalinks in WordPress by going to the Settings - Permalinks menu and enabling it there. Permalinks change your site URL structure from something that looks like /p=123 to pretty URLs like /my-new-post-today/ that are generally more search engine friendly.");
 			}
 		}
+		$warnHtaccess = false;
 		if($cacheType == 'disable' || $cacheType == 'php'){
 			$removeError = wfCache::addHtaccessCode('remove');
-			if($removeError){
-				return array('ok' => 1, 'heading' => "Problem disabling caching.", 'body' => "We could not disable caching because you have code in your .htaccess file that could not be removed by Wordfence. You need to go in and remove any Wordfence code from your .htaccess file yourself. Then return here and disable caching. The error we received was: $removeError");
-			}
-			$removeError = wfCache::updateBlockedIPs('remove');
-			if($removeError){
-				return array('ok' => 1, 'heading' => "Problem disabling caching.", 'body' => "We could not remove the list of blocked IP's from your .htaccess file when updating the type of caching you have selected. You need to go in and remove any Wordfence code from your .htaccess file yourself. Then return here and disable caching. The error we received was: $removeError");
+			$removeError2 = wfCache::updateBlockedIPs('remove');
+			if($removeError || $removeError2){
+				$warnHtaccess = true;
 			}
 		}
 		if($cacheType == 'php' || $cacheType == 'falcon'){
@@ -1236,17 +1300,22 @@ class wordfence {
 		if($cacheType != wfConfig::get('cacheType', false)){
 			wfCache::scheduleCacheClear();
 		}
-				
+		$htMsg = "";		
+		if($warnHtaccess){
+			$htMsg = " <strong style='color: #F00;'>Warning: We could not remove the caching code from your .htaccess file. you need to remove this manually yourself.</strong> ";
+		}
 		if($cacheType == 'disable'){
 			wfConfig::set('cacheType', false);
-			return array('ok' => 1, 'heading' => "Caching successfully disabled.", 'body' => "Caching has been disabled on your system.<br /><br /><center><input type='button' name='wfReload' value='Click here now to refresh this page' onclick='window.location.reload(true);' /></center>");
+			return array('ok' => 1, 'heading' => "Caching successfully disabled.", 'body' => "{$htMsg}Caching has been disabled on your system.<br /><br /><center><input type='button' name='wfReload' value='Click here now to refresh this page' onclick='window.location.reload(true);' /></center>");
 		} else if($cacheType == 'php'){
 			wfConfig::set('cacheType', 'php');
-			return array('ok' => 1, 'heading' => "Wordfence Basic Caching Enabled", 'body' => "Wordfence basic caching has been enabled on your system.<br /><br /><center><input type='button' name='wfReload' value='Click here now to refresh this page' onclick='window.location.reload(true);' /></center>");
+			return array('ok' => 1, 'heading' => "Wordfence Basic Caching Enabled", 'body' => "{$htMsg}Wordfence basic caching has been enabled on your system.<br /><br /><center><input type='button' name='wfReload' value='Click here now to refresh this page' onclick='window.location.reload(true);' /></center>");
 		} else if($cacheType == 'falcon'){
-			$err = wfCache::addHtaccessCode('add');
-			if($err){
-				return array('ok' => 1, 'heading' => "Wordfence could not edit .htaccess", 'body' => "Wordfence could not edit your .htaccess code. The error was: " . $err);
+			if($_POST['noEditHtaccess'] != '1'){
+				$err = wfCache::addHtaccessCode('add');
+				if($err){
+					return array('ok' => 1, 'heading' => "Wordfence could not edit .htaccess", 'body' => "Wordfence could not edit your .htaccess code. The error was: " . $err);
+				}
 			}
 			wfConfig::set('cacheType', 'falcon');
 			wfCache::scheduleUpdateBlockedIPs(); //Runs every 5 mins until we change cachetype
@@ -1304,6 +1373,18 @@ class wordfence {
 		wfConfig::set($key, $val);
 		return array('ok' => 1);
 	}
+	public static function ajax_checkFalconHtaccess_callback(){
+		$file = wfCache::getHtaccessPath();
+		if(! $file){
+			return array('err' => "We could not find your .htaccess file to modify it.", 'code' => wfCache::getHtaccessCode() );
+		}
+		$fh = @fopen($file, 'r+');
+		if(! $fh){
+			$err = error_get_last();
+			return array('err' => "We found your .htaccess file but could not open it for writing: " . $err['message'], 'code' => wfCache::getHtaccessCode() );
+		}
+		return array('ok' => 1);
+	}
 	public static function ajax_downloadHtaccess_callback(){
 		$url = site_url();
 		$url = preg_replace('/^https?:\/\//i', '', $url);
@@ -1311,8 +1392,8 @@ class wordfence {
 		$url = preg_replace('/^_+/', '', $url);
 		$url = preg_replace('/_+$/', '', $url);
 		header('Content-Type: application/octet-stream');
-		header('Content-Disposition: attachment; filename="htaccess_Backup_for_' . $url . '"');
-		$file = ABSPATH . '/.htaccess';
+		header('Content-Disposition: attachment; filename="htaccess_Backup_for_' . $url . '.txt"');
+		$file = wfCache::getHtaccessPath();
 		readfile($file);
 		die();
 	}
@@ -2143,7 +2224,7 @@ EOL;
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'updateConfig', 'saveCacheConfig', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
