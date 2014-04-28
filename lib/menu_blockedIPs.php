@@ -1,5 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_blockedIPs"></div>
 <div class="wrap">
+	<?php require('menuHeader.php'); ?>
 	<?php $pageTitle = "Wordfence Blocked IPs"; include('pageTitle.php'); ?>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
