@@ -26,8 +26,10 @@ function doWPostTest($protocol){
 		'sslverify' => false,
 		'headers' => array()
 		));
-	if($result['response']['code'] == 200 && strpos($result['body'], "scanptestok") !== false){
+	if( (! is_wp_error($result)) && $result['response']['code'] == 200 && strpos($result['body'], "scanptestok") !== false){
 		echo "wp_remote_post() test to noc1.wordfence.com passed!<br />\n";
+	} else if(is_wp_error($result)){
+		echo "wp_remote_post() test to noc1.wordfence.com failed! Response was: " . $result->get_error_message() . "<br />\n";
 	} else {
 		echo "wp_remote_post() test to noc1.wordfence.com failed! Response was: " . $result['response']['code'] . " " . $result['response']['message'] . "<br />\n";
 		echo "This likely means that your hosting provider is blocking requests to noc1.wordfence.com or has set up a proxy that is not behaving itself.<br />\n";

@@ -42,7 +42,6 @@ class wfScanEngine {
 		$this->startTime = time();
 		$this->maxExecTime = self::getMaxExecutionTime();
 		$this->i = new wfIssues();
-		$this->i->deleteNew();
 		$this->cycleStartTime = time();
 		$this->wp_version = wfUtils::getWPVersion();
 		$this->apiKey = wfConfig::get('apiKey');
@@ -63,6 +62,9 @@ class wfScanEngine {
 				}
 			}
 		}
+	}
+	public function deleteNewIssues(){
+		$this->i->deleteNew();
 	}
 	public function __wakeup(){
 		$this->cycleStartTime = time();

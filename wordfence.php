@@ -4,13 +4,13 @@ Plugin Name: Wordfence Security
 Plugin URI: http://www.wordfence.com/
 Description: Wordfence Security - Anti-virus, Firewal and Site Speedup
 Author: Wordfence
-Version: 5.0.4
+Version: 5.0.5
 Author URI: http://www.wordfence.com/
 */
 if(defined('WP_INSTALLING') && WP_INSTALLING){
 	return;
 }
-define('WORDFENCE_VERSION', '5.0.4');
+define('WORDFENCE_VERSION', '5.0.5');
 if(get_option('wordfenceActivated') != 1){
 	add_action('activated_plugin','wordfence_save_activation_error'); function wordfence_save_activation_error(){ update_option('wf_plugin_act_error',  ob_get_contents()); }
 }

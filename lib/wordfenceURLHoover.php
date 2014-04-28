@@ -129,11 +129,11 @@ class wordfenceURLHoover {
 			while($elem = $this->hostsToAdd->shift()){
 				//This may be an issue for hyperDB or other abstraction layers, but leaving it for now.
 				$sql .= sprintf("('%s', '%s', '%s', '%s'),", 
-					mysql_real_escape_string($elem['owner']), 
-					mysql_real_escape_string($elem['host']), 
-					mysql_real_escape_string($elem['path']), 
-					mysql_real_escape_string($elem['hostKey'])
-					);
+						$this->db->realEscape($elem['owner']),
+						$this->db->realEscape($elem['host']),
+						$this->db->realEscape($elem['path']),
+						$this->db->realEscape($elem['hostKey'])
+								);
 			}
 			$sql = rtrim($sql, ',');
 			$this->db->queryWrite($sql);

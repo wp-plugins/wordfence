@@ -3,13 +3,13 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability
 Requires at least: 3.3.1
 Tested up to: 3.9
-Stable tag: 5.0.4
+Stable tag: 5.0.5
 
 Wordfence Security is a free enterprise class security plugin that makes your site up to 50 times faster and more secure. 
 
 == Description ==
 
-Wordfence Security is a free enterprise class security and performance plugin that includes a very fast caching engine, firewall, anti-virus scanning, cellphone sign-in (two factor authentication), malicious URL scanning and live traffic including crawlers. Wordfence is the only WordPress security and performance plugin that can verify and repair your core, theme and plugin files, even if you don't have backups.
+Wordfence starts by checking if your site is already infected. We do a deep server-side scan of your source code comparing it to the Official WordPress repository for core, themes and plugins. Then Wordfence secures your site and makes it up to 50 times faster. 
 
 Wordfence Security is 100% free. We also offer a Premium API key that gives you access to our premium support ticketing system at [support.wordfence.com](http://support.wordfence.com/) along with two factor authentication via SMS, country blocking and the ability to schedule scans for specific times.
 
@@ -161,6 +161,11 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.0.5 =
+* Fix: Removed mysql_real_escape_string because it’s deprecated. Using WP’s internal escape.
+* Fix: Wordfence issues list would be deleted halfway through scan under certain conditions. 
+* Fix: Connection tester would generate php error under certain conditions. 
 
 = 5.0.4 =
 * Feature: We now scan for the infamous heartbleed openssl vulnerability using a non-intrusive scan method safe for production servers. 
