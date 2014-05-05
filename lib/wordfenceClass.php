@@ -72,8 +72,7 @@ class wordfence {
 	public static function hourlyCron(){
 		global $wpdb; $p = $wpdb->base_prefix;
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-			
-		
+
 		if(wfConfig::get('other_WFNet')){
 			$wfdb = new wfDB();
 			$q1 = $wfdb->querySelect("select URI from $p"."wfNet404s where ctime > unix_timestamp() - 3600 limit 1000");
@@ -126,10 +125,43 @@ class wordfence {
 			}
 		}
 	}
+	private function keyAlert($msg){
+		self::alert($msg, $msg . " To ensure uninterrupted Premium Wordfence protection on your site,\nplease renew your API key by visiting http://www.wordfence.com/ Sign in, go to your dashboard,\nselect the key about to expire and click the button to renew that API key.", false);
+	}
 	public static function dailyCron(){
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+		$keyData = $api->call('ping_api_key');
+		if(isset($keyData['_isPaidKey']) && $keyData['_isPaidKey']){
+			$keyExpDays = $keyData['_keyExpDays'];
+			$keyIsExpired = $keyData['_expired'];
+			if($keyExpDays > 15){
+				wfConfig::set('keyExp15Sent', '');
+				wfConfig::set('keyExp7Sent', '');
+				wfConfig::set('keyExp2Sent', '');
+				wfConfig::set('keyExp1Sent', '');
+				wfConfig::set('keyExpFinalSent', '');
+			} else if($keyExpDays <= 15 && $keyExpDays > 0){
+				if($keyExpDays <= 15 && $keyExpDays >= 11 && (! wfConfig::get('keyExp15Sent'))){
+					wfConfig::set('keyExp15Sent', 1);
+					self::keyAlert("Your Premium Wordfence API Key expires in less than 2 weeks.");
+				} else if($keyExpDays <= 7 && $keyExpDays >= 4 && (! wfConfig::get('keyExp7Sent'))){
+					wfConfig::set('keyExp7Sent', 1);
+					self::keyAlert("Your Premium Wordfence API Key expires in less than a week.");
+				} else if($keyExpDays == 2 && (! wfConfig::get('keyExp2Sent'))){
+					wfConfig::set('keyExp2Sent', 1);
+					self::keyAlert("Your Premium Wordfence API Key expires in 2 days.");
+				} else if($keyExpDays == 1 && (! wfConfig::get('keyExp1Sent'))){
+					wfConfig::set('keyExp1Sent', 1);
+					self::keyAlert("Your Premium Wordfence API Key expires in 1 day.");
+				}
+			} else if($keyIsExpired && (! wfConfig::get('keyExpFinalSent')) ){
+				wfConfig::set('keyExpFinalSent', 1);
+				self::keyAlert("Your Wordfence Premium API Key has Expired!");
+			}
+		}
+
 		$wfdb = new wfDB();
 		global $wpdb; $p = $wpdb->base_prefix;
-		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		try {
 			$patData = $api->call('get_known_vuln_pattern');
 			if(is_array($patData) && $patData['pat']){
@@ -225,7 +257,7 @@ class wordfence {
 		}
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
-		wp_schedule_event(time(), 'daily', 'wordfence_daily_cron');
+		wp_schedule_event(time(), 'daily', 'wordfence_daily_cron'); //'daily'
 		wp_schedule_event(time(), 'hourly', 'wordfence_hourly_cron');
 		$db = new wfDB();
 
@@ -342,6 +374,10 @@ class wordfence {
 			add_action('validate_password_reset', 'wordfence::validatePassword', 10, 2 );
 		}
 
+		//For debugging
+		//add_filter( 'cron_schedules', 'wordfence::cronAddSchedules' );
+ 
+		add_filter('wp_redirect', 'wordfence::wpRedirectFilter', 99, 2);
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
 		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
@@ -369,6 +405,21 @@ class wordfence {
 				add_action('post_submitbox_start', 'wordfence::postSubmitboxStart');
 			}
 		}
+	}
+	/* For debugging:
+  	public static function cronAddSchedules($schedules){
+		$schedules['wfEachMinute'] = array(
+				'interval' => 60,
+				'display' => __( 'Once a Minute' )
+				);
+		return $schedules;
+	}
+	*/
+	public static function wpRedirectFilter($URL, $status){
+		if(isset($_GET['author']) && preg_match('/^https?:\/\/[^\/]+\/author\/.+/i', $URL) && wfConfig::get('loginSec_disableAuthorScan') ){ //author query variable is present and we're about to redirect to a URL that starts with http://blah/author/...
+			return home_url(); //Send the user to the home URL (as opposed to site_url() which is not the home page on some sites)
+		}
+		return $URL;
 	}
 	public static function ajax_testAjax_callback(){
 		die("WFSCANTESTOK");
@@ -665,7 +716,7 @@ class wordfence {
 	public static function authenticateFilter($authResult){
 		$IP = wfUtils::getIP();	
 		$secEnabled = wfConfig::get('loginSecurityEnabled');
-		if($secEnabled && (! self::getLog()->isWhitelisted($IP)) ){
+		if($secEnabled && (! self::getLog()->isWhitelisted($IP)) && wfConfig::get('isPaid') ){
 			$twoFactorUsers = wfConfig::get_ser('twoFactorUsers', array());
 			if(isset($twoFactorUsers) && is_array($twoFactorUsers) && sizeof($twoFactorUsers) > 0){
 				$userDat = $_POST['wordfence_userDat'];
@@ -678,6 +729,9 @@ class wordfence {
 								} else if($_POST['wordfence_authFactor'] == $t[2]){
 									$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 									$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $t[1]) );
+									if(isset($codeResult['notPaid']) && $codeResult['notPaid']){
+										break; //Let them sign in without two factor
+									}
 									if(isset($codeResult['ok']) && $codeResult['ok']){
 										$t[2] = $codeResult['code'];
 										$t[4] = time() + 1800; //30 minutes until code expires
@@ -696,6 +750,10 @@ class wordfence {
 							if($t[0] == $userDat->ID && $t[3] == 'activated'){ //Yup, enabled, so lets send the code
 								$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 								$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $t[1]) );
+								if(isset($codeResult['notPaid']) && $codeResult['notPaid']){
+									break; //Let them sign in without two factor if their API key has expired or they're not paid and for some reason they have this set up.
+								}
+
 								if(isset($codeResult['ok']) && $codeResult['ok']){
 									$t[2] = $codeResult['code'];
 									$t[4] = time() + 1800; //30 minutes until code expires
@@ -714,7 +772,7 @@ class wordfence {
 		if(self::getLog()->isWhitelisted($IP)){
 			return $authResult;
 		}
-		if(wfConfig::get('other_WFNet') && is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
+		if(wfConfig::get('other_WFNet') && is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') ){
 			if($maxBlockTime = self::wfsnIsBlocked($IP, 'brute')){
 				self::getLog()->blockIP($IP, "Blocked by Wordfence Security Network", true, false, $maxBlockTime);
 			}
@@ -1374,6 +1432,9 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_checkFalconHtaccess_callback(){
+		if(wfUtils::isNginx()){
+			return array('nginx' => 1);
+		}
 		$file = wfCache::getHtaccessPath();
 		if(! $file){
 			return array('err' => "We could not find your .htaccess file to modify it.", 'code' => wfCache::getHtaccessCode() );
@@ -1581,6 +1642,9 @@ class wordfence {
 			} catch (Exception $e){
 				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . htmlentities($e->getMessage()) );
 			}
+		} else {
+			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
+			$res = $api->call('ping_api_key', array(), array());
 		}
 		return array('ok' => 1, 'reload' => $reload, 'paidKeyMsg' => $paidKeyMsg );
 	}

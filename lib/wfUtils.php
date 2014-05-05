@@ -593,6 +593,13 @@ class wfUtils {
 			@setcookie($name, $value, $expire, $path);
 		}
 	}
+	public static function isNginx(){
+		$sapi = php_sapi_name();
+		$serverSoft = $_SERVER['SERVER_SOFTWARE'];
+		if($sapi == 'fpm-fcgi' || stripos($serverSoft, 'nginx') !== false){
+			return true;
+		}
+	}
 }
 
 
