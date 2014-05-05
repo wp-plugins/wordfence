@@ -2,12 +2,15 @@
 /*
 Plugin Name: Wordfence Security
 Plugin URI: http://www.wordfence.com/
-Description: Wordfence Security - Anti-virus and Firewall security plugin for WordPress 
-Author: Mark Maunder
-Version: 3.8.6
+Description: Wordfence Security - Anti-virus, Firewal and Site Speedup
+Author: Wordfence
+Version: 5.0.6
 Author URI: http://www.wordfence.com/
 */
-define('WORDFENCE_VERSION', '3.8.6');
+if(defined('WP_INSTALLING') && WP_INSTALLING){
+	return;
+}
+define('WORDFENCE_VERSION', '5.0.6');
 if(get_option('wordfenceActivated') != 1){
 	add_action('activated_plugin','wordfence_save_activation_error'); function wordfence_save_activation_error(){ update_option('wf_plugin_act_error',  ob_get_contents()); }
 }
@@ -19,8 +22,6 @@ if(! defined('WORDFENCE_VERSIONONLY_MODE')){
 	}
 	require_once('lib/wordfenceConstants.php');
 	require_once('lib/wordfenceClass.php');
-	register_activation_hook(WP_PLUGIN_DIR . '/wordfence/wordfence.php', 'wordfence::installPlugin');
-	register_deactivation_hook(WP_PLUGIN_DIR . '/wordfence/wordfence.php', 'wordfence::uninstallPlugin');
 	wordfence::install_actions();
 }
 

@@ -1,5 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_whois"></div>
 <div class="wrap" id="paidWrap">
+	<?php require('menuHeader.php'); ?>
 	<?php $pageTitle = "WHOIS Lookup"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p style="width: 600px;">
