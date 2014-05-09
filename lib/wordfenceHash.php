@@ -117,6 +117,7 @@ class wordfenceHash {
 		$this->engine = $engine;
 		$files = scandir($this->path);
 		foreach($files as $file){
+			if($file == '.' || $file == '..'){ continue; }
 			if(sizeof($this->only) > 0 && (! in_array($file, $this->only))){
 				continue;
 			}

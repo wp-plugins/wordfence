@@ -244,6 +244,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Don't let WordPress reveal valid users in login errors</th><td><input type="checkbox" id="loginSec_maskLoginErrors" class="wfConfigElem" name="loginSec_maskLoginErrors" <?php $w->cb('loginSec_maskLoginErrors'); ?> /></td></tr>
 	<tr><th>Prevent users registering 'admin' username if it doesn't exist</th><td><input type="checkbox" id="loginSec_blockAdminReg" class="wfConfigElem" name="loginSec_blockAdminReg" <?php $w->cb('loginSec_blockAdminReg'); ?> /></td></tr>
 	<tr><th>Prevent discovery of usernames through '?/author=N' scans</th><td><input type="checkbox" id="loginSec_disableAuthorScan" class="wfConfigElem" name="loginSec_disableAuthorScan" <?php $w->cb('loginSec_disableAuthorScan'); ?> /></td></tr>
+	<tr><th>Immediately block the IP of users who try to sign in as these usernames</th><td><input type="text" name="loginSec_userBlacklist" id="loginSec_userBlacklist" value="<?php echo $w->getHTML('loginSec_userBlacklist'); ?>" size="40" />&nbsp;(Comma separated. Existing users won't be blocked.)</td></tr>
 	<tr><td colspan="2">
 		<div class="wfMarker" id="wfMarkerOtherOptions"></div>
 		<h3 class="wfConfigHeading">Other Options</h3>

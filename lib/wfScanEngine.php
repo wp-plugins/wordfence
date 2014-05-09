@@ -124,7 +124,7 @@ class wfScanEngine {
 		if($this->i->totalIssues  > 0){
 			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below.");
 		} else {
-			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, there were no problems found.");
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, no problems found.");
 		}
 		return;
 	}
@@ -187,6 +187,7 @@ class wfScanEngine {
 		}
 		$includeInKnownFilesScan = array();
 		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
+			if($file == '.' || $file == '..'){ continue; }
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
 			if($scanOutside){
 				$includeInKnownFilesScan[] = $file;

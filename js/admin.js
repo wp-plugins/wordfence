@@ -1264,7 +1264,8 @@ window['wordfenceAdmin'] = {
 		var self = this;
 		this.ajax('wordfence_saveCacheOptions', {
 			allowHTTPSCaching: (jQuery('#wfallowHTTPSCaching').is(':checked') ? 1 : 0),
-			addCacheComment: (jQuery('#wfaddCacheComment').is(':checked') ? 1 : 0)
+			addCacheComment: (jQuery('#wfaddCacheComment').is(':checked') ? 1 : 0),
+			clearCacheSched: (jQuery('#wfclearCacheSched').is(':checked') ? 1 : 0)
 			}, function(res){
 				if(res.updateErr){
 					self.colorbox('400px', "You need to manually update your .htaccess", res.updateErr + "<br />Your option was updated but you need to change the Wordfence code in your .htaccess to the following:<br /><textarea style='width: 300px; height: 120px;'>" + jQuery('<div/>').text(res.code).html() + '</textarea>');
@@ -1582,7 +1583,9 @@ window['wordfenceAdmin'] = {
 			patternType: patternType,
 			pattern: pattern
 			}, function(res){
-				window.location.reload(true);
+				if(res.ok){ //Otherwise errorMsg will get caught
+					window.location.reload(true);
+				}
 			});
 	},
 	loadCacheExclusions: function(){

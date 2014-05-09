@@ -18,6 +18,7 @@ $w = new wfConfig();
 		<table border="0">
 		<tr><td>Allow SSL (secure HTTPS pages) to be cached:</td><td><input type="checkbox" id="wfallowHTTPSCaching" value="1" <?php $w->cb('allowHTTPSCaching'); ?> />We recommend you leave this disabled unless your<br />site uses HTTPS but does not receive/send sensitive user info.</td></tr>
 		<tr><td>Add hidden debugging data to the bottom of the HTML source of cached pages:</td><td><input type="checkbox" id="wfaddCacheComment" value="1" <?php $w->cb('addCacheComment'); ?> />Message appears as an HTML comment below the closing HTML tag.</td></tr>
+		<tr><td>Clear cache when a scheduled post is published</td><td><input type="checkbox" id="wfclearCacheSched" value="1" <?php $w->cb('clearCacheSched'); ?> />The entire Falcon cache will be cleared when WordPress publishes a post you've scheduled to be published in future.</td></tr>
 		</table>
 		<br />
 		<input type="button" id="button1" name="button1" class="button-primary" value="Save Changes to the the caching options above" onclick="WFAD.saveCacheOptions();" />
@@ -32,15 +33,19 @@ $w = new wfConfig();
 			of the actions that will automatically clear the cache are:<br />
 			Publishing a post, creating a new page, updating general settings, creating a new category, updating menus, updating widgets and installing a new plugin.
 		</p>
-		<h2>You can add URLs to exclude from caching</h2>
+		<h2>You can add items like URLs, cookies and browsers (user-agents) to exclude from caching</h2>
 		<p style="width: 500px; white-space:nowrap;">
-			If a URL 
+			If a 
 			<select id="wfPatternType">
-				<option value="s">Starts with</option>
-				<option value="e">Ends with</option>
-				<option value="c">Contains</option>
+				<option value="s">URL Starts with</option>
+				<option value="e">URL Ends with</option>
+				<option value="c">URL Contains</option>
+				<option value="eq">URL Exactly Matches</option>
+				<option value="uac">User-Agent Contains</option>
+				<option value="uaeq">User-Agent Exactly Matches</option>
+				<option value="cc">Cookie Name Contains</option>
 			</select>
-			this text then don't cache it:
+			this value then don't cache it:
 			<input type="text" id="wfPattern" value="" size="20" maxlength="1000" />e.g. /my/dynamic/page/
 			<input type="button" class="button-primary" value="Add exclusion" onclick="WFAD.addCacheExclusion(jQuery('#wfPatternType').val(), jQuery('#wfPattern').val()); return false;" />
 		</p>
@@ -52,17 +57,29 @@ $w = new wfConfig();
 </div>
 <script type="text/x-jquery-template" id="wfCacheExclusionTmpl">
 <div>
-	If the URL
+	If the
 	<strong style="color: #0A0;">
 	{{if pt == 's'}}
-	STARTS WITH
+	URL starts with	
 	{{else pt == 'e'}}
-	ENDS WITH
+	URL ends with
 	{{else pt =='c'}}
-	CONTAINS
+	URL contains
+	{{else pt == 'eq'}}
+	URL equals
+	{{else pt == 'uac'}}
+	User-Agent contains
+	{{else pt == 'uaeq'}}
+	User-Agent equals
+	{{else pt == 'cc'}}
+	Cookie Name contains
+	{{else pt == 'ceq'}}
+	Cookie Name equals
+	{{else pt == 'ipeq'}}
+	IP Address equals
 	{{/if}}
 	</strong>
-	the text (without quotes): 
+	(without quotes): 
 	<strong style="color: #F00;">
 	"${p}"
 	</strong>

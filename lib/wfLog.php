@@ -45,10 +45,18 @@ class wfLog {
 			);
 	}
 	public function logLogin($action, $fail, $username){
+		if(! $username){
+			return;
+		}
 		$user = get_user_by('login', $username);
 		$userID = 0;
 		if($user){
 			$userID = $user->ID;
+			if(! $userID){
+				return;
+			}
+		} else { 
+			return; 
 		}
 		$this->getDB()->queryWrite("insert into " . $this->loginsTable . " (ctime, fail, action, username, userID, IP, UA) values (%f, %d, '%s', '%s', %s, %s, '%s')", 
 			sprintf('%.6f', microtime(true)),
@@ -767,7 +775,7 @@ class wfLog {
 			return;
 		}
 	}
-	private function do503($secsToGo, $reason){
+	public function do503($secsToGo, $reason){
 		wfUtils::doNotCache();
 		header('HTTP/1.1 503 Service Temporarily Unavailable');
 		header('Status: 503 Service Temporarily Unavailable');

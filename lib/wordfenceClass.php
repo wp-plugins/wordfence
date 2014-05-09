@@ -373,6 +373,7 @@ class wordfence {
 			add_action('profile_update', 'wordfence::profileUpdateAction', '99', 2);
 			add_action('validate_password_reset', 'wordfence::validatePassword', 10, 2 );
 		}
+		add_action('publish_future_post', 'wordfence::publishFuturePost');
 
 		//For debugging
 		//add_filter( 'cron_schedules', 'wordfence::cronAddSchedules' );
@@ -416,7 +417,7 @@ class wordfence {
 	}
 	*/
 	public static function wpRedirectFilter($URL, $status){
-		if(isset($_GET['author']) && preg_match('/^https?:\/\/[^\/]+\/author\/.+/i', $URL) && wfConfig::get('loginSec_disableAuthorScan') ){ //author query variable is present and we're about to redirect to a URL that starts with http://blah/author/...
+		if(isset($_GET['author']) && preg_match('/\/author\/.+/i', $URL) && wfConfig::get('loginSec_disableAuthorScan') ){ //author query variable is present and we're about to redirect to a URL that starts with http://blah/author/...
 			return home_url(); //Send the user to the home URL (as opposed to site_url() which is not the home page on some sites)
 		}
 		return $URL;
@@ -452,13 +453,13 @@ class wordfence {
 		$UA = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 		$isCrawler = false;
 		if($UA){
-			$b = $browscap->getBrowser($res['UA']);
+			$b = $browscap->getBrowser($UA);
 			if($b['Crawler']){
 				$isCrawler = true;
 			}
 		}
 
-		ob_end_clean();
+		@ob_end_clean();
 		if(! headers_sent()){ 
 			header('Content-type: text/javascript');
 			header("Connection: close");
@@ -501,6 +502,11 @@ class wordfence {
 		$returnArr['nonce'] = wp_create_nonce('wp-ajax');
 		die(json_encode($returnArr));
 		exit;
+	}
+	public static function publishFuturePost($id){
+		if(wfConfig::get('clearCacheSched')){
+			wfCache::scheduleCacheClear();
+		}
 	}
 	public static function validateProfileUpdate($errors, $update, $userData){
 		wordfence::validatePassword($errors, $userData);
@@ -779,9 +785,22 @@ class wordfence {
 				
 		}
 		if($secEnabled){
-			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username' && wfConfig::get('loginSec_lockInvalidUsers')){
-				self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
-				require('wfLockedOut.php');
+			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username'){
+				if($blacklist = wfConfig::get('loginSec_userBlacklist')){
+					$users = explode(',', $blacklist);
+					foreach($users as $user){
+						if(strtolower($_POST['log']) == strtolower($user)){
+							self::getLog()->blockIP($IP, "Blocked by login security setting.");
+							$secsToGo = wfConfig::get('blockedTime');
+							self::getLog()->do503($secsToGo, "Blocked by login security setting.");
+							break;
+						}
+					}
+				}
+				if(wfConfig::get('loginSec_lockInvalidUsers')){
+					self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
+					require('wfLockedOut.php');
+				}
 			}
 			$tKey = 'wflginfl_' . wfUtils::inet_aton($IP);
 			if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') ){
@@ -1297,6 +1316,7 @@ class wordfence {
 		}
 		wfConfig::set('allowHTTPSCaching', $_POST['allowHTTPSCaching'] == '1' ? 1 : 0);
 		wfConfig::set('addCacheComment', $_POST['addCacheComment'] == 1 ? '1' : 0);
+		wfConfig::set('clearCacheSched', $_POST['clearCacheSched'] == 1 ? '1' : 0);
 		if($changed && wfConfig::get('cacheType', false) == 'falcon'){
 			$err = wfCache::addHtaccessCode('add');
 			if($err){
@@ -1472,6 +1492,11 @@ class wordfence {
 			);
 		wfConfig::set('cacheExclusions', serialize($ex));
 		wfCache::scheduleCacheClear();
+		if(wfConfig::get('cacheType', false) == 'falcon' && preg_match('/^(?:uac|uaeq|cc)$/', $_POST['patternType'])){
+			if(wfCache::addHtaccessCode('add')){ //rewrites htaccess rules
+				return array('errorMsg' => "We added the rule you requested but could not modify your .htaccess file. Please delete this rule, check the permissions on your .htaccess file and then try again.");
+			}
+		}
 		return array('ok' => 1);
 	}
 	public static function ajax_removeCacheExclusion_callback(){
@@ -1481,13 +1506,20 @@ class wordfence {
 			return array('ok' => 1);
 		}
 		$ex = unserialize($ex);
+		$rewriteHtaccess = false;
 		for($i = 0; $i < sizeof($ex); $i++){ 
 			if((string)$ex[$i]['id'] == (string)$id){
+				if(wfConfig::get('cacheType', false) == 'falcon' && preg_match('/^(?:uac|uaeq|cc)$/', $ex[$i]['pt'])){
+					$rewriteHtaccess = true;
+				}
 				array_splice($ex, $i, 1);
 				//Dont break in case of dups
 			}
 		}
 		wfConfig::set('cacheExclusions', serialize($ex));
+		if($rewriteHtaccess && wfCache::addHtaccessCode('add')){ //rewrites htaccess rules
+			return array('errorMsg', "We removed that rule but could not rewrite your .htaccess file. You're going to have to manually remove this rule from your .htaccess file. Please reload this page now.");
+		}
 		return array('ok' => 1);
 	}
 	public static function ajax_loadCacheExclusions_callback(){
@@ -1554,6 +1586,19 @@ class wordfence {
 				}
 			}
 		}
+		$userBlacklist = array();
+		foreach(explode(',', $opts['loginSec_userBlacklist']) as $user){
+			$user = trim($user);
+			if(strlen($user) > 0){
+				$userBlacklist[] = $user;
+			}
+		}
+		if(sizeof($userBlacklist) > 0){
+			$opts['loginSec_userBlacklist'] = implode(',', $userBlacklist);
+		} else {
+			$opts['loginSec_userBlacklist'] = '';
+		}
+
 		$opts['apiKey'] = trim($opts['apiKey']);
 		if($opts['apiKey'] && (! preg_match('/^[a-fA-F0-9]+$/', $opts['apiKey'])) ){ //User entered something but it's garbage.
 			return array('errorMsg' => "You entered an API key but it is not in a valid format. It must consist only of characters A to F and 0 to 9.");
