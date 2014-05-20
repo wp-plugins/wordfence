@@ -6,7 +6,28 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 </script>
 <div class="wordfenceModeElem" id="wordfenceMode_countryBlocking"></div>
 <div class="wrap" id="paidWrap">
+	<?php require('menuHeader.php'); ?>
 	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Block specific countries from accessing your site</h2>
+<?php if(! wfConfig::get('isPaid')){ ?>
+		<div class="wfPaidOnlyNotice">
+			<strong>Country Blocking is only available to Premium Members at this time</strong><br /><br />
+			Country Blocking is a premium feature because we have licensed a very accurate commercial geolocation database to provide this feature. If you would like to
+			activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options
+			page.
+		</div>
+<?php } ?>
+		<?php if(wfConfig::get('cacheType') == 'falcon'){ ?>
+		<div class="wfFalconNotice">
+			<b>Note regarding country blocking with Falcon Engine enabled:</b><br /><br />
+			Country blocking will only work on the login page and other dynamic pages with
+			Wordfence Falcon Engine enabled. We do this to keep your site fast and avoid
+			a country lookup on every request. 
+			Serving cached pages only uses 2 to 3% of the resources that a non-cached page uses,
+			so malicious countries won't eat up your server resources when they load cached pages.
+			If you would like full country blocking, you can enable Basic Caching on the "Site Performance" page.
+		</div>
+		<?php } ?>
+
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<table class="wfConfigForm">
 		<tr><td colspan="2"><h2>Country Blocking Options</h2></td></tr>
@@ -70,11 +91,6 @@ jQuery(function(){ WFAD.loadBlockedCountries('<?php echo wfConfig::get('cbl_coun
 <?php
 }
 ?>
-<?php
-if( (! wfConfig::get('isPaid')) && (wfConfig::get('tourClosed', 0) == '1') ){
-	echo 'WFAD.paidUsersOnly("Country blocking is only available to paid members because we have licensed a commercial geolocation database to provide this feature.");';
-}
-?>
 </script>
 <script type="text/x-jquery-template" id="wfWelcomeContentCntBlk">
 <div>
@@ -95,7 +111,7 @@ if(wfConfig::get('isPaid')){
 } else {
 ?>
 	If you would like access to this premium feature, please 
-	<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to our premium version</a>.
+	<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
 </p>
 <?php
 }

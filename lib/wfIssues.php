@@ -116,6 +116,7 @@ class wfIssues {
 		if($level == 2 && $totalCriticalIssues < 1 && $totalWarningIssues < 1){ return; }
 		if($level == 1 && $totalCriticalIssues < 1){ return; }
 		$content = wfUtils::tmpl('email_newIssues.php', array(
+			'isPaid' => wfConfig::get('isPaid'),
 			'issues' => $finalIssues,
 			'totalCriticalIssues' => $totalCriticalIssues,
 			'totalWarningIssues' => $totalWarningIssues,
