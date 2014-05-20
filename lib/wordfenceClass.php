@@ -374,6 +374,7 @@ class wordfence {
 			add_action('validate_password_reset', 'wordfence::validatePassword', 10, 2 );
 		}
 		add_action('publish_future_post', 'wordfence::publishFuturePost');
+		add_action('mobile_setup', 'wordfence::jetpackMobileSetup'); //Action called in Jetpack Mobile Theme: modules/minileven/minileven.php
 
 		//For debugging
 		//add_filter( 'cron_schedules', 'wordfence::cronAddSchedules' );
@@ -416,6 +417,9 @@ class wordfence {
 		return $schedules;
 	}
 	*/
+	public static function jetpackMobileSetup(){
+		define('WFDONOTCACHE', true); //Don't cache jetpack mobile theme pages. 
+	}
 	public static function wpRedirectFilter($URL, $status){
 		if(isset($_GET['author']) && preg_match('/\/author\/.+/i', $URL) && wfConfig::get('loginSec_disableAuthorScan') ){ //author query variable is present and we're about to redirect to a URL that starts with http://blah/author/...
 			return home_url(); //Send the user to the home URL (as opposed to site_url() which is not the home page on some sites)

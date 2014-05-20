@@ -67,6 +67,9 @@ class wfCache {
 		return $status;
 	}
 	public static function isCachable(){
+		if(function_exists('is_404') && is_404()){
+			return false;
+		}
 		if(defined('WFDONOTCACHE') || defined('DONOTCACHEPAGE') || defined('DONOTCACHEDB') || defined('DONOTCACHEOBJECT')){ //If you want to tell Wordfence not to cache something in another plugin, simply define one of these. 
 			return false;
 		}
@@ -125,9 +128,16 @@ class wfCache {
 		return false;
 	}
 	public static function obComplete($buffer = ''){
+		if(function_exists('is_404') && is_404()){
+			return false;
+		}
+
 		if(defined('WFDONOTCACHE') || defined('DONOTCACHEPAGE') || defined('DONOTCACHEDB') || defined('DONOTCACHEOBJECT')){  
 			//These constants may have been set after we did the initial isCachable check by e.g. wp_redirect filter. If they're set then just return the buffer and don't cache.
 			return $buffer; 
+		}
+		if(strlen($buffer) < 1000){ //The average web page size is 1246,000 bytes. If web page is less than 1000 bytes, don't cache it. 
+			return $buffer;
 		}
 
 		$file = self::fileFromRequest( ($_SERVER['HTTP_HOST'] ? $_SERVER['HTTP_HOST'] : $_SERVER['SERVER_NAME']), $_SERVER['REQUEST_URI']);

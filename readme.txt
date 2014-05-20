@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm
 Requires at least: 3.3.1
 Tested up to: 3.9.1
-Stable tag: 5.0.7
+Stable tag: 5.0.8
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -161,6 +161,13 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.0.8 =
+* Feature: Support for Jetpack Mobile Theme in Falcon Caching engine. Regular pages are cached, mobile pages are served direct to browser. 
+* Improvement: Pages that are less than 1000 bytes will not be cached. The avg web page size in 2014 is 1246,000 bytes. Anything less than 1000 bytes is usuall an error. 
+* Improvement: Wordfence will now request 128M on hosts instead of 64M where memory in php.ini is set too low. 
+* Fix: Wordfence was caching 404's under certain conditions. Fixed. 
+* Fix: Nginx/FastCGI users would sometimes receive an error about not being able to edit .htaccess. Fixed. 
 
 = 5.0.7 =
 * Feature: Immediately block IP if hacker tries any of the following usernames. (Comma separated list that you can specify on the Wordfence options page)
