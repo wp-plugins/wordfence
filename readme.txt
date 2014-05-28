@@ -170,7 +170,7 @@ cause a security hole on your site.
 * Improvement: Added lightweight stats logging internally in preparation for displaying them on the admin UI in the next release. 
 * Fix: If a non-existent user tries to sign in it is not logged in the live logins tab. Fixed.
 * Fix: Removed warning "Trying to get property of non-object" that would occur under certain conditions. 
-* Fix: Removed call to is_404() which was not having any effect and would issue a warning if debug mode is enabled. 
+* Fix: Removed call to is_404()  which was not having any effect and would issue a warning if debug mode is enabled. 
 * Fix: Check if CURL is installed as part of connectivity test.
 
 = 5.0.8 =
