@@ -49,6 +49,8 @@ class wfScanEngine {
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 		$this->jobList[] = 'publicSite';
+		$this->jobList[] = 'checkSpamvertized';
+		$this->jobList[] = 'checkSpamIP';
 		$this->jobList[] = 'heartbleed';
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
@@ -171,6 +173,54 @@ class wfScanEngine {
 		} else {
 			wordfence::statusPaidOnly("Remote scan of public facing site only available to paid members");
 			sleep(2); //enough time to read the message before it scrolls off.
+		}
+	}
+	private function scan_checkSpamIP(){
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('checkSpamIP')){
+				$this->statusIDX['checkSpamIP'] = wordfence::statusStart("Checking if your site IP is generating spam");
+				$result = $this->api->call('check_spam_ip', array(), array(
+					'siteURL' => site_url()
+					));
+				$haveIssues = false;
+				if($result['haveIssues'] && is_array($result['issues']) ){
+					foreach($result['issues'] as $issue){
+						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+						$haveIssues = true;
+					}
+				}
+				wordfence::statusEnd($this->statusIDX['checkSpamIP'], $haveIssues);
+			} else {
+				wordfence::statusDisabled("Skipping check if your IP is generating spam");
+			}
+
+		} else {
+			wordfence::statusPaidOnly("Checking if your IP is generating spam is for paid members only");
+			sleep(2);
+		}
+	}
+	private function scan_checkSpamvertized(){
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('spamvertizeCheck')){
+				$this->statusIDX['spamvertizeCheck'] = wordfence::statusStart("Checking if your site is being Spamvertised");
+				$result = $this->api->call('spamvertize_check', array(), array(
+					'siteURL' => site_url()
+					));
+				$haveIssues = false;
+				if($result['haveIssues'] && is_array($result['issues']) ){
+					foreach($result['issues'] as $issue){
+						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+						$haveIssues = true;
+					}
+				}
+				wordfence::statusEnd($this->statusIDX['spamvertizeCheck'], $haveIssues);
+			} else {
+				wordfence::statusDisabled("Skipping check if your site is being spamvertized");
+			}
+
+		} else {
+			wordfence::statusPaidOnly("Check if your site is being Spamvertized is for paid members only");
+			sleep(2);
 		}
 	}
 	private function scan_knownFiles_init(){
@@ -887,6 +937,7 @@ class wfScanEngine {
 	}
 	public static function startScan($isFork = false){
 		if(! $isFork){ //beginning of scan
+			wfConfig::inc('totalScansRun');	
 			wfConfig::set('wfKillRequested', 0);
 			wordfence::status(4, 'info', "Entering start scan routine");
 			if(wfUtils::isScanRunning()){

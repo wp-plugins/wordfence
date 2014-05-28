@@ -321,14 +321,26 @@ class wfUtils {
 			self::iniSet('memory_limit', $maxMem . 'M');
 		}
 	}
-	public static function isAdmin(){
-		if(is_multisite()){
-			if(current_user_can('manage_network')){
-				return true;
+	public static function isAdmin($user = false){
+		if($user){
+			if(is_multisite()){
+				if(user_can($user, 'manage_network')){
+					return true;
+				}
+			} else {
+				if(user_can($user, 'manage_options')){
+					return true;
+				}
 			}
 		} else {
-			if(current_user_can('manage_options')){
-				return true;
+			if(is_multisite()){
+				if(current_user_can('manage_network')){
+					return true;
+				}
+			} else {
+				if(current_user_can('manage_options')){
+					return true;
+				}
 			}
 		}
 		return false;
@@ -415,6 +427,10 @@ class wfUtils {
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
 							$IPLocs[$IP] = false;
 						} else {
+							for($i = 0; $i <= 5; $i++){
+								//Prevent warnings in debug mode about uninitialized values
+								if(! isset($value[$i])){ $value[$i] = ''; }
+							}
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
 								($isInt ? $IP : self::inet_aton($IP)),
 								$value[3], //city
@@ -544,6 +560,9 @@ class wfUtils {
 	public static function localHumanDate(){
 		return date('l jS \of F Y \a\t h:i:s A', time() + (3600 * get_option('gmt_offset')));
 	}
+	public static function localHumanDateShort(){
+		return date('D jS F \@ h:i:sA', time() + (3600 * get_option('gmt_offset')));
+	}
 	public static function funcEnabled($func){
 		if(! function_exists($func)){ return false; }
 		$disabled = explode(',', ini_get('disable_functions'));
@@ -599,6 +618,13 @@ class wfUtils {
 		if($sapi == 'fpm-fcgi' || stripos($serverSoft, 'nginx') !== false){
 			return true;
 		}
+	}
+	public static function getLastError(){
+		$err = error_get_last();
+		if(is_array($err)){
+			return $err['message'];
+		}
+		return '';
 	}
 }
 

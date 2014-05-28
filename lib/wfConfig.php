@@ -19,6 +19,9 @@ class wfConfig {
 				"alertOn_adminLogin" => false,
 				"alertOn_nonAdminLogin" => false,
 				"liveTrafficEnabled" => true,
+				"advancedCommentScanning" => false,
+				"checkSpamIP" => false,
+				"spamvertizeCheck" => false,
 				"liveTraf_ignorePublishers" => true,
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => false,
@@ -94,6 +97,9 @@ class wfConfig {
 				"alertOn_adminLogin" => true,
 				"alertOn_nonAdminLogin" => false,
 				"liveTrafficEnabled" => true,
+				"advancedCommentScanning" => false,
+				"checkSpamIP" => false,
+				"spamvertizeCheck" => false,
 				"liveTraf_ignorePublishers" => true,
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
@@ -169,6 +175,9 @@ class wfConfig {
 				"alertOn_adminLogin" => true,
 				"alertOn_nonAdminLogin" => false,
 				"liveTrafficEnabled" => true,
+				"advancedCommentScanning" => false,
+				"checkSpamIP" => false,
+				"spamvertizeCheck" => false,
 				"liveTraf_ignorePublishers" => true,
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
@@ -244,6 +253,9 @@ class wfConfig {
 				"alertOn_adminLogin" => true,
 				"alertOn_nonAdminLogin" => false,
 				"liveTrafficEnabled" => true,
+				"advancedCommentScanning" => false,
+				"checkSpamIP" => false,
+				"spamvertizeCheck" => false,
 				"liveTraf_ignorePublishers" => true,
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
@@ -319,6 +331,9 @@ class wfConfig {
 				"alertOn_adminLogin" => true,
 				"alertOn_nonAdminLogin" => false,
 				"liveTrafficEnabled" => true,
+				"advancedCommentScanning" => false,
+				"checkSpamIP" => false,
+				"spamvertizeCheck" => false,
 				"liveTraf_ignorePublishers" => true,
 				//"perfLoggingEnabled" => false,
 				"scheduledScansEnabled" => true,
@@ -434,6 +449,13 @@ class wfConfig {
 	}
 	public static function getHTML($key){
 		return htmlspecialchars(self::get($key));
+	}
+	public static function inc($key){
+		$val = self::get($key, false);
+		if(! $val){
+			$val = 0;
+		}
+		self::set($key, $val + 1);
 	}
 	public static function set($key, $val){
 		if(is_array($val)){
@@ -620,6 +642,11 @@ class wfConfig {
 	}
 	public static function f($key){
 		echo esc_attr(self::get($key));
+	}
+	public static function cbp($key){
+		if(self::get('isPaid') && self::get($key)){
+			echo ' checked ';
+		}
 	}
 	public static function cb($key){
 		if(self::get($key)){

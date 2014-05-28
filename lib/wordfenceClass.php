@@ -28,6 +28,7 @@ class wordfence {
 	private static $statusStartMsgs = array();
 	private static $debugOn = null;
 	private static $runInstallCalled = false;
+	public static $commentSpamItems = array();
 	public static function installPlugin(){
 		self::runInstall();
 		//Used by MU code below
@@ -125,7 +126,7 @@ class wordfence {
 			}
 		}
 	}
-	private function keyAlert($msg){
+	private static function keyAlert($msg){
 		self::alert($msg, $msg . " To ensure uninterrupted Premium Wordfence protection on your site,\nplease renew your API key by visiting http://www.wordfence.com/ Sign in, go to your dashboard,\nselect the key about to expire and click the button to renew that API key.", false);
 	}
 	public static function dailyCron(){
@@ -349,6 +350,10 @@ class wordfence {
 			add_action('wp_ajax_wordfence_logHuman', 'wordfence::ajax_logHuman_callback');
 			add_action('wp_ajax_wordfence_doScan', 'wordfence::ajax_doScan_callback');
 			add_action('wp_ajax_wordfence_testAjax', 'wordfence::ajax_testAjax_callback');
+			/*
+			add_action('wp_dashboard_setup', 'wordfence::addDashboardWidget');
+			*/
+
 		}
 
 
@@ -415,6 +420,14 @@ class wordfence {
 				'display' => __( 'Once a Minute' )
 				);
 		return $schedules;
+	}
+	*/
+	/*
+	public static function addDashboardWidget(){
+		wp_add_dashboard_widget('wordfenceDashboardWidget', 'Wordfence Security Status', 'wordfence::displayDashboardWidget');
+	}
+	public static function displayDashboardWidget(){
+		require('dashboard.php');
 	}
 	*/
 	public static function jetpackMobileSetup(){
@@ -704,9 +717,21 @@ class wordfence {
 	public static function loginAction($username){
 		if(sizeof($_POST) < 1){ return; } //only execute if login form is posted
 		if(! $username){ return; }
+		wfConfig::inc('totalLogins');	
 		$user = get_user_by('login', $username);
 		$userID = $user ? $user->ID : 0;
 		self::getLog()->logLogin('loginOK', 0, $username);
+		if(wfUtils::isAdmin($user)){
+			wfConfig::set_ser('lastAdminLogin', array(
+				'userID' => $userID,
+				'username' => $username,
+				'firstName' => $user->first_name,
+				'lastName' => $user->last_name,
+				'time' => wfUtils::localHumanDateShort(),
+				'IP' => wfUtils::getIP()
+				));
+		}
+
 		if(user_can($userID, 'update_core')){
 			if(wfConfig::get('alertOn_adminLogin')){ 
 				wordfence::alert("Admin Login", "A user with username \"$username\" who has administrator access signed in to your WordPress site.", wfUtils::getIP());
@@ -724,6 +749,7 @@ class wordfence {
 		return $errors;
 	}
 	public static function authenticateFilter($authResult){
+		wfConfig::inc('totalLoginHits'); //The total hits to wp-login.php including logins, logouts and just hits.
 		$IP = wfUtils::getIP();	
 		$secEnabled = wfConfig::get('loginSecurityEnabled');
 		if($secEnabled && (! self::getLog()->isWhitelisted($IP)) && wfConfig::get('isPaid') ){
@@ -865,7 +891,9 @@ class wordfence {
 	public static function logoutAction(){
 		$userID = get_current_user_id();
 		$userDat = get_user_by('id', $userID);
-		self::getLog()->logLogin('logout', 0, $userDat->user_login); 
+		if(is_object($userDat)){
+			self::getLog()->logLogin('logout', 0, $userDat->user_login); 
+		}
 	}
 	public static function loginInitAction(){
 		if(self::isLockedOut(wfUtils::getIP())){
@@ -1443,6 +1471,10 @@ class wordfence {
 	}
 	public static function ajax_clearPageCache_callback(){
 		$stats = wfCache::clearPageCache();
+		if($stats['error']){
+			$body = "A total of " . $stats['totalErrors'] . " errors occurred while trying to clear your cache. The last error was: " . $stats['error'];
+			return array('ok' => 1, 'heading' => 'Error occurred while clearing cache', 'body' => $body );
+		}
 		$body = "A total of " . $stats['filesDeleted'] . ' files were deleted and ' . $stats['dirsDeleted'] . ' directories were removed. We cleared a total of ' . $stats['totalData'] . 'KB of data in the cache.';
 		if($stats['totalErrors'] > 0){
 			$body .=  ' A total of ' . $stats['totalErrors'] . ' errors were encountered. This probably means that we could not remove some of the files or directories in the cache. Please use your CPanel or file manager to remove the rest of the files in the directory: ' . WP_CONTENT_DIR . '/wfcache/';
@@ -2513,10 +2545,19 @@ EOL;
 			return $gen;
 		}
 	}
+	public static function pushCommentSpamIP($m){
+		if(wfUtils::isValidIP($m[1]) && strpos($m[1], '127.0.0') !== 0 ){
+			self::$commentSpamItems[] = trim($m[1]);
+		}
+	}
+	public static function pushCommentSpamHost($m){
+		self::$commentSpamItems[] = trim($m[1]);
+	}
 	public static function preCommentApprovedFilter($approved, $cData){
 		if( $approved == 1 && (! is_user_logged_in()) && wfConfig::get('other_noAnonMemberComments') ){
 			$user = get_user_by('email', trim($cData['comment_author_email']));
 			if($user){
+				wfConfig::inc('totalSpamStopped');	
 				return 0; //hold for moderation if the user is not signed in but used a members email
 			}
 		}
@@ -2525,12 +2566,43 @@ EOL;
 			$wf = new wfScanEngine();
 			try {
 				if($wf->isBadComment($cData['comment_author'], $cData['comment_author_email'], $cData['comment_author_url'],  $cData['comment_author_IP'], $cData['comment_content'])){
+					wfConfig::inc('totalSpamStopped');	
 					return 'spam';
 				}
 			} catch(Exception $e){
 				//This will most likely be an API exception because we can't contact the API, so we ignore it and let the normal comment mechanisms run.
 			}
 		}
+		if(wfConfig::get('isPaid') && ($approved == 1 || $approved == 0) && wfConfig::get('advancedCommentScanning')){
+			$IPs = array();
+			$hosts = array();
+			self::$commentSpamItems = array();
+			preg_replace_callback('/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/', 'wordfence::pushCommentSpamIP', $cData['comment_content']);
+			$IPs =  self::$commentSpamItems;
+			self::$commentSpamItems = array();
+			preg_replace_callback('/https?:\/\/([a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+[a-zA-Z0-9])/i', 'wordfence::pushCommentSpamHost', $cData['comment_content']);
+			$hosts = self::$commentSpamItems;
+			self::$commentSpamItems = array();
+			try {	
+				$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+				$res = $api->call('advanced_comment_scan', array(), array(
+					'author' => $cData['comment_author'],
+					'email' =>  $cData['comment_author_email'],
+					'URL' => $cData['comment_author_url'],
+					'commentIP' => $cData['comment_author_IP'],
+					'wfIP' => wfUtils::getIP(),
+					'hosts' => (sizeof($hosts) > 0 ? implode(',', $hosts) : ''),
+					'IPs' => (sizeof($IPs) > 0 ? implode(',', $IPs) : '')
+					));
+				if(is_array($res) && isset($res['spam']) && $res['spam'] == 1){
+					wfConfig::inc('totalSpamStopped');	
+					return 'spam';
+				}
+			} catch(Exception $e){
+				//API server is probably down
+			}
+		}
+		wfConfig::inc('totalCommentsFiltered');	
 		return $approved;
 	}
 	public static function getMyHomeURL(){
@@ -2541,6 +2613,7 @@ EOL;
 	}
 
 	public static function alert($subject, $alertMsg, $IP){
+		wfConfig::inc('totalAlertsSent');	
 		$emails = wfConfig::getAlertEmails();
 		if(sizeof($emails) < 1){ return; }
 

@@ -1,5 +1,5 @@
 <?php
-define('WORDFENCE_API_VERSION', '2.10');
+define('WORDFENCE_API_VERSION', '2.11');
 define('WORDFENCE_API_URL_SEC', 'https://noc1.wordfence.com/');
 define('WORDFENCE_API_URL_NONSEC', 'http://noc1.wordfence.com/');
 define('WORDFENCE_MAX_SCAN_TIME', 86400); //Increased this from 10 mins to 1 day because very big scans run for a long time. Users can use kill.

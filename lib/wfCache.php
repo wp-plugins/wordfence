@@ -5,6 +5,7 @@ class wfCache {
 	private static $cacheStats = array();
 	private static $cacheClearedThisRequest = false;
 	private static $clearScheduledThisRequest = false;
+	private static $lastRecursiveDeleteError = false;
 	public static function setupCaching(){
 		self::$cacheType = wfConfig::get('cacheType');
 		if(self::$cacheType != 'php' && self::$cacheType != 'falcon'){
@@ -67,9 +68,6 @@ class wfCache {
 		return $status;
 	}
 	public static function isCachable(){
-		if(function_exists('is_404') && is_404()){
-			return false;
-		}
 		if(defined('WFDONOTCACHE') || defined('DONOTCACHEPAGE') || defined('DONOTCACHEDB') || defined('DONOTCACHEOBJECT')){ //If you want to tell Wordfence not to cache something in another plugin, simply define one of these. 
 			return false;
 		}
@@ -320,18 +318,32 @@ class wfCache {
 			'dirsDeleted' => 0,
 			'filesDeleted' => 0,
 			'totalData' => 0,
-			'totalErrors' => 0
+			'totalErrors' => 0,
+			'error' => '',
 			);
 		$cacheClearLock = WP_CONTENT_DIR . '/wfcache/clear.lock';
 		if(! is_file($cacheClearLock)){
-			touch($cacheClearLock);
+			if(! touch($cacheClearLock)){
+				self::$cacheStats['error'] = "Could not create a lock file $cacheClearLock to clear the cache.";
+				self::$cacheStats['totalErrors']++;
+				return self::$cacheStats;
+			}
 		}
 		$fp = fopen($cacheClearLock, 'w');
-		if(! $fp){ return; }
+		if(! $fp){ 
+			self::$cacheStats['error'] = "Could not open the lock file $cacheClearLock to clear the cache. Please make sure the directory is writable by your web server.";
+			self::$cacheStats['totalErrors']++;
+			return self::$cacheStats;
+		}
 		if(flock($fp, LOCK_EX | LOCK_NB)){ //non blocking exclusive flock attempt. If we get a lock then it continues and returns true. If we don't lock, then return false, don't block and don't clear the cache. 
 					// This logic means that if a cache clear is currently in progress we don't try to clear the cache.
 					// This prevents web server children from being queued up waiting to be able to also clear the cache. 
+			self::$lastRecursiveDeleteError = false;
 			self::recursiveDelete(WP_CONTENT_DIR . '/wfcache/');
+			if(self::$lastRecursiveDeleteError){
+				self::$cacheStats['error'] = self::$lastRecursiveDeleteError;
+				self::$cacheStats['totalErrors']++;
+			}
 			flock($fp, LOCK_UN);
 		}
 		fclose($fp);
@@ -342,7 +354,9 @@ class wfCache {
 		$files = array_diff(scandir($dir), array('.','..')); 
 		foreach ($files as $file) { 
 			if(is_dir($dir . '/' . $file)){
-				self::recursiveDelete($dir . '/' . $file);
+				if(! self::recursiveDelete($dir . '/' . $file)){
+					return false;
+				}
 			} else {
 				if($file == 'clear.lock'){ continue; } //Don't delete our lock file
 				$size = filesize($dir . '/' . $file);
@@ -350,29 +364,37 @@ class wfCache {
 					self::$cacheStats['totalData'] += round($size / 1024);
 				}
 				if(strpos($dir, 'wfcache/') === false){
-					//error_log("Tried to delete file in invalid dir in cache clear: $dir");
-					return; //Safety check that we're in a subdir of the cache
+					self::$lastRecursiveDeleteError = "Not deleting file in directory $dir because it appears to be in the wrong path.";
+					self::$cacheStats['totalErrors']++;
+					return false; //Safety check that we're in a subdir of the cache
 				}
 				if(@unlink($dir . '/' . $file)){
 					self::$cacheStats['filesDeleted']++;
 				} else {
+					self::$lastRecursiveDeleteError = "Could not delete file " . $dir . "/" . $file . " : " . wfUtils::getLastError();
 					self::$cacheStats['totalErrors']++;
+					return false;
 				}
 			}
 		} 
 		if($dir != WP_CONTENT_DIR . '/wfcache/'){
 			if(strpos($dir, 'wfcache/') === false){
-				//error_log("Tried to delete invalid dir in cache clear: $dir");
+				self::$lastRecursiveDeleteError = "Not deleting directory $dir because it appears to be in the wrong path.";
+				self::$cacheStats['totalErrors']++;
 				return; //Safety check that we're in a subdir of the cache
 			}
 			if(@rmdir($dir)){
 				self::$cacheStats['dirsDeleted']++;
 			} else {
+				self::$lastRecursiveDeleteError = "Could not delete directory $dir : " . wfUtils::getLastError();
 				self::$cacheStats['totalErrors']++;
+				return false;
 			}
+			return true;
 		} else {
 			return true;
 		}
+		return true;
 	}
 	public static function addHtaccessCode($action){
 		if($action != 'add' && $action != 'remove'){

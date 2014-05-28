@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm
 Requires at least: 3.3.1
 Tested up to: 3.9.1
-Stable tag: 5.0.8
+Stable tag: 5.0.9
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -162,9 +162,20 @@ cause a security hole on your site.
 
 == Changelog ==
 
+= 5.0.9 =
+* Feature: (Premium) Advanced Comment Spam Filter. Checks comment source IP, author URL and hosts and IP's in body against additional spam lists. 
+* Feature: (Premium) Check if your site is being Spamvertised i.e. your domain is being included in spam emails. Usually indicates you've been hacked.
+* Feature: (Premium) Check if your website IP is generating spam. Checks against spam lists if your IP is a known source of spam.
+* Improvement: Cache clearing errors are nown shown with clear explanations. 
+* Improvement: Added lightweight stats logging internally in preparation for displaying them on the admin UI in the next release. 
+* Fix: If a non-existent user tries to sign in it is not logged in the live logins tab. Fixed.
+* Fix: Removed warning "Trying to get property of non-object" that would occur under certain conditions. 
+* Fix: Removed call to is_404() which was not having any effect and would issue a warning if debug mode is enabled. 
+* Fix: Check if CURL is installed as part of connectivity test.
+
 = 5.0.8 =
 * Feature: Support for Jetpack Mobile Theme in Falcon Caching engine. Regular pages are cached, mobile pages are served direct to browser. 
-* Improvement: Pages that are less than 1000 bytes will not be cached. The avg web page size in 2014 is 1246,000 bytes. Anything less than 1000 bytes is usuall an error. 
+* Improvement: Pages that are less than 1000 bytes will not be cached. The avg web page size in 2014 is 1246,000 bytes. Anything less than 1000 bytes is usually an error. 
 * Improvement: Wordfence will now request 128M on hosts instead of 64M where memory in php.ini is set too low. 
 * Fix: Wordfence was caching 404's under certain conditions. Fixed. 
 * Fix: Nginx/FastCGI users would sometimes receive an error about not being able to edit .htaccess. Fixed. 
