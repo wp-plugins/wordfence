@@ -2,6 +2,24 @@
 require_once('wfConfig.php');
 require_once('wfCountryMap.php');
 class wfUtils {
+	private static $privateAddrs = array(
+		array('0.0.0.0/8',0,16777215),
+		array('10.0.0.0/8',167772160,184549375),
+		array('100.64.0.0/10',1681915904,1686110207),
+		array('127.0.0.0/8',2130706432,2147483647),
+		array('169.254.0.0/16',2851995648,2852061183),
+		array('172.16.0.0/12',2886729728,2887778303),
+		array('192.0.0.0/29',3221225472,3221225479),
+		array('192.0.2.0/24',3221225984,3221226239),
+		array('192.88.99.0/24',3227017984,3227018239),
+		array('192.168.0.0/16',3232235520,3232301055),
+		array('198.18.0.0/15',3323068416,3323199487),
+		array('198.51.100.0/24',3325256704,3325256959),
+		array('203.0.113.0/24',3405803776,3405804031),
+		array('224.0.0.0/4',3758096384,4026531839),
+		array('240.0.0.0/4',4026531840,4294967295),
+		array('255.255.255.255/32',4294967295,4294967295)
+	);
 	private static $isWindows = false;
 	public static $scanLockFH = false;
 	private static $lastErrorReporting = false;
@@ -65,7 +83,20 @@ class wfUtils {
 		return long2ip(-$long);
 	}
 	public static function inet_aton($ip){
+		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
+	}
+	public static function hasLoginCookie(){
+		if(isset($_COOKIE)){
+			if(is_array($_COOKIE)){
+				foreach($_COOKIE as $key => $val){
+					if(strpos($key, 'wordpress_logged_in') == 0){
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 	public static function getBaseURL(){
 		return plugins_url() . '/wordfence/';
@@ -90,7 +121,23 @@ class wfUtils {
 		}
 		return $IP;
 	}
+	public static function isPrivateAddress($addr){
+		$num = self::inet_aton($addr);
+		foreach(self::$privateAddrs as $a){
+			if($num >= $a[1] && $num <= $a[2]){
+				return true;
+			}
+		}
+		return false;
+	}
+	public static function makeRandomIP(){
+		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
+	}
 	public static function getIP(){
+		//You can use the following examples to force Wordfence to think a visitor has a certain IP if you're testing. Remember to re-comment this out or you will break Wordfence badly. 
+		//return '1.2.3.8';
+		//return self::makeRandomIP();
+
 		$howGet = wfConfig::get('howGetIPs', false);
 		if($howGet){
 			$IP = $_SERVER[$howGet];
@@ -103,7 +150,7 @@ class wfUtils {
 		if(preg_match('/,/', $IP)){
 			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
 			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part) && (! self::isPrivateAddress($part)) ){
 					$IP = trim($part);
 					break;
 				}
@@ -111,7 +158,7 @@ class wfUtils {
 		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
 			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
 			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
+				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part) && (! self::isPrivateAddress($part)) ){
 					$IP = trim($part);
 					break;
 				}
@@ -123,7 +170,7 @@ class wfUtils {
 		}
 		if(self::isValidIP($IP)){
 			if(wfConfig::get('IPGetFail', false)){
-				if(preg_match('/^(?:10\.|192\.168|127\.|172\.)/', $IP)){
+				if(self::isPrivateAddress($IP) ){
 					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
 				} else {
 					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
@@ -146,7 +193,7 @@ class wfUtils {
 				}
 			}
 			if(sizeof($possible) > 0){
-				$msg .= "  Report the following on the Wordfence forums and they may be able to help. Headers that may contain the client IP: ";
+				$msg .= "  Headers that may contain the client IP: ";
 				foreach($possible as $key => $val){
 					$msg .= "$key => $val   ";
 				}
@@ -175,7 +222,11 @@ class wfUtils {
 		} else {
 			$host = $_SERVER['SERVER_NAME'];
 		}
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
+		$prefix = 'http';
+		if( isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ){
+			$prefix = 'https';
+		}
+		return $prefix . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){
@@ -270,14 +321,26 @@ class wfUtils {
 			self::iniSet('memory_limit', $maxMem . 'M');
 		}
 	}
-	public static function isAdmin(){
-		if(is_multisite()){
-			if(current_user_can('manage_network')){
-				return true;
+	public static function isAdmin($user = false){
+		if($user){
+			if(is_multisite()){
+				if(user_can($user, 'manage_network')){
+					return true;
+				}
+			} else {
+				if(user_can($user, 'manage_options')){
+					return true;
+				}
 			}
 		} else {
-			if(current_user_can('manage_options')){
-				return true;
+			if(is_multisite()){
+				if(current_user_can('manage_network')){
+					return true;
+				}
+			} else {
+				if(current_user_can('manage_options')){
+					return true;
+				}
 			}
 		}
 		return false;
@@ -364,6 +427,10 @@ class wfUtils {
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
 							$IPLocs[$IP] = false;
 						} else {
+							for($i = 0; $i <= 5; $i++){
+								//Prevent warnings in debug mode about uninitialized values
+								if(! isset($value[$i])){ $value[$i] = ''; }
+							}
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
 								($isInt ? $IP : self::inet_aton($IP)),
 								$value[3], //city
@@ -426,6 +493,7 @@ class wfUtils {
 		self::iniSet('display_errors', self::$lastDisplayErrors);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
+	//Note this function may report files that are too big which actually are not too big but are unseekable and throw an error on fseek(). But that's intentional
 	public static function fileTooBig($file){ //Deals with files > 2 gigs on 32 bit systems which are reported with the wrong size due to integer overflow
 		wfUtils::errorsOff();
 		$fh = @fopen($file, 'r');
@@ -433,25 +501,28 @@ class wfUtils {
 		if(! $fh){ return false; }
 		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1; 
 		$tooBig = false;
-		if(fseek($fh, $offset, SEEK_SET) === 0){
-			if(strlen(fread($fh, 1)) === 1){
-				$tooBig = true;
-			}
-		} //Otherwise we couldn't seek there so it must be smaller
-		fclose($fh);
-		return $tooBig;
+		try {
+			if(@fseek($fh, $offset, SEEK_SET) === 0){
+				if(strlen(fread($fh, 1)) === 1){
+					$tooBig = true;
+				}
+			} //Otherwise we couldn't seek there so it must be smaller
+			fclose($fh);
+			return $tooBig;
+		} catch(Exception $e){ return true; } //If we get an error don't scan this file, report it's too big.
 	}
-	public static function fileOver2Gigs($file){
+	public static function fileOver2Gigs($file){ //Surround calls to this func with try/catch because fseek may throw error.
 		$fh = @fopen($file, 'r');
 		if(! $fh){ return false; }
 		$offset = 2147483647; 
 		$tooBig = false;
-		if(fseek($fh, $offset, SEEK_SET) === 0){
+		//My throw an error so surround calls to this func with try/catch
+		if(@fseek($fh, $offset, SEEK_SET) === 0){
 			if(strlen(fread($fh, 1)) === 1){
 				$tooBig = true;
 			}
 		} //Otherwise we couldn't seek there so it must be smaller
-		fclose($fh);
+		@fclose($fh);
 		return $tooBig;
 	}
 	public static function countryCode2Name($code){
@@ -489,6 +560,9 @@ class wfUtils {
 	public static function localHumanDate(){
 		return date('l jS \of F Y \a\t h:i:s A', time() + (3600 * get_option('gmt_offset')));
 	}
+	public static function localHumanDateShort(){
+		return date('D jS F \@ h:i:sA', time() + (3600 * get_option('gmt_offset')));
+	}
 	public static function funcEnabled($func){
 		if(! function_exists($func)){ return false; }
 		$disabled = explode(',', ini_get('disable_functions'));
@@ -513,6 +587,44 @@ class wfUtils {
 	}
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
 		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
+	}
+	public static function rangeToCIDRs($startIP, $endIP){
+		$startIPBin = sprintf('%032b', $startIP);
+		$endIPBin = sprintf('%032b', $endIP);
+		$IPIncBin = $startIPBin;
+		$CIDRs = array();
+		while(strcmp($IPIncBin, $endIPBin) <= 0){
+			$longNetwork = 32;
+			$IPNetBin = $IPIncBin;
+			while(($IPIncBin[$longNetwork - 1] == '0') && (strcmp(substr_replace($IPNetBin, '1', $longNetwork - 1, 1), $endIPBin) <= 0)){
+				$IPNetBin[$longNetwork - 1] = '1';
+				$longNetwork--;
+			}
+			$CIDRs[] = long2ip(bindec($IPIncBin)) . ($longNetwork < 32 ? '/' . $longNetwork : '');
+			$IPIncBin = sprintf('%032b', bindec($IPNetBin) + 1);
+		}
+		return $CIDRs;
+	}
+	public static function setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly){
+		if(version_compare(PHP_VERSION, '5.2.0') >= 0){
+			@setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly);
+		} else {
+			@setcookie($name, $value, $expire, $path);
+		}
+	}
+	public static function isNginx(){
+		$sapi = php_sapi_name();
+		$serverSoft = $_SERVER['SERVER_SOFTWARE'];
+		if($sapi == 'fpm-fcgi' || stripos($serverSoft, 'nginx') !== false){
+			return true;
+		}
+	}
+	public static function getLastError(){
+		$err = error_get_last();
+		if(is_array($err)){
+			return $err['message'];
+		}
+		return '';
 	}
 }
 
