@@ -80,6 +80,7 @@ class wfScan {
 		} else {
 			wordfence::statusPrep(); //Re-initializes all status counters
 			$scan = new wfScanEngine();
+			$scan->deleteNewIssues();
 		}
 		try {
 			$scan->go();

@@ -1,7 +1,6 @@
 <?php
 require_once('wordfenceClass.php');
 class wordfenceHash {
-	private $whitespace = array("\n","\r","\t"," ");
 	private $engine = false;
 	private $db = false;
 	private $startTime = false;
@@ -63,7 +62,7 @@ class wordfenceHash {
 		$this->knownFiles = @json_decode($dataArr['data'], true);
 		if(! is_array($this->knownFiles)){
 			wordfence::statusEndErr();
-			throw new Exception("Invaid response from Wordfence servers.");
+			throw new Exception("Invalid response from Wordfence servers.");
 		}
 		wordfence::statusEnd($fetchCoreHashesStatus, false, true);
 
@@ -118,6 +117,7 @@ class wordfenceHash {
 		$this->engine = $engine;
 		$files = scandir($this->path);
 		foreach($files as $file){
+			if($file == '.' || $file == '..'){ continue; }
 			if(sizeof($this->only) > 0 && (! in_array($file, $this->only))){
 				continue;
 			}
@@ -213,7 +213,7 @@ class wordfenceHash {
 		} else {
                        wordfence::status(4, 'info', "Scanning: $realFile");
 		}
-		$wfHash = $this->wfHash($realFile); 
+		$wfHash = self::wfHash($realFile); 
 		if($wfHash){
 			$md5 = strtoupper($wfHash[0]);
 			$shac = strtoupper($wfHash[1]);
@@ -228,24 +228,26 @@ class wordfenceHash {
 					if($this->coreEnabled){
 						$localFile = ABSPATH . '/' . preg_replace('/^[\.\/]+/', '', $file);
 						$fileContents = @file_get_contents($localFile);
-						if($fileContents && (! preg_match('/<\?' . 'php[\r\n\s\t]*\/\/[\r\n\s\t]*Silence is golden\.[\r\n\s\t]*(?:\?>)?[\r\n\s\t]*$/s', $fileContents))){
-								
-							$this->haveIssues['core'] = true;
-							$this->engine->addIssue(
-								'file', 
-								1, 
-								'coreModified' . $file . $md5, 
-								'coreModified' . $file,
-								'WordPress core file modified: ' . $file,
-								"This WordPress core file has been modified and differs from the original file distributed with this version of WordPress.",
-								array(
-									'file' => $file,
-									'cType' => 'core',
-									'canDiff' => true,
-									'canFix' => true,
-									'canDelete' => false
-									)
-								);
+						if($fileContents && (! preg_match('/<\?' . 'php[\r\n\s\t]*\/\/[\r\n\s\t]*Silence is golden\.[\r\n\s\t]*(?:\?>)?[\r\n\s\t]*$/s', $fileContents))){ //<?php
+							if(! $this->isSafeFile($shac)){
+									
+								$this->haveIssues['core'] = true;
+								$this->engine->addIssue(
+									'file', 
+									1, 
+									'coreModified' . $file . $md5, 
+									'coreModified' . $file,
+									'WordPress core file modified: ' . $file,
+									"This WordPress core file has been modified and differs from the original file distributed with this version of WordPress.",
+									array(
+										'file' => $file,
+										'cType' => 'core',
+										'canDiff' => true,
+										'canFix' => true,
+										'canDelete' => false
+										)
+									);
+							}
 						}
 					}
 				}
@@ -254,28 +256,30 @@ class wordfenceHash {
 					$knownFile = 1;
 				} else {
 					if($this->pluginsEnabled){
-						$itemName = $this->knownFiles['plugins'][$file][0];
-						$itemVersion = $this->knownFiles['plugins'][$file][1];
-						$cKey = $this->knownFiles['plugins'][$file][2];
-						$this->haveIssues['plugins'] = true;
-						$this->engine->addIssue(
-							'file', 
-							2, 
-							'modifiedplugin' . $file . $md5, 
-							'modifiedplugin' . $file,
-							'Modified plugin file: ' . $file,
-							"This file belongs to plugin \"$itemName\" version \"$itemVersion\" and has been modified from the file that is distributed by WordPress.org for this version. Please use the link to see how the file has changed. If you have modified this file yourself, you can safely ignore this warning. If you see a lot of changed files in a plugin that have been made by the author, then try uninstalling and reinstalling the plugin to force an upgrade. Doing this is a workaround for plugin authors who don't manage their code correctly. [See our FAQ on www.wordfence.com for more info]",
-							array(
-								'file' => $file,
-								'cType' => 'plugin',
-								'canDiff' => true,
-								'canFix' => true,
-								'canDelete' => false,
-								'cName' => $itemName,
-								'cVersion' => $itemVersion,
-								'cKey' => $cKey 
-								)
-							);
+						if(! $this->isSafeFile($shac)){
+							$itemName = $this->knownFiles['plugins'][$file][0];
+							$itemVersion = $this->knownFiles['plugins'][$file][1];
+							$cKey = $this->knownFiles['plugins'][$file][2];
+							$this->haveIssues['plugins'] = true;
+							$this->engine->addIssue(
+								'file', 
+								2, 
+								'modifiedplugin' . $file . $md5, 
+								'modifiedplugin' . $file,
+								'Modified plugin file: ' . $file,
+								"This file belongs to plugin \"$itemName\" version \"$itemVersion\" and has been modified from the file that is distributed by WordPress.org for this version. Please use the link to see how the file has changed. If you have modified this file yourself, you can safely ignore this warning. If you see a lot of changed files in a plugin that have been made by the author, then try uninstalling and reinstalling the plugin to force an upgrade. Doing this is a workaround for plugin authors who don't manage their code correctly. [See our FAQ on www.wordfence.com for more info]",
+								array(
+									'file' => $file,
+									'cType' => 'plugin',
+									'canDiff' => true,
+									'canFix' => true,
+									'canDelete' => false,
+									'cName' => $itemName,
+									'cVersion' => $itemVersion,
+									'cKey' => $cKey 
+									)
+								);
+						}
 					}
 
 				}
@@ -284,28 +288,30 @@ class wordfenceHash {
 					$knownFile = 1;
 				} else {
 					if($this->themesEnabled){
-						$itemName = $this->knownFiles['themes'][$file][0];
-						$itemVersion = $this->knownFiles['themes'][$file][1];
-						$cKey = $this->knownFiles['themes'][$file][2];
-						$this->haveIssues['themes'] = true;
-						$this->engine->addIssue(
-							'file', 
-							2, 
-							'modifiedtheme' . $file . $md5, 
-							'modifiedtheme' . $file,
-							'Modified theme file: ' . $file,
-							"This file belongs to theme \"$itemName\" version \"$itemVersion\" and has been modified from the original distribution. It is common for site owners to modify their theme files, so if you have modified this file yourself you can safely ignore this warning.",
-							array(
-								'file' => $file,
-								'cType' => 'theme',
-								'canDiff' => true,
-								'canFix' => true,
-								'canDelete' => false,
-								'cName' => $itemName,
-								'cVersion' => $itemVersion,
-								'cKey' => $cKey 
-								)
-							);
+						if(! $this->isSafeFile($shac)){
+							$itemName = $this->knownFiles['themes'][$file][0];
+							$itemVersion = $this->knownFiles['themes'][$file][1];
+							$cKey = $this->knownFiles['themes'][$file][2];
+							$this->haveIssues['themes'] = true;
+							$this->engine->addIssue(
+								'file', 
+								2, 
+								'modifiedtheme' . $file . $md5, 
+								'modifiedtheme' . $file,
+								'Modified theme file: ' . $file,
+								"This file belongs to theme \"$itemName\" version \"$itemVersion\" and has been modified from the original distribution. It is common for site owners to modify their theme files, so if you have modified this file yourself you can safely ignore this warning.",
+								array(
+									'file' => $file,
+									'cType' => 'theme',
+									'canDiff' => true,
+									'canFix' => true,
+									'canDelete' => false,
+									'cName' => $itemName,
+									'cVersion' => $itemVersion,
+									'cKey' => $cKey 
+									)
+								);
+						}
 					}
 
 				}
@@ -330,7 +336,7 @@ class wordfenceHash {
 			//wordfence::status(2, 'error', "Could not gen hash for file (probably because we don't have permission to access the file): $realFile");
 		}
 	}
-	public function wfHash($file){
+	public static function wfHash($file){
 		wfUtils::errorsOff();
 		$md5 = @md5_file($file, false);
 		wfUtils::errorsOn();
@@ -342,7 +348,7 @@ class wordfenceHash {
 		}
 		$ctx = hash_init('sha256');
 		while (!feof($fp)) {
-			hash_update($ctx, str_replace($this->whitespace,"",fread($fp, 65536)));
+			hash_update($ctx, str_replace( array("\n","\r","\t"," ") ,"",fread($fp, 65536)));
 		}
 		$shac = hash_final($ctx, false);
 		return array($md5, $shac);
@@ -350,6 +356,13 @@ class wordfenceHash {
 	private function isMalwarePrefix($hexMD5){
 		$binPrefix = pack("H*", substr($hexMD5, 0, 8));
 		if(isset($this->malwareData[$binPrefix])){
+			return true;
+		}
+		return false;
+	}
+	private function isSafeFile($shac){
+		$result = $this->engine->api->call('is_safe_file', array(), array('shac' => strtoupper($shac)));
+		if(isset($result['isSafe']) && $result['isSafe'] == 1){
 			return true;
 		}
 		return false;
