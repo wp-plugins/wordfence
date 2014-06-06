@@ -364,11 +364,14 @@ class wordfence {
 		add_action('init', 'wordfence::initAction');
 		add_action('template_redirect', 'wordfence::templateRedir');
 		add_action('shutdown', 'wordfence::shutdownAction');
+		
 		if(version_compare(PHP_VERSION, '5.4.0') >= 0){
 			add_action('wp_authenticate','wordfence::authActionNew', 1, 2);
 		} else {
 			add_action('wp_authenticate','wordfence::authActionOld', 1, 2);
 		}
+		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
+
 		add_action('login_init','wordfence::loginInitAction');
 		add_action('wp_login','wordfence::loginAction');
 		add_action('wp_logout','wordfence::logoutAction');
@@ -386,7 +389,6 @@ class wordfence {
  
 		add_filter('wp_redirect', 'wordfence::wpRedirectFilter', 99, 2);
 		add_filter('pre_comment_approved', 'wordfence::preCommentApprovedFilter', '99', 2);
-		add_filter('authenticate', 'wordfence::authenticateFilter', 99, 3);
 		//html|xhtml|atom|rss2|rdf|comment|export
 		add_filter('get_the_generator_html', 'wordfence::genFilter', 99, 2);
 		add_filter('get_the_generator_xhtml', 'wordfence::genFilter', 99, 2);
@@ -497,8 +499,8 @@ class wordfence {
 		if(! wfUtils::isAdmin()){
 			die(json_encode(array('errorMsg' => "You appear to have logged out or you are not an admin. Please sign-out and sign-in again.")));
 		}
-		$func = $_POST['action'] ? $_POST['action'] : $_GET['action'];
-		$nonce = $_POST['nonce'] ? $_POST['nonce'] : $_GET['nonce'];
+		$func = (isset($_POST['action']) && $_POST['action']) ? $_POST['action'] : $_GET['action'];
+		$nonce = (isset($_POST['nonce']) && $_POST['nonce']) ? $_POST['nonce'] : $_GET['nonce'];
 		if(! wp_verify_nonce($nonce, 'wp-ajax')){ 
 			die(json_encode(array('errorMsg' => "Your browser sent an invalid security token to Wordfence. Please try reloading this page or signing out and in again.")));
 		}
@@ -748,15 +750,15 @@ class wordfence {
 		}
 		return $errors;
 	}
-	public static function authenticateFilter($authResult){
+	public static function authenticateFilter($authUser, $username, $passwd){
 		wfConfig::inc('totalLoginHits'); //The total hits to wp-login.php including logins, logouts and just hits.
 		$IP = wfUtils::getIP();	
 		$secEnabled = wfConfig::get('loginSecurityEnabled');
 		if($secEnabled && (! self::getLog()->isWhitelisted($IP)) && wfConfig::get('isPaid') ){
 			$twoFactorUsers = wfConfig::get_ser('twoFactorUsers', array());
 			if(isset($twoFactorUsers) && is_array($twoFactorUsers) && sizeof($twoFactorUsers) > 0){
-				$userDat = $_POST['wordfence_userDat'];
-				 if(get_class($authResult) == 'WP_User'){ //Valid username and password either with or without the 'wf...' code. Users is now logged in at this point. 
+				$userDat = (isset($_POST['wordfence_userDat']) ? $_POST['wordfence_userDat'] : false);
+				 if(is_object($userDat) && get_class($authUser) == 'WP_User'){ //Valid username and password either with or without the 'wf...' code. Users is now logged in at this point. 
 					if(isset($_POST['wordfence_authFactor']) && $_POST['wordfence_authFactor']){ //user entered a valid user and password with ' wf....' appended
 						foreach($twoFactorUsers as &$t){
 							if($t[0] == $userDat->ID && $t[3] == 'activated'){
@@ -806,16 +808,16 @@ class wordfence {
 		}
 
 		if(self::getLog()->isWhitelisted($IP)){
-			return $authResult;
+			return $authUser;
 		}
-		if(wfConfig::get('other_WFNet') && is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') ){
+		if(wfConfig::get('other_WFNet') && is_wp_error($authUser) && ($authUser->get_error_code() == 'invalid_username' || $authUser->get_error_code() == 'incorrect_password') ){
 			if($maxBlockTime = self::wfsnIsBlocked($IP, 'brute')){
 				self::getLog()->blockIP($IP, "Blocked by Wordfence Security Network", true, false, $maxBlockTime);
 			}
 				
 		}
 		if($secEnabled){
-			if(is_wp_error($authResult) && $authResult->get_error_code() == 'invalid_username'){
+			if(is_wp_error($authUser) && $authUser->get_error_code() == 'invalid_username'){
 				if($blacklist = wfConfig::get('loginSec_userBlacklist')){
 					$users = explode(',', $blacklist);
 					foreach($users as $user){
@@ -833,7 +835,7 @@ class wordfence {
 				}
 			}
 			$tKey = 'wflginfl_' . wfUtils::inet_aton($IP);
-			if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') ){
+			if(is_wp_error($authUser) && ($authUser->get_error_code() == 'invalid_username' || $authUser->get_error_code() == 'incorrect_password') ){
 				$tries = get_transient($tKey);
 				if($tries){
 					$tries++;
@@ -845,14 +847,22 @@ class wordfence {
 					require('wfLockedOut.php');
 				}
 				set_transient($tKey, $tries, wfConfig::get('loginSec_countFailMins') * 60);
-			} else if(get_class($authResult) == 'WP_User'){
+			} else if(get_class($authUser) == 'WP_User'){
 				delete_transient($tKey); //reset counter on success
 			}
 		}
-		if(is_wp_error($authResult) && ($authResult->get_error_code() == 'invalid_username' || $authResult->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
+		if(is_wp_error($authUser)){
+			if($authUser->get_error_code() == 'invalid_username'){
+				self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
+			} else {
+				self::getLog()->logLogin('loginFailValidUsername', 1, $username); 
+			}
+		}
+
+		if(is_wp_error($authUser) && ($authUser->get_error_code() == 'invalid_username' || $authUser->get_error_code() == 'incorrect_password') && wfConfig::get('loginSec_maskLoginErrors')){
 			return new WP_Error( 'incorrect_password', sprintf( __( '<strong>ERROR</strong>: The username or password you entered is incorrect. <a href="%2$s" title="Password Lost and Found">Lost your password</a>?' ), $_POST['log'], wp_lostpassword_url() ) );
 		}
-		return $authResult;
+		return $authUser;
 	}
 	public static function wfsnReportBlockedAttempt($IP, $type){
 		try {
@@ -912,16 +922,6 @@ class wordfence {
 			$passwd = preg_replace('/^(.+)\s+(wf[a-z0-9]+)$/i', '$1', $passwd);
 			$_POST['pwd'] = $passwd;
 		}
-
-		if($userDat){
-			require_once( ABSPATH . 'wp-includes/class-phpass.php');
-			$hasher = new PasswordHash(8, TRUE);
-			if(! $hasher->CheckPassword($_POST['pwd'], $userDat->user_pass)){
-				self::getLog()->logLogin('loginFailValidUsername', 1, $username); 
-			}
-		} else {
-			self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
-		}
 	}
 	public static function authActionOld($username, $passwd){ //Code is identical to Newer function above except passing by ref ampersand. Some versions of PHP are throwing an error if we include the ampersand in PHP prior to 5.4.
 		if(self::isLockedOut(wfUtils::getIP())){
@@ -935,18 +935,7 @@ class wordfence {
 			$passwd = preg_replace('/^(.+)\s+(wf[a-z0-9]+)$/i', '$1', $passwd);
 			$_POST['pwd'] = $passwd;
 		}
-
-		if($userDat){
-			require_once( ABSPATH . 'wp-includes/class-phpass.php');
-			$hasher = new PasswordHash(8, TRUE);
-			if(! $hasher->CheckPassword($_POST['pwd'], $userDat->user_pass)){
-				self::getLog()->logLogin('loginFailValidUsername', 1, $username); 
-			}
-		} else {
-			self::getLog()->logLogin('loginFailInvalidUsername', 1, $username); 
-		}
 	}
-
 	public static function getWPFileContent($file, $cType, $cName, $cVersion){
 		if($cType == 'plugin'){
 			if(preg_match('#^/?wp-content/plugins/[^/]+/#', $file)){
@@ -2745,6 +2734,10 @@ EOL;
 			}
 		}
 		return self::$debugOn;
+	}
+	//PUBLIC API
+	public static function doNotCache(){ //Call this to prevent Wordfence from caching the current page. 
+		wfCache::doNotCache();
 	}
 }
 ?>

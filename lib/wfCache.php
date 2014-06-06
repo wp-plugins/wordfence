@@ -64,7 +64,9 @@ class wfCache {
 		}
 	}
 	public static function redirectFilter($status){
-		define('WFDONOTCACHE', true);
+		if(! defined('WFDONOTCACHE')){
+			define('WFDONOTCACHE', true);
+		}
 		return $status;
 	}
 	public static function isCachable(){
@@ -501,6 +503,10 @@ class wfCache {
 	Header set Vary "Accept-Encoding, Cookie"
 </IfModule>
 <IfModule mod_rewrite.c>
+	#Prevents garbled chars in cached files if there is no default charset.
+	AddDefaultCharset utf-8
+
+	#Cache rules:
 	RewriteEngine On
 	RewriteBase /
 	RewriteCond %{HTTPS} on
@@ -652,5 +658,10 @@ EOT;
 			}
 		}
 		return false;
+	}
+	public static function doNotCache(){
+		if(! defined('WFDONOTCACHE')){
+			define('WFDONOTCACHE', true);
+		}
 	}
 }

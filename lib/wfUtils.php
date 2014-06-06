@@ -426,7 +426,7 @@ class wfUtils {
 						if($value == 'failed'){
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
 							$IPLocs[$IP] = false;
-						} else {
+						} else if(is_array($value)){
 							for($i = 0; $i <= 5; $i++){
 								//Prevent warnings in debug mode about uninitialized values
 								if(! isset($value[$i])){ $value[$i] = ''; }
@@ -579,11 +579,11 @@ class wfUtils {
 	public static function doNotCache(){
 		header("Cache-Control: no-cache, must-revalidate");
 		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); //In the past
-		define('DONOTCACHEPAGE', true);
-		define('DONOTCACHEDB', true);
-		define('DONOTCDN', true);
-		define('DONOTCACHEOBJECT', true);
-
+		if(! defined('DONOTCACHEPAGE')){ define('DONOTCACHEPAGE', true); }
+		if(! defined('DONOTCACHEDB')){ define('DONOTCACHEDB', true); }
+		if(! defined('DONOTCDN')){ define('DONOTCDN', true); }
+		if(! defined('DONOTCACHEOBJECT')){ define('DONOTCACHEOBJECT', true); }
+		wfCache::doNotCache();
 	}
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
 		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
