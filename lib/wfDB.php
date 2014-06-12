@@ -104,6 +104,11 @@ class wfDB {
 		global $wpdb;
 		return $wpdb->last_error;
 	}
+	public function realEscape($str){
+		global $wpdb;
+		return $wpdb->_real_escape($str);
+	}
+
 }
 
 ?>

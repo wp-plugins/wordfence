@@ -26,6 +26,15 @@ class wfAPI {
 		}
 
 		$dat = json_decode($json, true);
+		if(isset($dat['_isPaidKey'])){
+			wfConfig::set('keyExpDays', $dat['_keyExpDays']);
+			if($dat['_keyExpDays'] > -1){
+				wfConfig::set('isPaid', 1);
+			} else if($dat['_keyExpDays'] < 0){
+				wfConfig::set('isPaid', '');
+			}
+		}
+				
 		if(! is_array($dat)){
 			throw new Exception("We received a data structure that is not the expected array when contacting the Wordfence scanning servers and calling the '$action' function.");
 		}
@@ -71,7 +80,7 @@ class wfAPI {
 			if($data === false){
 				$err = error_get_last();
 				if($err){
-					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . $err);
+					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . var_export($err, true));
 				} else {
 					throw new Exception("We received an empty response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function.");
 				}
