@@ -104,6 +104,16 @@ class wfLog {
 					wordfence::status(2, 'info', "Blocking fake Googlebot at IP $IP");
 				}
 			}
+			if(wfConfig::get('bannedURLs', false)){
+				$URLs = explode(',', wfConfig::get('bannedURLs'));
+				foreach($URLs as $URL){
+					if($_SERVER['REQUEST_URI'] == trim($URL)){
+						$this->blockIP($IP, "Accessed a banned URL.");
+						$this->do503(3600, "Accessed a banned URL.");
+						//exits
+					}
+				}
+			}
 
 			if(wfConfig::get('maxGlobalRequests') != 'DISABLED' && $hitsPerMinute > wfConfig::get('maxGlobalRequests')){ //Applies to 404 or pageview
 				$this->takeBlockingAction('maxGlobalRequests', "Exceeded the maximum global requests per minute for crawlers or humans.");

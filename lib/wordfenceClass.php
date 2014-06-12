@@ -1670,12 +1670,18 @@ class wordfence {
 		if($opts['howGetIPs'] != wfConfig::get('howGetIPs', '')){
 			$reload = 'reload';
 		}
-
+		$regenerateHtaccess = false;
+		if(wfConfig::get('bannedURLs', false) != $opts['bannedURLs']){
+			$regenerateHtaccess = true;
+		}
 
 		foreach($opts as $key => $val){
 			if($key != 'apiKey'){ //Don't save API key yet
 				wfConfig::set($key, $val);
 			}
+		}
+		if($regenerateHtaccess){
+			wfCache::addHtaccessCode('add');
 		}
 		
 		$paidKeyMsg = false;

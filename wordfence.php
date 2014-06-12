@@ -2,15 +2,15 @@
 /*
 Plugin Name: Wordfence Security
 Plugin URI: http://www.wordfence.com/
-Description: Wordfence Security - Anti-virus, Firewall and Site Speedup
+Description: Wordfence Security - Anti-virus, Firewall and High Speed Cache
 Author: Wordfence
-Version: 5.1.1
+Version: 5.1.2
 Author URI: http://www.wordfence.com/
 */
 if(defined('WP_INSTALLING') && WP_INSTALLING){
 	return;
 }
-define('WORDFENCE_VERSION', '5.1.1');
+define('WORDFENCE_VERSION', '5.1.2');
 if(get_option('wordfenceActivated') != 1){
 	add_action('activated_plugin','wordfence_save_activation_error'); function wordfence_save_activation_error(){ update_option('wf_plugin_act_error',  ob_get_contents()); }
 }

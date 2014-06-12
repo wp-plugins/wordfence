@@ -77,7 +77,8 @@ class wfIssues {
 	public function emailNewIssues(){
 		$level = wfConfig::getAlertLevel();
 		$emails = wfConfig::getAlertEmails();
-		$subject = "[Wordfence Alert] Problems found on " . get_bloginfo('name', 'raw');
+		$shortSiteURL = preg_replace('/^https?:\/\//i', '', site_url());
+		$subject = "[Wordfence Alert] Problems found on $shortSiteURL";
 
 		if(sizeof($emails) < 1){ return; }
 		if($level < 1){ return; }

@@ -135,7 +135,7 @@ class wfUtils {
 	}
 	public static function getIP(){
 		//You can use the following examples to force Wordfence to think a visitor has a certain IP if you're testing. Remember to re-comment this out or you will break Wordfence badly. 
-		//return '1.2.3.8';
+		//return '1.2.3.4';
 		//return self::makeRandomIP();
 
 		$howGet = wfConfig::get('howGetIPs', false);

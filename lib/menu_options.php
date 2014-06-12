@@ -253,8 +253,13 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		<div class="wfMarker" id="wfMarkerOtherOptions"></div>
 		<h3 class="wfConfigHeading">Other Options</h3>
 		</td></tr>
+
 	<tr><th>Whitelisted IP addresses that bypass all rules:</th><td><input type="text" name="whitelisted" id="whitelisted" value="<?php echo $w->getHTML('whitelisted'); ?>" size="40" /></td></tr>
 	<tr><th colspan="2" style="color: #999;">Whitelisted IP's must be separated by commas. You can specify ranges using the following format: 123.23.34.[1-50]<br />Wordfence automatically whitelists <a href="http://en.wikipedia.org/wiki/Private_network" target="_blank">private networks</a> because these are not routable on the public Internet.<br /><br /></th></tr>
+
+	<tr><th>Immediately block IP's that access these URLs:</th><td><input type="text" name="bannedURLs" id="bannedURLs" value="<?php echo $w->getHTML('bannedURLs'); ?>" size="40" /></td></tr>
+	<tr><th colspan="2" style="color: #999;">Separate multiple URL's with commas. If you see an attacker repeatedly probing your site for a known vulnerability you can use this to immediately block them.<br /><br /></th></tr>
+
 	<tr><th>Hide WordPress version</th><td><input type="checkbox" id="other_hideWPVersion" class="wfConfigElem" name="other_hideWPVersion" value="1" <?php $w->cb('other_hideWPVersion'); ?> /></td></tr>
 	<tr><th>Hold anonymous comments using member emails for moderation</th><td><input type="checkbox" id="other_noAnonMemberComments" class="wfConfigElem" name="other_noAnonMemberComments" value="1" <?php $w->cb('other_noAnonMemberComments'); ?> /></td></tr>
 	<tr><th>Filter comments for malware and phishing URL's</th><td><input type="checkbox" id="other_scanComments" class="wfConfigElem" name="other_scanComments" value="1" <?php $w->cb('other_scanComments'); ?> /></td></tr>

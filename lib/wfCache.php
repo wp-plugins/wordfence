@@ -478,6 +478,14 @@ class wfCache {
 			}
 		}
 
+		//We exclude URLs that are banned so that Wordfence PHP code can catch the IP address, then ban that IP and the ban is added to .htaccess. 
+		$excludedURLs = "";
+		if(wfConfig::get('bannedURLs', false)){
+			foreach(explode(',', wfConfig::get('bannedURLs', false)) as $URL){
+				$excludedURLs .= "RewriteCond  %{REQUEST_URI} !^" .  self::regexSpaceFix(preg_quote(trim($URL))) . "$\n\t";
+			}
+		}
+
 		$code = <<<EOT
 #WFCACHECODE - Do not remove this line. Disable Web Caching in Wordfence to remove this data.
 <IfModule mod_deflate.c>
@@ -517,6 +525,7 @@ class wfCache {
 	{$sslString}
 	RewriteCond %{QUERY_STRING} ^(?:\d+=\d+)?$
 	RewriteCond %{REQUEST_URI} (?:\/|\.html)$ [NC]
+	{$excludedURLs}
 	RewriteCond %{HTTP_COOKIE} !(comment_author|wp\-postpass|wf_logout|wordpress_logged_in|wptouch_switch_toggle|wpmp_switcher) [NC]
 	{$otherRewriteConds}
 	RewriteCond %{REQUEST_URI} \/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)\/*([^\/]*)(.*)$
