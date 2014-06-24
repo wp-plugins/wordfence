@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link rel='stylesheet' id='wordfence-main-style-css'  href='<?php echo wfUtils::getBaseURL(); ?>/css/iptraf.css?ver=<?php echo WORDFENCE_VERSION; ?>' type='text/css' media='all' />
 <body>
-<h1>Wordfence: All recent hits for IP address <?php echo $IP; if($reverseLookup){ echo '[' . $reverseLookup . ']'; } ?></h1>
+<h1>Wordfence: All recent hits for IP address <?php echo htmlspecialchars($IP, ENT_QUOTES, 'UTF-8'); if($reverseLookup){ echo '[' . htmlspecialchars($reverseLookup, ENT_QUOTES, 'UTF-8') . ']'; } ?></h1>
 <table border="0" cellpadding="2" cellspacing="0" style="width: 900px;">
 <?php foreach($results as $key => $v){ ?>
 <tr><th>Time:</th><td><?php echo $v['timeAgo'] ?> ago -- <?php echo date(DATE_RFC822, $v['ctime']); ?> -- <?php echo $v['ctime']; ?> in Unixtime</td></tr>

@@ -35,7 +35,6 @@ class wordfence {
 		update_option('wordfenceActivated', 1);
 	}
 	public static function uninstallPlugin(){
-
 		//Check if caching is enabled and if it is, disable it and fix the .htaccess file. 
 		$cacheType = wfConfig::get('cacheType', false);
 		if($cacheType == 'falcon'){
@@ -54,6 +53,7 @@ class wordfence {
 		update_option('wordfenceActivated', 0);
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
+		wp_clear_scheduled_hook('wordfence_daily_autoUpdate');
 		
 		//Remove old legacy cron job if it exists
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
@@ -242,6 +242,10 @@ class wordfence {
 		//Install new schedule. If schedule config is blank it will install the default 'auto' schedule.
 		wordfence::scheduleScans();
 
+		if(wfConfig::get('autoUpdate') == '1'){
+			wfConfig::enableAutoUpdate(); //Sets up the cron
+		}
+
 		if(! wfConfig::get('apiKey')){
 			$api = new wfAPI('', wfUtils::getWPVersion());
 			try {
@@ -359,6 +363,7 @@ class wordfence {
 
 		add_action('wordfence_start_scheduled_scan', 'wordfence::wordfenceStartScheduledScan');
 		add_action('wordfence_daily_cron', 'wordfence::dailyCron');
+		add_action('wordfence_daily_autoUpdate', 'wfConfig::autoUpdate');
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
 		add_action('plugins_loaded', 'wordfence::veryFirstAction');
 		add_action('init', 'wordfence::initAction');
@@ -415,7 +420,7 @@ class wordfence {
 			}
 		}
 	}
-	/* For debugging:
+	/*
   	public static function cronAddSchedules($schedules){
 		$schedules['wfEachMinute'] = array(
 				'interval' => 60,
@@ -1683,6 +1688,14 @@ class wordfence {
 		if($regenerateHtaccess){
 			wfCache::addHtaccessCode('add');
 		}
+
+		if($opts['autoUpdate'] == '1'){
+			wfConfig::enableAutoUpdate();
+		} else if($opts['autoUpdate'] == '0'){
+			wfConfig::disableAutoUpdate();
+		}
+			
+			
 		
 		$paidKeyMsg = false;
 
@@ -2067,9 +2080,9 @@ class wordfence {
 			return array('cerrorMsg' => "We could not find that issue in our database.");
 		}
 		$dat = $issue['data'];	
-		$result = self::getWPFileContent($dat['file'], $dat['cType'], $dat['cName'], $dat['cVersion']);
+		$result = self::getWPFileContent($dat['file'], $dat['cType'], (isset($dat['cName']) ? $dat['cName'] : ''), (isset($dat['cVersion']) ? $dat['cVersion'] : ''));
 		$file = $dat['file'];
-		if($result['cerrorMsg']){
+		if(isset($result['cerrorMsg']) && $result['cerrorMsg']){
 			return $result;
 		} else if(! $result['fileContent']){
 			return array('cerrorMsg' => "We could not get the original file to do a repair.");
@@ -2259,11 +2272,11 @@ EOL;
 	}
 	public static function wfFunc_IPTraf(){
 		$IP = $_GET['IP'];
-		$reverseLookup = wfUtils::reverseLookup($IP);
 		if(! preg_match('/^\d+\.\d+\.\d+\.\d+$/', $IP)){
 			echo "An invalid IP address was specified.";
 			exit(0);
 		}
+		$reverseLookup = wfUtils::reverseLookup($IP);
 		$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$results = array_merge(
 			$wfLog->getHits('hits', 'hit', 0, 10000, $IP), 
@@ -2288,6 +2301,10 @@ EOL;
 		$localFile = ABSPATH . '/' . preg_replace('/^(?:\.\.|[\/]+)/', '', $_GET['file']);
 		if(strpos($localFile, '..') !== false){
 			echo "Invalid file requested. (Relative paths not allowed)";
+			exit();
+		}
+		if(preg_match('/[\'\"<>\!\{\}\(\)\&\@\%\$\*\+\[\]\?]+/', $localFile)){
+			echo "File contains illegal characters.";
 			exit();
 		}
 		$lang = false;
@@ -2317,6 +2334,11 @@ EOL;
 		exit(0);
 	}
 	public static function wfFunc_diff(){
+		if(preg_match('/[\'\"<>\!\{\}\(\)\&\@\%\$\*\+\[\]\?]+/', $_GET['file'])){
+			echo "File contains illegal characters.";
+			exit();
+		}
+
 		$result = self::getWPFileContent($_GET['file'], $_GET['cType'], $_GET['cName'], $_GET['cVersion']);
 		if( isset( $result['errorMsg'] ) && $result['errorMsg']){
 			echo htmlentities($result['errorMsg']);

@@ -47,6 +47,8 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><td colspan="2">&nbsp;</td></tr>
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> />&nbsp;Regular scans ensure your site stays secure.</td></tr>
 	<tr><td colspan="2">&nbsp;</td></tr>
+	<tr><th class="wfConfigEnable">Update Wordfence automatically when a new version is released?</th><td><input type="checkbox" id="autoUpdate" class="wfConfigElem" name="autoUpdate" value="1" <?php $w->cb('autoUpdate'); ?> />&nbsp;Automatically updates Wordfence to the newest version within 24 hours of a new release.</td></tr>
+	<tr><td colspan="2">&nbsp;</td></tr>
 
 	<tr><th>Where to email alerts:</th><td><input type="text" id="alertEmails" name="alertEmails" value="<?php $w->f('alertEmails'); ?>" size="50" />&nbsp;<span class="wfTipText">Separate multiple emails with commas</span></td></tr>
 	<tr><th colspan="2">&nbsp;</th></tr>
@@ -87,6 +89,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 			echo "<tr><th colspan=\"2\" style=\"color: #F00;\">You have not configured an email to receive alerts yet. Set this up under \"Basic Options\" above.</th></tr>\n";
 		}
 	?>
+	<tr><th>Email me when Wordfence is automatically updated</th><td><input type="checkbox" id="alertOn_update" class="wfConfigElem" name="alertOn_update" value="1" <?php $w->cb('alertOn_update'); ?>/>&nbsp;If you have automatic updates enabled (see above), you'll get an email when an update occurs.</td></tr>
 	<tr><th>Alert on critical problems</th><td><input type="checkbox" id="alertOn_critical" class="wfConfigElem" name="alertOn_critical" value="1" <?php $w->cb('alertOn_critical'); ?>/></td></tr>
 	<tr><th>Alert on warnings</th><td><input type="checkbox" id="alertOn_warnings" class="wfConfigElem" name="alertOn_warnings" value="1" <?php $w->cb('alertOn_warnings'); ?>/></td></tr>
 	<tr><th>Alert when an IP address is blocked</th><td><input type="checkbox" id="alertOn_block" class="wfConfigElem" name="alertOn_block" value="1" <?php $w->cb('alertOn_block'); ?>/></td></tr>
@@ -270,6 +273,8 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th>Update interval in seconds (2 is default)</th><td><input type="text" id="actUpdateInterval" name="actUpdateInterval" value="<?php $w->f('actUpdateInterval'); ?>" size="4" />Setting higher will reduce browser traffic but slow scan starts, live traffic &amp; status updates.</td></tr>
 	<tr><th>Enable debugging mode (increases database load)</th><td><input type="checkbox" id="debugOn" class="wfConfigElem" name="debugOn" value="1" <?php $w->cb('debugOn'); ?> /></td></tr>
 	<tr><th>Delete Wordfence tables and data on deactivation?</th><td><input type="checkbox" id="deleteTablesOnDeact" class="wfConfigElem" name="deleteTablesOnDeact" value="1" <?php $w->cb('deleteTablesOnDeact'); ?> /></td></tr>
+
+
 	<tr><th>Disable Wordfence Cookies</th><td><input type="checkbox" id="disableCookies" class="wfConfigElem" name="disableCookies" value="1" <?php $w->cb('disableCookies'); ?> />(when enabled all visits in live traffic will appear to be new visits)</td></tr>
 	<tr><th>Start all scans remotely</th><td><input type="checkbox" id="startScansRemotely" class="wfConfigElem" name="startScansRemotely" value="1" <?php $w->cb('startScansRemotely'); ?> />(Try this if your scans aren't starting and your site is publicly accessible)</td></tr>
 	<tr><th>Add a debugging comment to HTML source of cached pages.</th><td><input type="checkbox" id="addCacheComment" class="wfConfigElem" name="addCacheComment" value="1" <?php $w->cb('addCacheComment'); ?> /></td></tr>
