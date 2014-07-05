@@ -61,8 +61,8 @@ class wordfence {
 		//Remove all scheduled scans.
 		self::unscheduleAllScans();
 		
+		wfConfig::clearDiskCache();
 		if(wfConfig::get('deleteTablesOnDeact')){
-			wfConfig::clearDiskCache();
 			$schema = new wfSchema();
 			$schema->dropAll();
 			foreach(array('wordfence_version', 'wordfenceActivated') as $opt){

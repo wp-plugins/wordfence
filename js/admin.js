@@ -1080,6 +1080,7 @@ window['wordfenceAdmin'] = {
 		if(res.ok && res.result && res.result.rawdata && res.result.rawdata.length > 0){
 			var rawhtml = "";
 			for(var i = 0; i < res.result.rawdata.length; i++){
+				res.result.rawdata[i] = jQuery('<div />').text(res.result.rawdata[i]).html();
 				res.result.rawdata[i] = res.result.rawdata[i].replace(/([^\s\t\r\n:;]+@[^\s\t\r\n:;\.]+\.[^\s\t\r\n:;]+)/, "<a href=\"mailto:$1\">$1<\/a>"); 
 				res.result.rawdata[i] = res.result.rawdata[i].replace(/(https?:\/\/[^\/]+[^\s\r\n\t]+)/, "<a target=\"_blank\" href=\"$1\">$1<\/a>"); 
 				var redStyle = "";
