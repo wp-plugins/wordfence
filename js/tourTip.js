@@ -17,6 +17,14 @@ window['wordfenceExt'] = {
 			jQuery('#wordfenceWorking').remove();
 		}
 	},
+	autoUpdateChoice: function(choice){
+		this.ajax('wordfence_autoUpdateChoice', {
+			choice: choice
+			}, 
+			function(res){ jQuery('#wordfenceAutoUpdateChoice').fadeOut(); },
+			function(){ jQuery('#wordfenceAutoUpdateChoice').fadeOut(); }
+			);
+	},
 	removeFromCache: function(postID){
 		this.ajax('wordfence_removeFromCache', {
 			id: postID

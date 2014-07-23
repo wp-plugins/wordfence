@@ -177,7 +177,7 @@ class wordfenceScanner {
 									'severity' => 1,
 									'ignoreP' => $this->path . $file,
 									'ignoreC' => $fileSum,
-									'shortMsg' => "This file may contain malicious executable code",
+									'shortMsg' => "This file may contain malicious executable code: " . $this->path . $file,
 									'longMsg' => "This file is a PHP executable file and contains an " . $this->patterns['word1'] . " function and " . $this->patterns['word2'] . " decoding function on the same line. This is a common technique used by hackers to hide and execute code. If you know about this file you can choose to ignore it to exclude it from future scans.",
 									'data' => array(
 										'file' => $file,
@@ -206,7 +206,7 @@ class wordfenceScanner {
 										'severity' => 1,
 										'ignoreP' => $this->path . $file,
 										'ignoreC' => $fileSum,
-										'shortMsg' => "This file may contain malicious executable code",
+										'shortMsg' => "This file may contain malicious executable code" . $this->path . $file,
 										'longMsg' => "This file is a PHP executable file and contains the word 'eval' (without quotes) and the word '" . $badStringFound . "' (without quotes). The eval() function along with an encoding function like the one mentioned are commonly used by hackers to hide their code. If you know about this file you can choose to ignore it to exclude it from future scans.",
 										'data' => array(
 											'file' => $file,

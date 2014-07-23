@@ -1393,6 +1393,7 @@ window['wordfenceAdmin'] = {
 		var redirURL = jQuery('#wfRedirURL').val();
 		var loggedInBlocked = jQuery('#wfLoggedInBlocked').is(':checked') ? '1' : '0';
 		var loginFormBlocked = jQuery('#wfLoginFormBlocked').is(':checked') ? '1' : '0';
+		var restOfSiteBlocked = jQuery('#wfRestOfSiteBlocked').is(':checked') ? '1' : '0';
 		var bypassRedirURL = jQuery('#wfBypassRedirURL').val();
 		var bypassRedirDest = jQuery('#wfBypassRedirDest').val();
 		var bypassViewURL = jQuery('#wfBypassViewURL').val();
@@ -1404,6 +1405,7 @@ window['wordfenceAdmin'] = {
 			redirURL: redirURL,
 			loggedInBlocked: loggedInBlocked,
 			loginFormBlocked: loginFormBlocked,
+			restOfSiteBlocked: restOfSiteBlocked,
 			bypassRedirURL: bypassRedirURL,
 			bypassRedirDest: bypassRedirDest,
 			bypassViewURL: bypassViewURL,

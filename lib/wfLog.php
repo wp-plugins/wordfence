@@ -703,6 +703,8 @@ class wfLog {
 				//Do nothing
 			} else if(strpos($_SERVER['REQUEST_URI'], '/wp-login.php') !== false && (! wfConfig::get('cbl_loginFormBlocked', false))  ){ //It's the login form and we're allowing that
 				//Do nothing 
+			} else if(strpos($_SERVER['REQUEST_URI'], '/wp-login.php') === false && (! wfConfig::get('cbl_restOfSiteBlocked', false))  ){ //It's the rest of the site and we're allowing that 
+				//Do nothing
 			} else {
 				if($country = wfUtils::IP2Country($IP) ){
 					foreach(explode(',', $blockedCountries) as $blocked){

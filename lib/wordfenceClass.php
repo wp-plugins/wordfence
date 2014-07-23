@@ -234,6 +234,10 @@ class wordfence {
 		//Remove old legacy cron job if exists
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
 
+		$restOfSite = wfConfig::get('cbl_restOfSiteBlocked', 'notset');
+		if($restOfSite == 'notset'){
+			wfConfig::set('cbl_restOfSiteBlocked', '1');
+		}
 
 		$schema = new wfSchema();
 		$schema->createAll(); //if not exists
@@ -835,7 +839,9 @@ class wordfence {
 					}
 				}
 				if(wfConfig::get('loginSec_lockInvalidUsers')){
-					self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
+					if(strlen($_POST['log']) > 0 && preg_match('/[^\r\s\n\t]+/', $_POST['log'])){
+						self::lockOutIP($IP, "Used an invalid username '" . $_POST['log'] . "' to try to sign in.");
+					}
 					require('wfLockedOut.php');
 				}
 			}
@@ -1230,6 +1236,7 @@ class wordfence {
 		wfConfig::set('cbl_redirURL', $_POST['redirURL']);
 		wfConfig::set('cbl_loggedInBlocked', $_POST['loggedInBlocked']);
 		wfConfig::set('cbl_loginFormBlocked', $_POST['loginFormBlocked']);
+		wfConfig::set('cbl_restOfSiteBlocked', $_POST['restOfSiteBlocked']);
 		wfConfig::set('cbl_bypassRedirURL', $_POST['bypassRedirURL']);
 		wfConfig::set('cbl_bypassRedirDest', $_POST['bypassRedirDest']);
 		wfConfig::set('cbl_bypassViewURL', $_POST['bypassViewURL']);
@@ -1316,6 +1323,16 @@ class wordfence {
 			wfConfig::set('cacheType', false);
 		}
 		return $newVal;
+	}
+	public static function ajax_autoUpdateChoice_callback(){
+		$choice = $_POST['choice'];
+		wfConfig::set('autoUpdateChoice', '1');
+		if($choice == 'yes'){
+			wfConfig::set('autoUpdate', '1');
+		} else {
+			wfConfig::set('autoUpdate', '0');
+		}
+		return array('ok' => 1);
 	}
 	public static function ajax_removeFromCache_callback(){
 		$id = $_POST['id'];
@@ -2386,7 +2403,7 @@ EOL;
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -2404,6 +2421,7 @@ EOL;
 			wp_enqueue_script('jquery.wfdataTables', wfUtils::getBaseURL() . 'js/jquery.dataTables.min.js', array('jquery'), WORDFENCE_VERSION);
 			//wp_enqueue_script('jquery.tools', wfUtils::getBaseURL() . 'js/jquery.tools.min.js', array('jquery'));
 			wp_enqueue_script('wordfenceAdminjs', wfUtils::getBaseURL() . 'js/admin.js', array('jquery'), WORDFENCE_VERSION);
+			wp_enqueue_script('wordfenceAdminExtjs', wfUtils::getBaseURL() . 'js/tourTip.js', array('jquery'), WORDFENCE_VERSION);
 			self::setupAdminVars();
 		} else {
 			wp_enqueue_style('wp-pointer');
@@ -2447,7 +2465,9 @@ EOL;
 	public static function adminEmailWarning(){
 		echo '<div id="wordfenceConfigWarning" class="fade error"><p><strong>You have not set an administrator email address to receive alerts for Wordfence.</strong> Please <a href="' . self::getMyOptionsURL() . '">click here to go to the Wordfence Options Page</a> and set an email address where you will receive security alerts from this site.</p></div>';
 	}
-
+	public static function autoUpdateNotice(){
+		echo '<div id="wordfenceAutoUpdateChoice" class="fade error"><p><strong>Do you want Wordfence to stay up-to-date automatically?</strong>&nbsp;&nbsp;&nbsp;<a href="#" onclick="wordfenceExt.autoUpdateChoice(\'yes\'); return false;">Yes, enable auto-update.</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="#" onclick="wordfenceExt.autoUpdateChoice(\'no\'); return false;">No thanks.</a></p></div>';
+	}
 	public static function admin_menus(){
 		if(! wfUtils::isAdmin()){ return; }
 		$warningAdded = false;
@@ -2468,7 +2488,18 @@ EOL;
 			$warningAdded = true;
 		}
 		if(! $warningAdded){
+			if(wfConfig::get('tourClosed') == '1' && (! wfConfig::get('autoUpdate')) && (! wfConfig::get('autoUpdateChoice'))){
+				$warningAdded = true;
+				if(wfUtils::isAdminPageMU()){
+					add_action('network_admin_notices', 'wordfence::autoUpdateNotice');
+				} else {
+					add_action('admin_notices', 'wordfence::autoUpdateNotice');
+				}
+			}
+		}
+		if(! $warningAdded){
 			if(wfConfig::get('tourClosed') == '1' && (! wfConfig::get('alertEmails')) ){
+				$warningAdded = true;
 				if(wfUtils::isAdminPageMU()){
 					add_action('network_admin_notices', 'wordfence::adminEmailWarning');
 				} else {
