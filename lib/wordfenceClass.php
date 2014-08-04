@@ -878,6 +878,14 @@ class wordfence {
 	public static function wfsnReportBlockedAttempt($IP, $type){
 		try {
 			$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?blocked=1&k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+			if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy('noc3.wordfence.com') ){
+				curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
+				curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
+				if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
+					curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
+				}
+			}
+
 			curl_setopt($curl, CURLOPT_TIMEOUT, 1);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
@@ -893,6 +901,14 @@ class wordfence {
 	private static function wfsnIsBlocked($IP, $type){
 		try {
 			$curl = curl_init('http://noc3.wordfence.com:9050/hackAttempt/?k=' . wfConfig::get('apiKey') . '&IP=' . wfUtils::inet_aton($IP) . '&t=' . $type );
+			if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy('noc3.wordfence.com') ){
+				curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
+				curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
+				if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
+					curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
+				}
+			}
+
 			curl_setopt($curl, CURLOPT_TIMEOUT, 3);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);

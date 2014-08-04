@@ -136,7 +136,7 @@ class wfUtils {
 	public static function getIP(){
 		//You can use the following examples to force Wordfence to think a visitor has a certain IP if you're testing. Remember to re-comment this out or you will break Wordfence badly. 
 		//return '1.2.33.57';
-		//return '1.2.3.4';
+		//return '4.2.3.14';
 		//return self::makeRandomIP();
 
 		$howGet = wfConfig::get('howGetIPs', false);
@@ -626,6 +626,21 @@ class wfUtils {
 			return $err['message'];
 		}
 		return '';
+	}
+	public static function hostNotExcludedFromProxy($url){
+		if(! defined('WP_PROXY_BYPASS_HOSTS')){
+			return true; //No hosts are excluded
+		}
+		$hosts = explode(',', WP_PROXY_BYPASS_HOSTS);
+		$url = preg_replace('/^https?:\/\//i', '', $url);
+		$url = preg_replace('/\/.*$/', '', $url);
+		$url = strtolower($url);
+		foreach($hosts as $h){
+			if(strtolower(trim($h)) == $url){
+				return false;
+			}
+		}
+		return true;
 	}
 }
 

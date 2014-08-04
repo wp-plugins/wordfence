@@ -48,6 +48,14 @@ function doCurlTest($protocol){
 	global $curlContent;
 	$curlContent = "";
 	$curl = curl_init($protocol . '://noc1.wordfence.com/');
+	if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy('noc1.wordfence.com') ){
+		curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
+		curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
+		if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
+			curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
+		}
+	}
+
 	curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 	curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 	curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
