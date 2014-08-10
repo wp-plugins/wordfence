@@ -277,6 +277,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 
 	<tr><th>Disable Wordfence Cookies</th><td><input type="checkbox" id="disableCookies" class="wfConfigElem" name="disableCookies" value="1" <?php $w->cb('disableCookies'); ?> />(when enabled all visits in live traffic will appear to be new visits)</td></tr>
 	<tr><th>Start all scans remotely</th><td><input type="checkbox" id="startScansRemotely" class="wfConfigElem" name="startScansRemotely" value="1" <?php $w->cb('startScansRemotely'); ?> />(Try this if your scans aren't starting and your site is publicly accessible)</td></tr>
+	<tr><th>Disable config caching</th><td><input type="checkbox" id="disableConfigCaching" class="wfConfigElem" name="disableConfigCaching" value="1" <?php $w->cb('disableConfigCaching'); ?> />(Try this if your options aren't saving)</td></tr>
 	<tr><th>Add a debugging comment to HTML source of cached pages.</th><td><input type="checkbox" id="addCacheComment" class="wfConfigElem" name="addCacheComment" value="1" <?php $w->cb('addCacheComment'); ?> /></td></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=conntest&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to test connectivity to the Wordfence API servers</a></th></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>

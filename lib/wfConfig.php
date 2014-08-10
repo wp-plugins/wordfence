@@ -2,6 +2,7 @@
 class wfConfig {
 	public static $diskCache = array();
 	private static $diskCacheDisabled = false; //enables if we detect a write fail so we don't keep calling stat()
+	private static $cacheDisableCheckDone = false;
 	private static $table = false;
 	private static $cache = array();
 	private static $DB = false;
@@ -60,6 +61,7 @@ class wfConfig {
 				"autoUpdate" => false,
 				"disableCookies" => false,
 				"startScansRemotely" => false,
+				"disableConfigCaching" => false,
 				"addCacheComment" => false,
 				"allowHTTPSCaching" => false,
 				"debugOn" => false
@@ -140,6 +142,7 @@ class wfConfig {
 				"autoUpdate" => false,
 				"disableCookies" => false,
 				"startScansRemotely" => false,
+				"disableConfigCaching" => false,
 				"addCacheComment" => false,
 				"allowHTTPSCaching" => false,
 				"debugOn" => false
@@ -220,6 +223,7 @@ class wfConfig {
 				"autoUpdate" => false,
 				"disableCookies" => false,
 				"startScansRemotely" => false,
+				"disableConfigCaching" => false,
 				"addCacheComment" => false,
 				"allowHTTPSCaching" => false,
 				"debugOn" => false
@@ -300,6 +304,7 @@ class wfConfig {
 				"autoUpdate" => false,
 				"disableCookies" => false,
 				"startScansRemotely" => false,
+				"disableConfigCaching" => false,
 				"addCacheComment" => false,
 				"allowHTTPSCaching" => false,
 				"debugOn" => false
@@ -380,6 +385,7 @@ class wfConfig {
 				"autoUpdate" => false,
 				"disableCookies" => false,
 				"startScansRemotely" => false,
+				"disableConfigCaching" => false,
 				"addCacheComment" => false,
 				"allowHTTPSCaching" => false,
 				"debugOn" => false
@@ -468,6 +474,11 @@ class wfConfig {
 		self::set($key, $val + 1);
 	}
 	public static function set($key, $val){
+		if($key == 'disableConfigCaching'){
+			self::getDB()->queryWrite("insert into " . self::table() . " (name, val) values ('%s', '%s') ON DUPLICATE KEY UPDATE val='%s'", $key, $val, $val);
+			return;
+		}
+	
 		if(is_array($val)){
 			$msg = "wfConfig::set() got an array as second param with key: $key and value: " . var_export($val, true);
 			wordfence::status(1, 'error', $msg);
@@ -494,6 +505,19 @@ class wfConfig {
 		self::$diskCacheDisabled = true;
 	}
 	public static function get($key, $default = false){
+		if($key == 'disableConfigCaching'){
+			$val = self::getDB()->querySingle("select val from " . self::table() . " where name='%s'", $key);
+			return $val;
+		}
+
+		if(! self::$cacheDisableCheckDone){
+			self::$cacheDisableCheckDone = true;
+			$cachingDisabledSetting = self::getDB()->querySingle("select val from " . self::table() . " where name='%s'", 'disableConfigCaching');
+			if($cachingDisabledSetting == '1'){
+				self::$diskCacheDisabled = true;
+			}
+		}
+
 		if(! isset(self::$cache[$key])){ 
 			$val = self::loadFromDiskCache($key);
 			//$val = self::getDB()->querySingle("select val from " . self::table() . " where name='%s'", $key);
@@ -527,7 +551,9 @@ class wfConfig {
 			}
 		}
 		$val = self::getDB()->querySingle("select val from " . self::table() . " where name='%s'", $key);
-		if(self::$diskCacheDisabled){ return $val; }
+		if(self::$diskCacheDisabled){ 
+			return $val; 
+		}
 		wfConfig::$diskCache[$key] = isset($val) ? $val : '';
 		try {
 			$bytesWritten = @file_put_contents($cacheFile, self::$tmpFileHeader . serialize(wfConfig::$diskCache), LOCK_EX);
