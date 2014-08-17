@@ -19,7 +19,4 @@ from the time they were sent.
 </ul>
 <br />
 <br />
-If you have any further questions, please <a href="https://www.wordfence.com/forums/">visit our support forum at www.wordfence.com</a>.
-<br />
-<br />
 <br />
