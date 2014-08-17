@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.3.1
-Tested up to: 3.9.1
-Stable tag: 5.1.8
+Tested up to: 3.9.2
+Stable tag: 5.1.9
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -162,6 +162,14 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.1.9 =
+* Fix: Crawler triggering update cron job threw error about show_message() being redeclared at end of update. Fixed. 
+* Fix: Live traffic cities were incorrect and did not match country blocking block effects under certain conditions. Fixed. 
+* Fix: If a site database contained a table with dashes in the table name, we would throw an error at the end of every scan. Fixed. 
+* Improvement: Upgraded country DB to newest version. 
+* Improvement: Changed live traffic geo location caching to be 24 hours instead of a week so that geo DB updates for live traffic on our servers take effect sooner. 
+* Improvement: Ignoring .sql files in scans which are usually backups and contain many false positives, unless high sensitivity scanning is enabled. 
 
 = 5.1.8 =
 * Fix: Option to disable config caching. You can find this new option at the bottom of the Wordfence options page. 

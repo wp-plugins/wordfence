@@ -752,9 +752,12 @@ class wfConfig {
 	public static function autoUpdate(){
 		try {
 			require_once(ABSPATH . 'wp-admin/includes/class-wp-upgrader.php');
+			require_once(ABSPATH . 'wp-admin/includes/misc.php');
+			/* We were creating show_message here so that WP did not write to STDOUT. This had the strange effect of throwing an error about redeclaring show_message function, but only when a crawler hit the site and triggered the cron job. Not a human. So we're now just require'ing misc.php which does generate output, but that's OK because it is a loopback cron request.  
 			if(! function_exists('show_message')){ 
 				function show_message($msg = 'null'){}
 			}
+			*/
 			define('FS_METHOD', 'direct');
 			require_once(ABSPATH . 'wp-includes/update.php');
 			require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -768,8 +771,8 @@ class wfConfig {
 					wordfence::alert("Wordfence Upgraded to version " . $matches[1], "Your Wordfence installation has been upgraded to version " . $matches[1], '127.0.0.1');
 				}
 			}
-			$output = ob_get_contents();
-			ob_end_clean();
+			$output = @ob_get_contents();
+			@ob_end_clean();
 		} catch(Exception $e){}
 	}
 }

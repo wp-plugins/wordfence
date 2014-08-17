@@ -228,7 +228,7 @@ class wfIssues {
 		$res1 = $wpdb->get_col("show tables"); $dat['totalTables'] = sizeof($res1);
 		$totalRows = 0;
 		foreach($res1 as $table){
-			$res2 = $wpdb->get_col("select count(*) from $table");
+			$res2 = $wpdb->get_col("select count(*) from `$table`");
 			if(isset($res2[0]) ){
 				$totalRows += $res2[0];
 			}

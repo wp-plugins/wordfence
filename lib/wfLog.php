@@ -697,7 +697,6 @@ class wfLog {
 			$skipCountryBlocking = true;
 		}
 			
-
 		if((! $skipCountryBlocking) && $blockedCountries && wfConfig::get('isPaid') && (! self::isCBLBypassCookieSet()) ){
 			if(is_user_logged_in() && (! wfConfig::get('cbl_loggedInBlocked', false)) ){ //User is logged in and we're allowing logins
 				//Do nothing
