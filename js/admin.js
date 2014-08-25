@@ -962,7 +962,13 @@ window['wordfenceAdmin'] = {
 			} else if(this.activityMode == 'throttledIPs'){
 				tmpl = '#wfThrottledIPsTmpl';
 			} else { return; }
-			jQuery(tmpl).tmpl(res).prependTo(contentElem);
+			var i, j, chunk = 1000;
+			var bigArray = res.results.slice(0);
+			res.results = false;
+			for(i = 0, j = bigArray.length; i < j; i += chunk){
+				res.results = bigArray.slice(i, i + chunk);
+				jQuery(tmpl).tmpl(res).appendTo(contentElem);
+			}
 			this.reverseLookupIPs();
 		} else {
 			if(this.activityMode == 'topScanners' || this.activityMode == 'topLeechers'){
