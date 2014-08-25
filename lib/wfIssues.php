@@ -77,7 +77,8 @@ class wfIssues {
 	public function emailNewIssues(){
 		$level = wfConfig::getAlertLevel();
 		$emails = wfConfig::getAlertEmails();
-		$subject = "[Wordfence Alert] Problems found on " . get_bloginfo('name', 'raw');
+		$shortSiteURL = preg_replace('/^https?:\/\//i', '', site_url());
+		$subject = "[Wordfence Alert] Problems found on $shortSiteURL";
 
 		if(sizeof($emails) < 1){ return; }
 		if($level < 1){ return; }
@@ -116,6 +117,7 @@ class wfIssues {
 		if($level == 2 && $totalCriticalIssues < 1 && $totalWarningIssues < 1){ return; }
 		if($level == 1 && $totalCriticalIssues < 1){ return; }
 		$content = wfUtils::tmpl('email_newIssues.php', array(
+			'isPaid' => wfConfig::get('isPaid'),
 			'issues' => $finalIssues,
 			'totalCriticalIssues' => $totalCriticalIssues,
 			'totalWarningIssues' => $totalWarningIssues,
@@ -226,7 +228,7 @@ class wfIssues {
 		$res1 = $wpdb->get_col("show tables"); $dat['totalTables'] = sizeof($res1);
 		$totalRows = 0;
 		foreach($res1 as $table){
-			$res2 = $wpdb->get_col("select count(*) from $table");
+			$res2 = $wpdb->get_col("select count(*) from `$table`");
 			if(isset($res2[0]) ){
 				$totalRows += $res2[0];
 			}
