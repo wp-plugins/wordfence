@@ -330,7 +330,16 @@ class wordfence {
 			*/
 		}
 	}
+	public static function initProtection(){
+		if(preg_match('/\/wp\-admin\/admin\-ajax\.php/', $_SERVER['REQUEST_URI'])){
+			if(isset($_REQUEST['action']) && $_REQUEST['action'] == 'revslider_show_image' && isset($_REQUEST['img']) && preg_match('/\.php$/i', $_REQUEST['img']) ){
+				self::getLog()->do503(86400, "URL not allowed. Slider Revolution Hack attempt detected. #2");
+				exit(); //function above exits anyway
+			}
+		}
+	}
 	public static function install_actions(){
+		self::initProtection();
 		if(wfUtils::hasLoginCookie()){ //Fast way of checking if user may be logged in. Not secure, but these are only available if you're signed in.
 			register_activation_hook(WP_PLUGIN_DIR . '/wordfence/wordfence.php', 'wordfence::installPlugin');
 			register_deactivation_hook(WP_PLUGIN_DIR . '/wordfence/wordfence.php', 'wordfence::uninstallPlugin');
