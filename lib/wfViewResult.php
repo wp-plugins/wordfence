@@ -6,7 +6,7 @@
 <body>
 <h1>Wordfence: File Viewer</h1>
 <table border="0" style="margin: 0 0 20px 0;" class="summary">
-<tr><td>Filename:</td><td><?php echo $localFile; ?></td></tr>
+<tr><td>Filename:</td><td><?php echo htmlspecialchars($localFile, ENT_QUOTES, 'UTF-8'); ?></td></tr>
 <tr><td>File Size:</td><td><?php echo $fileSize; ?></td></tr>
 <tr><td>File last modified:</td><td><?php echo $fileMTime; ?></td></tr>
 </table>
