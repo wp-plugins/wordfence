@@ -15,15 +15,15 @@
 	ignore this file the next time Wordfence scans your system.
 </p>
 <table border="0" style="margin: 0 0 20px 0;" class="summary">
-<tr><td>Filename:</td><td><?php echo $_GET['file']; ?></td></tr>
+<tr><td>Filename:</td><td><?php echo htmlentities($_GET['file']); ?></td></tr>
 <tr><td>File type:</td><td><?php 
 	$cType = $_GET['cType'];
 	if($cType == 'core'){
 		echo "WordPress Core File</td></tr>";
 	} else if($cType == 'theme'){
-		echo "Theme File</td></tr><tr><td>Theme Name:</td><td>" . $_GET['cName'] . "</td></tr><tr><td>Theme Version:</td><td>" . $_GET['cVersion'] . "</td></tr>";
+		echo "Theme File</td></tr><tr><td>Theme Name:</td><td>" . htmlentities($_GET['cName']) . "</td></tr><tr><td>Theme Version:</td><td>" . htmlentities($_GET['cVersion']) . "</td></tr>";
 	} else if($cType == 'plugin'){
-		echo "Plugin File</td></tr><tr><td>Plugin Name:</td><td>" . $_GET['cName'] . "</td></tr><tr><td>Plugin Version:</td><td>" . $_GET['cVersion'] . "</td></tr>";
+		echo "Plugin File</td></tr><tr><td>Plugin Name:</td><td>" . htmlentities($_GET['cName']) . "</td></tr><tr><td>Plugin Version:</td><td>" . htmlentities($_GET['cVersion']) . "</td></tr>";
 	} else {
 		echo "Unknown Type</td></tr>";
 	}
