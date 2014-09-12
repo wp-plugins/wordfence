@@ -207,10 +207,10 @@ class wfUtils {
 	public static function isValidIP($IP){
 		if(preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/', $IP, $m)){
 			if(
-				$m[0] >= 0 && $m[0] <= 255 &&
 				$m[1] >= 0 && $m[1] <= 255 &&
 				$m[2] >= 0 && $m[2] <= 255 &&
-				$m[3] >= 0 && $m[3] <= 255
+				$m[3] >= 0 && $m[3] <= 255 &&
+				$m[4] >= 0 && $m[4] <= 255
 			){
 				return true;
 			}

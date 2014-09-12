@@ -504,9 +504,14 @@ class wfLog {
 			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and (permanent = 1 OR (blockedTime + %s > unix_timestamp()))", $res['IP'], wfConfig::get('blockedTime'));
 			$res['IP'] = wfUtils::inet_ntoa($res['IP']); 
 			$res['extReferer'] = false;
+			if(isset( $res['referer'] ) && $res['referer']){
+				if(! preg_match('/^https?:\/\/[a-z0-9\.\-]+\/[^\':<>\"\\\]*$/i', $res['referer'] )){ //filtering out XSS
+					$res['referer'] = '';
+				}
+			}
 			if( isset( $res['referer'] ) && $res['referer']){
 				$refURL = parse_url($res['referer']);
-				if(is_array($refURL) && $refURL['host']){
+				if(is_array($refURL) && isset($refURL['host']) && $refURL['host']){
 					$refHost = strtolower(preg_replace('/^www\./i', '', $refURL['host']));
 					if($refHost != $ourHost){
 						$res['extReferer'] = true;

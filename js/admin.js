@@ -632,7 +632,7 @@ window['wordfenceAdmin'] = {
 			if(res.issuesLists[issueStatus].length < 1){
 				if(issueStatus == 'new'){
 					if(res.lastScanCompleted == 'ok'){
-						jQuery('#' + containerID).html('<p style="font-size: 20px; color: #0A0;">Congratulations! You have no security issues on your site.</p>');
+						jQuery('#' + containerID).html('<p style="font-size: 20px; color: #0A0;">Congratulations! No security problems were detected by Wordfence.</p>');
 					} else if(res['lastScanCompleted']){
 						//jQuery('#' + containerID).html('<p style="font-size: 12px; color: #A00;">The latest scan failed: ' + res.lastScanCompleted + '</p>');
 					} else {

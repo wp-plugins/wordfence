@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.3.1
 Tested up to: 4.0
-Stable tag: 5.2.2
+Stable tag: 5.2.3
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -89,7 +89,7 @@ To install Wordfence Security on WordPress Multi-Site installations:
 * Wordfence Security is the only security plugin that is fully integrated with it's own high speed caching engine to avoid security and caching conflicts. 
 * Wordfence Security actually verifies your website source code integrity against the official WordPress repository and shows you the changes. We are the only plugin to do this.
 * Wordfence Security provides two-factor authentication (Cellphone Sign-in) for paid members. We're the only plugin to offer this.
-* Wordfence Security includes comprehensive protection against DDoS attacks by giving you a performance boost up to 50X and giving you the option to disable XML-RPC among other features. 
+* Wordfence Security includes protection against DDoS attacks by giving you a performance boost up to 50X. 
 * Wordfence Security scans check all your files, comments and posts for URL's in Google's Safe Browsing list. We are the only plugin to offer this very important security enhancement.
 * Wordfence Security scans do not consume large amounts of your precious bandwidth because all security scans happen on your web server which makes them very fast.
 * Wordfence Security fully supports WordPress Multi-Site which means you can security scan every blog in your Multi-Site installation with one click.
@@ -162,6 +162,12 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.2.3 =
+* Updated Geo IP country database to newest version (September 2014 edition)
+* Security fix. Improved referrer sanitization in live traffic.  
+* Changed scan success messaging for clarity. 
+* Fixed minor bug in IP validation which manifested when users use IPv6 to IPv4 translation which produces 255.x.x.x addrs.
 
 = 5.2.2 =
 * Protection from the Slider Revolution Plugin arbitrary file download vulnerability announced today. Attempts to download any .php file including wp-config.php are denied. 

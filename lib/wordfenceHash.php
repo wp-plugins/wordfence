@@ -65,7 +65,6 @@ class wordfenceHash {
 			throw new Exception("Invalid response from Wordfence servers.");
 		}
 		wordfence::statusEnd($fetchCoreHashesStatus, false, true);
-
 		if($this->malwareEnabled){
 			$malwarePrefixStatus = wordfence::statusStart("Fetching list of known malware files from Wordfence");
 			$malwareData = $engine->api->getStaticURL('/malwarePrefixes.bin');
