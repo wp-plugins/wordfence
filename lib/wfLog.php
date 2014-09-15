@@ -505,7 +505,7 @@ class wfLog {
 			$res['IP'] = wfUtils::inet_ntoa($res['IP']); 
 			$res['extReferer'] = false;
 			if(isset( $res['referer'] ) && $res['referer']){
-				if(! preg_match('/^https?:\/\/[a-z0-9\.\-]+\/[^\':<>\"\\\]*$/i', $res['referer'] )){ //filtering out XSS
+				if(wfUtils::hasXSS($res['referer'] )){ //filtering out XSS
 					$res['referer'] = '';
 				}
 			}

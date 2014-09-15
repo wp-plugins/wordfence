@@ -332,7 +332,10 @@ class wordfence {
 	}
 	public static function initProtection(){
 		if(preg_match('/\/wp\-admin\/admin\-ajax\.php/', $_SERVER['REQUEST_URI'])){
-			if(isset($_REQUEST['action']) && $_REQUEST['action'] == 'revslider_show_image' && isset($_REQUEST['img']) && preg_match('/\.php$/i', $_REQUEST['img']) ){
+			if(
+				(isset($_GET['action']) && $_GET['action'] == 'revslider_show_image' && isset($_GET['img']) && preg_match('/\.php$/i', $_GET['img'])) ||
+				(isset($_POST['action']) && $_POST['action'] == 'revslider_show_image' && isset($_POST['img']) && preg_match('/\.php$/i', $_POST['img']))
+			){
 				self::getLog()->do503(86400, "URL not allowed. Slider Revolution Hack attempt detected. #2");
 				exit(); //function above exits anyway
 			}
@@ -1881,7 +1884,7 @@ class wordfence {
 			return array('err' => 1, 'errorMsg' => "The IP address " . htmlentities($IP) . " is whitelisted and can't be blocked or it is in a range of internal IP addresses that Wordfence does not block. You can remove this IP from the whitelist on the Wordfence options page.");
 		}
 		if(wfConfig::get('neverBlockBG') != 'treatAsOtherCrawlers'){ //Either neverBlockVerified or neverBlockUA is selected which means the user doesn't want to block google 
-			if(wfCrawl::verifyCrawlerPTR('/googlebot\.com$/i', $IP)){
+			if(wfCrawl::verifyCrawlerPTR('/\.googlebot\.com$/i', $IP)){
 				return array('err' => 1, 'errorMsg' => "The IP address you're trying to block belongs to Google. Your options are currently set to not block these crawlers. Change this in Wordfence options if you want to manually block Google.");
 			}
 		}

@@ -9,7 +9,11 @@
 <?php foreach($results as $key => $v){ ?>
 <tr><th>Time:</th><td><?php echo $v['timeAgo'] ?> ago -- <?php echo date(DATE_RFC822, $v['ctime']); ?> -- <?php echo $v['ctime']; ?> in Unixtime</td></tr>
 <?php if($v['timeSinceLastHit']){ echo '<th>Secs since last hit:</th><td>' . $v['timeSinceLastHit'] . '</td></tr>'; } ?>
+<?php if(wfUtils::hasXSS($v['URL'])){ ?>
+<tr><th>URL:</th><td><span style="color: #F00;">Possible XSS code filtered out for your security</span></td></tr>
+<?php } else { ?>
 <tr><th>URL:</th><td><a href="<?php echo $v['URL']; ?>" target="_blank"><?php echo $v['URL']; ?></a></td></tr>
+<?php } ?>
 <tr><th>Type:</th><td><?php if($v['type'] == 'hit'){ echo 'Normal request'; } else if($v['type'] == '404'){ echo '<span style="color: #F00;">Page not found</span>'; } ?></td></tr>
 <?php if($v['referer']){ ?><tr><th>Referrer:</th><td><a href="<?php echo $v['referer']; ?>" target="_blank"><?php echo $v['referer']; ?></a></td></tr><?php } ?>
 <tr><th>Full Browser ID:</th><td><?php echo esc_html($v['UA']); ?></td></tr>

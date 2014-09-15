@@ -154,8 +154,8 @@ class wfCache {
 			$append .= "Time created on server: " . date('Y-m-d H:i:s T') . ". ";
 			$append .= "Is HTTPS page: " . (self::isHTTPSPage() ? 'HTTPS' : 'no') . ". ";
 			$append .= "Page size: " . strlen($buffer) . " bytes. ";
-			$append .= "Host: " . ($_SERVER['HTTP_HOST'] ? $_SERVER['HTTP_HOST'] : $_SERVER['SERVER_NAME']) . ". ";
-			$append .= "Request URI: " . $_SERVER['REQUEST_URI'] . " ";
+			$append .= "Host: " . ($_SERVER['HTTP_HOST'] ? htmlentities($_SERVER['HTTP_HOST']) : htmlentities($_SERVER['SERVER_NAME'])) . ". ";
+			$append .= "Request URI: " . htmlentities($_SERVER['REQUEST_URI']) . " ";
 			$appendGzip = $append . " Encoding: GZEncode -->\n";
 			$append .= " Encoding: Uncompressed -->\n";
 		}
