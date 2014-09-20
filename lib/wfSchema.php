@@ -122,6 +122,7 @@ class wfSchema {
 	KEY k2(endTime)
 ) default charset=utf8",
 "wfStatus" => "(
+	id bigint UNSIGNED NOT NULL auto_increment PRIMARY KEY,
 	ctime DOUBLE(17,6) UNSIGNED NOT NULL,
 	level tinyint UNSIGNED NOT NULL,
 	type char(5) NOT NULL,

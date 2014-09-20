@@ -298,6 +298,8 @@ class wordfence {
 		$db->queryWriteIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
 		$db->queryWriteIgnoreError("drop table if exists $prefix"."wfFileQueue");
 		$db->queryWriteIgnoreError("drop table if exists $prefix"."wfFileChanges");
+		//Adding primary key to this table because some backup apps use primary key during backup. 
+		$db->queryWriteIgnoreError("alter table wp_wfStatus add id bigint UNSIGNED NOT NULL auto_increment PRIMARY KEY");
 
 		$optScanEnabled = $db->querySingle("select val from $prefix"."wfConfig where name='scansEnabled_options'");
 		if($optScanEnabled != '0' && $optScanEnabled != '1'){
@@ -533,7 +535,7 @@ class wordfence {
 		}
 			
 		if(! is_array($returnArr)){
-			error_log("Function $func did not return an array and did not generate an error.");
+			error_log("Function " . wp_kses($func, array()) . " did not return an array and did not generate an error.");
 			$returnArr = array();
 		}
 		if(isset($returnArr['nonce'])){
@@ -615,7 +617,7 @@ class wordfence {
 		$user = get_user_by('email', $_POST['user_login']);
 		if($user){
 			if(wfConfig::get('alertOn_lostPasswdForm')){
-				wordfence::alert("Password recovery attempted", "Someone tried to recover the password for user with email address: $email", $IP);
+				wordfence::alert("Password recovery attempted", "Someone tried to recover the password for user with email address: " . wp_kses($email, array()), $IP);
 			}
 		}
 		if(wfConfig::get('loginSecurityEnabled')){
@@ -647,6 +649,9 @@ class wordfence {
 	public static function veryFirstAction(){
 		$wfFunc = @$_GET['_wfsf'];
 		if($wfFunc == 'unlockEmail'){
+			if(! wp_verify_nonce(@$_POST['nonce'], 'wf-form')){
+				die("Sorry but your browser sent an invalid security token when trying to use this form.");
+			}
 			$numTries = get_transient('wordfenceUnlockTries');
 			if($numTries > 10){
 				echo "<html><body><h1>Please wait 3 minutes and try again</h1><p>You have used this form too much. Please wait 3 minutes and try again.</p></body></html>";
@@ -689,7 +694,7 @@ class wordfence {
 					));
 				wp_mail($email, "Unlock email requested", $content, "Content-Type: text/html");
 			}
-			echo "<html><body><h1>Your request was received</h1><p>We received a request to email \"" . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . "\" instructions to unlock their access. If that is the email address of a site administrator or someone on the Wordfence alert list, then they have been emailed instructions on how to regain access to this sytem. The instructions we sent will expire 30 minutes from now.</body></html>";
+			echo "<html><body><h1>Your request was received</h1><p>We received a request to email \"" . wp_kses($email, array()) . "\" instructions to unlock their access. If that is the email address of a site administrator or someone on the Wordfence alert list, then they have been emailed instructions on how to regain access to this sytem. The instructions we sent will expire 30 minutes from now.</body></html>";
 			exit();
 		} else if($wfFunc == 'unlockAccess'){
 			if(! preg_match('/^\d+\.\d+\.\d+\.\d+$/', get_transient('wfunlock_' . $_GET['key']))){
@@ -1009,7 +1014,7 @@ class wordfence {
 				throw new Exception("We could not fetch a core WordPress file from the Wordfence API.");
 			}
 		} catch (Exception $e){
-			return array('errorMsg' => htmlentities($e->getMessage()));
+			return array('errorMsg' => wp_kses($e->getMessage(), array()));
 		}
 	}
 	public static function ajax_loadAvgSitePerf_callback(){
@@ -1024,8 +1029,8 @@ class wordfence {
 		if(! wfConfig::get('isPaid')){
 			return array('errorMsg' => 'Cellphone Sign-in is only available to paid members. <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade now.</a>');
 		}
-		$username = $_POST['username'];
-		$phone = $_POST['phone'];
+		$username = sanitize_text_field($_POST['username']);
+		$phone = sanitize_text_field($_POST['phone']);
 		$user = get_user_by('login', $username);
 		if(! $user){
 			return array('errorMsg' => "The username you specified does not exist.");
@@ -1037,12 +1042,12 @@ class wordfence {
 		try {
 			$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $phone));
 		} catch(Exception $e){
-			return array('errorMsg' => "Could not contact Wordfence servers to generate a verification code: " . htmlentities($e->getMessage()) );
+			return array('errorMsg' => "Could not contact Wordfence servers to generate a verification code: " . wp_kses($e->getMessage(), array()) );
 		}
 		if(isset($codeResult['ok']) && $codeResult['ok']){
 			$code = $codeResult['code'];
 		} else if(isset($codeResult['errorMsg']) && $codeResult['errorMsg']){
-			return array('errorMsg' => htmlentities($codeResult['errorMsg']));
+			return array('errorMsg' => wp_kses($codeResult['errorMsg'], array()));
 		} else {
 			return array('errorMsg' => "We could not generate a verification code.");
 		}
@@ -1055,8 +1060,8 @@ class wordfence {
 			);
 	}
 	public static function ajax_twoFacActivate_callback(){
-		$userID = $_POST['userID'];
-		$code = $_POST['code'];
+		$userID = sanitize_text_field($_POST['userID']);
+		$code = sanitize_text_field($_POST['code']);
 		$twoFactorUsers = wfConfig::get_ser('twoFactorUsers', array());
 		if(! is_array($twoFactorUsers)){
 			$twoFactorUsers = array();
@@ -1071,7 +1076,7 @@ class wordfence {
 					$user = $twoFactorUsers[$i];
 					break;
 				} else {
-					return array('errorMsg' => "That is not the correct code. Please look for an SMS containing an activation code on the phone with number: " . htmlentities($twoFactorUsers[$i][1]) );
+					return array('errorMsg' => "That is not the correct code. Please look for an SMS containing an activation code on the phone with number: " . wp_kses($twoFactorUsers[$i][1], array()) );
 				}
 			}
 		}
@@ -1281,7 +1286,7 @@ class wordfence {
 			if($r['type'] == 'error'){
 				$content .= "\n";
 			}
-			$content .= date(DATE_RFC822, $r['ctime'] + $timeOffset) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . $r['msg'] . "\n";
+			$content .= date(DATE_RFC822, $r['ctime'] + $timeOffset) . '::' . sprintf('%.4f', $r['ctime']) . ':' . $r['level'] . ':' . $r['type'] . '::' . wp_kses_data( (string) $r['msg']) . "\n";
 		}
 		$content .= "\n\n";
 		
@@ -1312,7 +1317,7 @@ class wordfence {
 				throw new Exception("Could not understand the response we received from the Wordfence servers when applying for a free API key.");
 			}
 		} catch(Exception $e){
-			return array('errorMsg' => "Could not fetch free API key from Wordfence: " . htmlentities($e->getMessage()));
+			return array('errorMsg' => "Could not fetch free API key from Wordfence: " . wp_kses($e->getMessage(), array()));
 		}
 		return array('ok' => 1);
 	}
@@ -1622,7 +1627,7 @@ class wordfence {
 				}
 			}
 			if(sizeof($badEmails) > 0){
-				return array('errorMsg' => "The following emails are invalid: " . htmlentities(implode(', ', $badEmails)) );
+				return array('errorMsg' => "The following emails are invalid: " . wp_kses(implode(', ', $badEmails), array()) );
 			}
 			$opts['alertEmails'] = implode(',', $emails);
 		} else {
@@ -1643,7 +1648,7 @@ class wordfence {
 				}
 			}
 			if(sizeof($badWhiteIPs) > 0){
-				return array('errorMsg' => "Please make sure you separate your IP addresses with commas. The following whitelisted IP addresses are invalid: " . htmlentities(implode(', ', $badWhiteIPs)) );
+				return array('errorMsg' => "Please make sure you separate your IP addresses with commas. The following whitelisted IP addresses are invalid: " . wp_kses(implode(', ', $badWhiteIPs), array()) );
 			}
 			$opts['whitelisted'] = implode(',', $whiteIPs);
 		} else {
@@ -1680,7 +1685,7 @@ class wordfence {
 		}
 
 		if(sizeof($invalidUsers) > 0){
-			return array('errorMsg' => "The following users you selected to ignore in live traffic reports are not valid on this system: " . htmlentities(implode(', ', $invalidUsers)) );
+			return array('errorMsg' => "The following users you selected to ignore in live traffic reports are not valid on this system: " . wp_kses(implode(', ', $invalidUsers), array()) );
 		}
 		if(sizeof($validUsers) > 0){
 			$opts['liveTraf_ignoreUsers'] = implode(',', $validUsers);
@@ -1700,7 +1705,7 @@ class wordfence {
 			}
 		}
 		if(sizeof($invalidIPs) > 0){
-			return array('errorMsg' => "The following IPs you selected to ignore in live traffic reports are not valid: " . htmlentities(implode(', ', $invalidIPs)) );
+			return array('errorMsg' => "The following IPs you selected to ignore in live traffic reports are not valid: " . wp_kses(implode(', ', $invalidIPs), array()) );
 		}
 		if(sizeof($validIPs) > 0){
 			$opts['liveTraf_ignoreIPs'] = implode(',', $validIPs);
@@ -1757,7 +1762,7 @@ class wordfence {
 					throw new Exception("We could not understand the Wordfence server's response because it did not contain an 'ok' and 'apiKey' element.");
 				}
 			} catch(Exception $e){
-				return array('errorMsg' => "Your options have been saved, but we encountered a problem. You left your API key blank, so we tried to get you a free API key from the Wordfence servers. However we encountered a problem fetching the free key: " . htmlentities($e->getMessage()) );
+				return array('errorMsg' => "Your options have been saved, but we encountered a problem. You left your API key blank, so we tried to get you a free API key from the Wordfence servers. However we encountered a problem fetching the free key: " . wp_kses($e->getMessage(), array()) );
 			}
 		} else if($opts['apiKey'] != wfConfig::get('apiKey')){
 			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
@@ -1774,7 +1779,7 @@ class wordfence {
 					throw new Exception("We could not understand the Wordfence API server reply when updating your API key.");
 				}
 			} catch (Exception $e){
-				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . htmlentities($e->getMessage()) );
+				return array('errorMsg' => "Your options have been saved. However we noticed you changed your API key and we tried to verify it with the Wordfence servers and received an error: " . wp_kses($e->getMessage(), array()) );
 			}
 		} else {
 			$api = new wfAPI($opts['apiKey'], wfUtils::getWPVersion());
@@ -1853,7 +1858,7 @@ class wordfence {
 			}
 			$clientIP = wfUtils::inet_aton(wfUtils::getIP());
 			if($ip1 <= $clientIP && $ip2 >= $clientIP){
-				return array('err' => 1, 'errorMsg' => "You are trying to block yourself. Your IP address is " . htmlentities(wfUtils::getIP()) . " which falls into the range " . htmlentities($ipRange) . ". This blocking action has been cancelled so that you don't block yourself from your website.");
+				return array('err' => 1, 'errorMsg' => "You are trying to block yourself. Your IP address is " . wp_kses(wfUtils::getIP(), array()) . " which falls into the range " . wp_kses($ipRange, array()) . ". This blocking action has been cancelled so that you don't block yourself from your website.");
 			}
 			$ipRange = $ip1 . '-' . $ip2;
 		}
@@ -1881,7 +1886,7 @@ class wordfence {
 			return array('err' => 1, 'errorMsg' => "You can't block your own IP address.");
 		}
 		if(self::getLog()->isWhitelisted($IP)){
-			return array('err' => 1, 'errorMsg' => "The IP address " . htmlentities($IP) . " is whitelisted and can't be blocked or it is in a range of internal IP addresses that Wordfence does not block. You can remove this IP from the whitelist on the Wordfence options page.");
+			return array('err' => 1, 'errorMsg' => "The IP address " . wp_kses($IP, array()) . " is whitelisted and can't be blocked or it is in a range of internal IP addresses that Wordfence does not block. You can remove this IP from the whitelist on the Wordfence options page.");
 		}
 		if(wfConfig::get('neverBlockBG') != 'treatAsOtherCrawlers'){ //Either neverBlockVerified or neverBlockUA is selected which means the user doesn't want to block google 
 			if(wfCrawl::verifyCrawlerPTR('/\.googlebot\.com$/i', $IP)){
@@ -1956,7 +1961,7 @@ class wordfence {
 		$issues = new wfIssues();
 		$jsonData = array(
 			'serverTime' => $serverTime,
-			'msg' => $wfdb->querySingle("select msg from $p"."wfStatus where level < 3 order by ctime desc limit 1")
+			'msg' => wp_kses_data( (string) $wfdb->querySingle("select msg from $p"."wfStatus where level < 3 order by ctime desc limit 1"))
 			);
 		$events = array();
 		$alsoGet = $_POST['alsoGet'];
@@ -2001,13 +2006,14 @@ class wordfence {
 		return array('ok' => 1, 'email' => $email);
 	}
 	public static function ajax_bulkOperation_callback(){
-		$op = $_POST['op'];
+		$op = sanitize_text_field($_POST['op']);
 		if($op == 'del' || $op == 'repair'){
 			$ids = $_POST['ids'];
 			$filesWorkedOn = 0;
 			$errors = array();
 			$issues = new wfIssues();
 			foreach($ids as $id){
+				$id = intval($id); //Make sure input is a number. 
 				$issue = $issues->getIssueByID($id);
 				if(! $issue){
 					$errors[] = "Could not delete one of the files because we could not find the issue. Perhaps it's been resolved?";
@@ -2017,7 +2023,7 @@ class wordfence {
 				$localFile = ABSPATH . '/' . preg_replace('/^[\.\/]+/', '', $file);
 				$localFile = realpath($localFile);
 				if(strpos($localFile, ABSPATH) !== 0){
-					$errors[] = "An invalid file was requested: " . htmlentities($file);
+					$errors[] = "An invalid file was requested: " . wp_kses($file, arra());
 					continue;
 				}
 				if($op == 'del'){
@@ -2026,7 +2032,7 @@ class wordfence {
 						$filesWorkedOn++;
 					} else {
 						$err = error_get_last();
-						$errors[] = "Could not delete file " . htmlentities($file) . ". Error was: " . htmlentities($err['message']);
+						$errors[] = "Could not delete file " . wp_kses($file, array()) . ". Error was: " . wp_kses($err['message'], array());
 					}
 				} else if($op == 'repair'){
 					$dat = $issue['data'];	
@@ -2035,21 +2041,21 @@ class wordfence {
 						$errors[] = $result['cerrorMsg'];
 						continue;
 					} else if(! $result['fileContent']){
-						$errors[] = "We could not get the original file of " . htmlentities($file) . " to do a repair.";
+						$errors[] = "We could not get the original file of " . wp_kses($file, array()) . " to do a repair.";
 						continue;
 					}
 					
 					if(preg_match('/\.\./', $file)){
-						$errors[] = "An invalid file " . htmlentities($file) . " was specified for repair.";
+						$errors[] = "An invalid file " . wp_kses($file, array()) . " was specified for repair.";
 						continue;
 					}
 					$fh = fopen($localFile, 'w');
 					if(! $fh){
 						$err = error_get_last();
 						if(preg_match('/Permission denied/i', $err['message'])){
-							$errMsg = "You don't have permission to repair " . htmlentities($file) . ". You need to either fix the file manually using FTP or change the file permissions and ownership so that your web server has write access to repair the file.";
+							$errMsg = "You don't have permission to repair " . wp_kses($file, array()) . ". You need to either fix the file manually using FTP or change the file permissions and ownership so that your web server has write access to repair the file.";
 						} else {
-							$errMsg = "We could not write to " . htmlentities($file) . ". The error was: " . $err['message'];
+							$errMsg = "We could not write to " . wp_kses($file, array()) . ". The error was: " . $err['message'];
 						}
 						$errors[] = $errMsg;
 						continue;
@@ -2059,7 +2065,7 @@ class wordfence {
 					flock($fh, LOCK_UN);
 					fclose($fh);
 					if($bytes < 1){
-						$errors[] = "We could not write to " . htmlentities($file) . ". ($bytes bytes written) You may not have permission to modify files on your WordPress server.";
+						$errors[] = "We could not write to " . wp_kses($file, array()) . ". ($bytes bytes written) You may not have permission to modify files on your WordPress server.";
 						continue;
 					}
 					$filesWorkedOn++;
@@ -2090,7 +2096,7 @@ class wordfence {
 		}
 	}
 	public static function ajax_deleteFile_callback(){
-		$issueID = $_POST['issueID'];
+		$issueID = intval($_POST['issueID']);
 		$wfIssues = new wfIssues();
 		$issue = $wfIssues->getIssueByID($issueID);
 		if(! $issue){
@@ -2114,11 +2120,11 @@ class wordfence {
 				);
 		} else {
 			$err = error_get_last();
-			return array('errorMsg' => "Could not delete file " . htmlentities($file) . ". The error was: " . htmlentities($err['message']));
+			return array('errorMsg' => "Could not delete file " . wp_kses($file, array()) . ". The error was: " . wp_kses($err['message'], array()));
 		}
 	}
 	public static function ajax_restoreFile_callback(){
-		$issueID = $_POST['issueID'];
+		$issueID = intval($_POST['issueID']);
 		$wfIssues = new wfIssues();
 		$issue = $wfIssues->getIssueByID($issueID);
 		if(! $issue){
@@ -2164,7 +2170,7 @@ class wordfence {
 		self::status(4, 'info', "Ajax request received to start scan.");
 		$err = wfScanEngine::startScan();
 		if($err){
-			return array('errorMsg' => htmlentities($err));
+			return array('errorMsg' => wp_kses($err, array()));
 		} else {
 			return array("ok" => 1);
 		}
@@ -2343,7 +2349,7 @@ EOL;
 		return ($a['ctime'] < $b['ctime']) ? -1 : 1;
 	}
 	public static function wfFunc_view(){
-		$localFile = ABSPATH . '/' . preg_replace('/^(?:\.\.|[\/]+)/', '', $_GET['file']);
+		$localFile = ABSPATH . '/' . preg_replace('/^(?:\.\.|[\/]+)/', '', sanitize_text_field($_GET['file']));
 		if(strpos($localFile, '..') !== false){
 			echo "Invalid file requested. (Relative paths not allowed)";
 			exit();
@@ -2386,7 +2392,7 @@ EOL;
 
 		$result = self::getWPFileContent($_GET['file'], $_GET['cType'], $_GET['cName'], $_GET['cVersion']);
 		if( isset( $result['errorMsg'] ) && $result['errorMsg']){
-			echo htmlentities($result['errorMsg']);
+			echo wp_kses($result['errorMsg'], array());
 			exit(0);
 		} else if(! $result['fileContent']){
 			echo "We could not get the contents of the original file to do a comparison.";
@@ -2483,7 +2489,7 @@ EOL;
 			$activationError = substr($activationError, 0, 400) . '...[output truncated]';
 		}
 		if($activationError){
-			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. The output we received during activation was:</strong> ' . htmlspecialchars($activationError) . '</p></div>';
+			echo '<div id="wordfenceConfigWarning" class="updated fade"><p><strong>Wordfence generated an error on activation. The output we received during activation was:</strong> ' . wp_kses($activationError, array()) . '</p></div>';
 		}
 		delete_option('wf_plugin_act_error');
 	}

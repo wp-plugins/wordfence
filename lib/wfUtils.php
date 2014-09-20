@@ -106,20 +106,10 @@ class wfUtils {
 		//return ABSPATH . 'wp-content/plugins/';
 	}
 	public static function defaultGetIP(){
-		$IP = 0;
-		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
-			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
-			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
-		}
-		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['HTTP_X_REAL_IP'])){
-			$IP = $_SERVER['HTTP_X_REAL_IP'];
-			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
-		}
-		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['REMOTE_ADDR'])){
-			$IP = $_SERVER['REMOTE_ADDR'];
-			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
-		}
 		return $IP;
+	}
+	public static function makeRandomIP(){
+		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
 	}
 	public static function isPrivateAddress($addr){
 		$num = self::inet_aton($addr);
@@ -130,79 +120,77 @@ class wfUtils {
 		}
 		return false;
 	}
-	public static function makeRandomIP(){
-		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
-	}
-	public static function getIP(){
-		//You can use the following examples to force Wordfence to think a visitor has a certain IP if you're testing. Remember to re-comment this out or you will break Wordfence badly. 
-		//return '1.2.33.57';
-		//return '4.22.23.114';
-		//return self::makeRandomIP();
-
-		$howGet = wfConfig::get('howGetIPs', false);
-		if($howGet){
-			$IP = $_SERVER[$howGet];
-			if( $howGet == "HTTP_CF_CONNECTING_IP" && (! self::isValidIP($IP)) ){
-				$IP = $_SERVER['REMOTE_ADDR'];
-			}
-		} else {
-			$IP = wfUtils::defaultGetIP();
-		}
-		if(preg_match('/,/', $IP)){
-			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
-			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part) && (! self::isPrivateAddress($part)) ){
-					$IP = trim($part);
-					break;
-				}
-			}
-		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
-			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
-			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part) && (! self::isPrivateAddress($part)) ){
-					$IP = trim($part);
-					break;
-				}
-			}
-			
-		}
-		if(preg_match('/:\d+$/', $IP)){
-			$IP = preg_replace('/:\d+$/', '', $IP);
-		}
-		if(self::isValidIP($IP)){
-			if(wfConfig::get('IPGetFail', false)){
-				if(self::isPrivateAddress($IP) ){
-					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
-				} else {
-					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
-				}
-				wfConfig::set('IPGetFail', '');
-			}
-			return $IP;
-		} else {
-			$xFor = "";
-			if(isset($_SERVER['HTTP_X_FORWARDED_FOR']) ){
-				$xFor = $_SERVER['HTTP_X_FORWARDED_FOR'];
-			}
-			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $xFor . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
-			$possible = array();
-			foreach($_SERVER as $key => $val){
-				if(is_string($val) && preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
-					if($val != '127.0.0.1'){
-						$possible[$key] = $val;
+	private static function getCleanIP($arr){ //Expects an array of items. The items are either IP's or IP's separated by comma, space or tab. Or an array of IP's.
+						//  We then examine all IP's looking for a public IP and storing private IP's in an array. If we find no public IPs we return the first private addr we found.
+		$privates = array(); //Store private addrs until end as last resort. 
+		for($i = 0; $i < count($arr); $i++){ 
+			$item = $arr[$i];
+			if(is_array($item)){ 
+				foreach($item as $j){
+					$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+					if(self::isValidIP($j)){
+						if(self::isPrivateAddress($j)){
+							$privates[] = $j;
+						} else {
+							return $j;
+						}
 					}
 				}
+				continue; //This was an array so we can skip to the next item
 			}
-			if(sizeof($possible) > 0){
-				$msg .= "  Headers that may contain the client IP: ";
-				foreach($possible as $key => $val){
-					$msg .= "$key => $val   ";
+			$skipToNext = false;
+			foreach(array(',', ' ', "\t") as $char){
+				if(strpos($item, $char) !== false){ 
+					$sp = explode($char, $item);
+					foreach($sp as $j){
+						$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+						if(self::isValidIP($j)){
+							if(self::isPrivateAddress($j)){
+								$privates[] = $j;
+							} else {
+								return $j;
+							}
+						}
+					}
+					$skipToNext = true;
+					break;
 				}
 			}
-			wordfence::status(1, 'error', $msg);
-			wfConfig::set('IPGetFail', 1);
+			if($skipToNext){ continue; } //Skip to next item because this one had a comma, space or tab so was delimited and we didn't find anything.
+
+			$item = preg_replace('/:\d+$/', '', $item); //Strip off port
+			if(self::isValidIP($item)){
+				if(self::isPrivateAddress($item)){
+					$privates[] = $item;
+				} else {
+					return $item;
+				}
+			}
+		}
+		if(sizeof($privates) > 0){
+			return $privates[0]; //Return the first private we found so that we respect the order the IP's were passed to this function.
+		} else {
 			return false;
 		}
+	}
+	public static function getIP(){
+		//For debugging. 
+		//return '105.2.33.57';
+		//return self::makeRandomIP();
+		$howGet = wfConfig::get('howGetIPs', false);
+		if($howGet){
+			if($howGet == 'REMOTE_ADDR'){
+				$IP = self::getCleanIP(array($_SERVER['REMOTE_ADDR']));
+			} else {
+				$IP = self::getCleanIP(array($_SERVER[$howGet], $_SERVER['REMOTE_ADDR']));
+			}
+		} else {
+			$IPs = array($_SERVER['REMOTE_ADDR']);
+			if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){ $IPs[] = $_SERVER['HTTP_X_FORWARDED_FOR']; }
+			if(isset($_SERVER['HTTP_X_REAL_IP'])){ $IPs[] = $_SERVER['HTTP_X_REAL_IP']; }
+			$IP = self::getCleanIP($IPs); 
+		}
+		return $IP; //Returns a valid IP or false. 
 	}
 	public static function isValidIP($IP){
 		if(preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/', $IP, $m)){

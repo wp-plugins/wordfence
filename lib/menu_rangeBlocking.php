@@ -16,7 +16,7 @@
 			</ul>
 			</div>
 			<table class="wfConfigForm">
-				<tr><th>Block anyone that has an IP address in this range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if( isset( $_GET['wfBlockRange'] ) && $_GET['wfBlockRange']){ echo htmlentities($_GET['wfBlockRange']); } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
+				<tr><th>Block anyone that has an IP address in this range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if( isset( $_GET['wfBlockRange'] ) && $_GET['wfBlockRange']){ echo wp_kses($_GET['wfBlockRange'], array()); } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> 192.168.200.200 - 192.168.200.220</td></tr>
 				<tr><th>...you can also enter a User-Agent (browser) that matches:</th><td><input id="uaRange" type="text" size="30" maxlength="255" >&nbsp;(Case insensitive)</td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *badRobot*, AnotherBadRobot*, *someKindOfSuffix</td></tr>

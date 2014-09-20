@@ -47,7 +47,12 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><td colspan="2">&nbsp;</td></tr>
 	<tr><th class="wfConfigEnable">Enable automatic scheduled scans</th><td><input type="checkbox" id="scheduledScansEnabled" class="wfConfigElem" name="scheduledScansEnabled" value="1" <?php $w->cb('scheduledScansEnabled'); ?> />&nbsp;Regular scans ensure your site stays secure.</td></tr>
 	<tr><td colspan="2">&nbsp;</td></tr>
-	<tr><th class="wfConfigEnable">Update Wordfence automatically when a new version is released?</th><td><input type="checkbox" id="autoUpdate" class="wfConfigElem" name="autoUpdate" value="1" <?php $w->cb('autoUpdate'); ?> />&nbsp;Automatically updates Wordfence to the newest version within 24 hours of a new release.</td></tr>
+	<tr><th class="wfConfigEnable">Update Wordfence automatically when a new version is released?</th><td><input type="checkbox" id="autoUpdate" class="wfConfigElem" name="autoUpdate" value="1" <?php $w->cb('autoUpdate'); ?> />&nbsp;Automatically updates Wordfence to the newest version within 24 hours of a new release.<br />
+		<?php if(getenv('noabort') != '1' && stristr($_SERVER['SERVER_SOFTWARE'], 'litespeed') !== false){ ?>
+		<span style="color: #F00;">Warning: </span>You are running LiteSpeed web server and you don't have the "noabort" variable set in your .htaccess.<br />
+		<a href="https://support.wordfence.com/solution/articles/1000129050-running-wordfence-under-litespeed-web-server-and-preventing-process-killing-or" target="_blank">Please read this article in our FAQ to make an important change that will ensure your site stability during an update.<br />
+		<?php } ?>
+	</td></tr>
 	<tr><td colspan="2">&nbsp;</td></tr>
 
 	<tr><th>Where to email alerts:</th><td><input type="text" id="alertEmails" name="alertEmails" value="<?php $w->f('alertEmails'); ?>" size="50" />&nbsp;<span class="wfTipText">Separate multiple emails with commas</span></td></tr>
@@ -64,11 +69,11 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 		</td></tr>
 	<tr><th>How does Wordfence get IPs:</th><td>
 		<select id="howGetIPs" name="howGetIPs">
-			<option value="">Set this option if you're seeing visitors from fake IP addresses or who appear to be from your internal network but aren't.</option>
-			<option value="REMOTE_ADDR"<?php $w->sel('howGetIPs', 'REMOTE_ADDR'); ?>>Use PHP's built in REMOTE_ADDR. Use this if you're not using Nginx or any separate front-end proxy or firewall. Try this first.</option>
-			<option value="HTTP_X_REAL_IP"<?php $w->sel('howGetIPs', 'HTTP_X_REAL_IP'); ?>>Use the X-Real-IP HTTP header which my Nginx, firewall or front-end proxy is setting. Try this next.</option>
-			<option value="HTTP_X_FORWARDED_FOR"<?php $w->sel('howGetIPs', 'HTTP_X_FORWARDED_FOR'); ?>>Use the X-Forwarded-For HTTP header which my Nginx, firewall or front-end proxy is setting.</option>
-			<option value="HTTP_CF_CONNECTING_IP"<?php $w->sel('howGetIPs', 'HTTP_CF_CONNECTING_IP'); ?>>I'm using Cloudflare so use the "CF-Connecting-IP" HTTP header to get a visitor IP</option>
+			<option value="">Let Wordfence use the most secure method to get visitor IP addresses. Prevents spoofing and works with most sites.</option>
+			<option value="REMOTE_ADDR"<?php $w->sel('howGetIPs', 'REMOTE_ADDR'); ?>>Use PHP's built in REMOTE_ADDR and don't use anything else. Very secure if this is compatible with your site.</option>
+			<option value="HTTP_X_FORWARDED_FOR"<?php $w->sel('howGetIPs', 'HTTP_X_FORWARDED_FOR'); ?>>Use the X-Forwarded-For HTTP header. Only use if you have a front-end proxy or spoofing may result.</option>
+			<option value="HTTP_X_REAL_IP"<?php $w->sel('howGetIPs', 'HTTP_X_REAL_IP'); ?>>Use the X-Real-IP HTTP header. Only use if you have a front-end proxy or spoofing may result.</option>
+			<option value="HTTP_CF_CONNECTING_IP"<?php $w->sel('howGetIPs', 'HTTP_CF_CONNECTING_IP'); ?>>Use the Cloudflare "CF-Connecting-IP" HTTP header to get a visitor IP. Only use if you're using Cloudflare.</option>
 		</select>
 		</td></tr>
 	</table>
@@ -261,7 +266,9 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th colspan="2" style="color: #999;">Whitelisted IP's must be separated by commas. You can specify ranges using the following format: 123.23.34.[1-50]<br />Wordfence automatically whitelists <a href="http://en.wikipedia.org/wiki/Private_network" target="_blank">private networks</a> because these are not routable on the public Internet.<br /><br /></th></tr>
 
 	<tr><th>Immediately block IP's that access these URLs:</th><td><input type="text" name="bannedURLs" id="bannedURLs" value="<?php echo $w->getHTML('bannedURLs'); ?>" size="40" /></td></tr>
-	<tr><th colspan="2" style="color: #999;">Separate multiple URL's with commas. If you see an attacker repeatedly probing your site for a known vulnerability you can use this to immediately block them.<br /><br /></th></tr>
+	<tr><th colspan="2" style="color: #999;">Separate multiple URL's with commas. If you see an attacker repeatedly probing your site for a known vulnerability you can use this to immediately block them.<br />
+		All URL's must start with a '/' without quotes and must be relative. e.g. /badURLone/, /bannedPage.html, /dont-access/this/URL/
+	<br /><br /></th></tr>
 
 	<tr><th>Hide WordPress version</th><td><input type="checkbox" id="other_hideWPVersion" class="wfConfigElem" name="other_hideWPVersion" value="1" <?php $w->cb('other_hideWPVersion'); ?> /></td></tr>
 	<tr><th>Hold anonymous comments using member emails for moderation</th><td><input type="checkbox" id="other_noAnonMemberComments" class="wfConfigElem" name="other_noAnonMemberComments" value="1" <?php $w->cb('other_noAnonMemberComments'); ?> /></td></tr>

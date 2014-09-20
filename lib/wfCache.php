@@ -154,8 +154,8 @@ class wfCache {
 			$append .= "Time created on server: " . date('Y-m-d H:i:s T') . ". ";
 			$append .= "Is HTTPS page: " . (self::isHTTPSPage() ? 'HTTPS' : 'no') . ". ";
 			$append .= "Page size: " . strlen($buffer) . " bytes. ";
-			$append .= "Host: " . ($_SERVER['HTTP_HOST'] ? htmlentities($_SERVER['HTTP_HOST']) : htmlentities($_SERVER['SERVER_NAME'])) . ". ";
-			$append .= "Request URI: " . htmlentities($_SERVER['REQUEST_URI']) . " ";
+			$append .= "Host: " . ($_SERVER['HTTP_HOST'] ? wp_kses($_SERVER['HTTP_HOST'], array()) : wp_kses($_SERVER['SERVER_NAME'], array())) . ". ";
+			$append .= "Request URI: " . wp_kses($_SERVER['REQUEST_URI'], array()) . " ";
 			$appendGzip = $append . " Encoding: GZEncode -->\n";
 			$append .= " Encoding: Uncompressed -->\n";
 		}
@@ -193,7 +193,7 @@ class wfCache {
 	public static function makeDirIfNeeded($file){
 		$file = preg_replace('/\/[^\/]*$/', '', $file);
 		if(! is_dir($file)){
-			mkdir($file, 0755, true);
+			@mkdir($file, 0755, true);
 		}
 	}
 	public static function logout(){

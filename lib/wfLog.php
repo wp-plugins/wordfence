@@ -164,6 +164,11 @@ class wfLog {
 		if(wfUtils::isPrivateAddress($IP)){
 			return true;
 		}
+		//These belong to sucuri's scanning servers which will get blocked by Wordfence as a false positive if you try a scan. So we whitelisted them.
+		$externalWhite = array('97.74.127.171','69.164.203.172','173.230.128.135','66.228.34.49','66.228.40.185','50.116.36.92','50.116.36.93','50.116.3.171','198.58.96.212','50.116.63.221','192.155.92.112','192.81.128.31','198.58.106.244','192.155.95.139','23.239.9.227','198.58.112.103','192.155.94.43','162.216.16.33','173.255.233.124','173.255.233.124','192.155.90.179','50.116.41.217','192.81.129.227','198.58.111.80');
+		if(in_array($IP, $externalWhite)){
+			return true;
+		}
 		$list = wfConfig::get('whitelisted');
 		if(! $list){ return false; }
 		$list = explode(',', $list);
@@ -235,7 +240,7 @@ class wfLog {
 			}
 			$blockDat = explode('|', $elem['blockString']);
 			$elem['ipPattern'] = "";
-			$haveIPBLock = false;
+			$haveIPBlock = false;
 			$haveBrowserBlock = false;
 			if($blockDat[0]){
 				$haveIPBlock = true;
@@ -862,6 +867,7 @@ class wfLog {
 		foreach($results as &$rec){
 			//$rec['timeAgo'] = wfUtils::makeTimeAgo(time() - $rec['ctime']);
 			$rec['date'] = date('M d H:i:s', $rec['ctime'] + $timeOffset);
+			$rec['msg'] = wp_kses_data( (string) $rec['msg']);
 		}
 		return $results;
 	}
