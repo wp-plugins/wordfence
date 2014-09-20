@@ -42,7 +42,6 @@ class wfScanEngine {
 		$this->startTime = time();
 		$this->maxExecTime = self::getMaxExecutionTime();
 		$this->i = new wfIssues();
-		$this->i->deleteNew();
 		$this->cycleStartTime = time();
 		$this->wp_version = wfUtils::getWPVersion();
 		$this->apiKey = wfConfig::get('apiKey');
@@ -50,6 +49,9 @@ class wfScanEngine {
 		include('wfDict.php'); //$dictWords
 		$this->dictWords = $dictWords;
 		$this->jobList[] = 'publicSite';
+		$this->jobList[] = 'checkSpamvertized';
+		$this->jobList[] = 'checkSpamIP';
+		$this->jobList[] = 'heartbleed';
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
 		$this->jobList[] = 'knownFiles_finish';
@@ -62,6 +64,9 @@ class wfScanEngine {
 				}
 			}
 		}
+	}
+	public function deleteNewIssues(){
+		$this->i->deleteNew();
 	}
 	public function __wakeup(){
 		$this->cycleStartTime = time();
@@ -119,14 +124,32 @@ class wfScanEngine {
 		$this->status(1, 'info', '-------------------');
 		$this->status(1, 'info', "Scan Complete. Scanned " . $summary['totalFiles'] . " files, " . $summary['totalPlugins'] . " plugins, " . $summary['totalThemes'] . " themes, " . ($summary['totalPages'] + $summary['totalPosts']) . " pages, " . $summary['totalComments'] . " comments and " . $summary['totalRows'] . " records in " . (time() - $this->startTime) . " seconds.");
 		if($this->i->totalIssues  > 0){
-			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below for details.");
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. You have " . $this->i->totalIssues . " new issues to fix. See below.");
 		} else {
-			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, there were no problems found.");
+			$this->status(10, 'info', "SUM_FINAL:Scan complete. Congratulations, no problems found.");
 		}
 		return;
 	}
 	public function getCurrentJob(){
 		return $this->jobList[0];
+	}
+	private function scan_heartbleed(){
+		if(wfConfig::get('scansEnabled_heartbleed')){
+			$this->statusIDX['heartbleed'] = wordfence::statusStart("Scanning your site for the HeartBleed vulnerability");
+			$result = $this->api->call('scan_heartbleed', array(), array(
+				'siteURL' => site_url()
+				));
+			$haveIssues = false;
+			if($result['haveIssues'] && is_array($result['issues']) ){
+				foreach($result['issues'] as $issue){
+					$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+					$haveIssues = true;
+				}
+			}
+			wordfence::statusEnd($this->statusIDX['heartbleed'], $haveIssues);
+		} else {
+			wordfence::statusDisabled("Skipping HeartBleed scan");
+		}
 	}
 	private function scan_publicSite(){
 		if(wfConfig::get('isPaid')){
@@ -152,6 +175,54 @@ class wfScanEngine {
 			sleep(2); //enough time to read the message before it scrolls off.
 		}
 	}
+	private function scan_checkSpamIP(){
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('checkSpamIP')){
+				$this->statusIDX['checkSpamIP'] = wordfence::statusStart("Checking if your site IP is generating spam");
+				$result = $this->api->call('check_spam_ip', array(), array(
+					'siteURL' => site_url()
+					));
+				$haveIssues = false;
+				if($result['haveIssues'] && is_array($result['issues']) ){
+					foreach($result['issues'] as $issue){
+						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+						$haveIssues = true;
+					}
+				}
+				wordfence::statusEnd($this->statusIDX['checkSpamIP'], $haveIssues);
+			} else {
+				wordfence::statusDisabled("Skipping check if your IP is generating spam");
+			}
+
+		} else {
+			wordfence::statusPaidOnly("Checking if your IP is generating spam is for paid members only");
+			sleep(2);
+		}
+	}
+	private function scan_checkSpamvertized(){
+		if(wfConfig::get('isPaid')){
+			if(wfConfig::get('spamvertizeCheck')){
+				$this->statusIDX['spamvertizeCheck'] = wordfence::statusStart("Checking if your site is being Spamvertised");
+				$result = $this->api->call('spamvertize_check', array(), array(
+					'siteURL' => site_url()
+					));
+				$haveIssues = false;
+				if($result['haveIssues'] && is_array($result['issues']) ){
+					foreach($result['issues'] as $issue){
+						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+						$haveIssues = true;
+					}
+				}
+				wordfence::statusEnd($this->statusIDX['spamvertizeCheck'], $haveIssues);
+			} else {
+				wordfence::statusDisabled("Skipping check if your site is being spamvertized");
+			}
+
+		} else {
+			wordfence::statusPaidOnly("Check if your site is being Spamvertized is for paid members only");
+			sleep(2);
+		}
+	}
 	private function scan_knownFiles_init(){
 		$this->status(1, 'info', "Contacting Wordfence to initiate scan");
 		$this->api->call('log_scan', array(), array());
@@ -166,6 +237,7 @@ class wfScanEngine {
 		}
 		$includeInKnownFilesScan = array();
 		foreach($baseContents as $file){ //Only include base files less than a meg that are files.
+			if($file == '.' || $file == '..'){ continue; }
 			$fullFile = rtrim(ABSPATH, '/') . '/' . $file;
 			if($scanOutside){
 				$includeInKnownFilesScan[] = $file;
@@ -319,6 +391,7 @@ class wfScanEngine {
 			throw new Exception($this->hoover->errorMsg);
 		
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -411,6 +484,7 @@ class wfScanEngine {
 			wordfence::statusEndErr();
 			throw new Exception($this->hoover->errorMsg);
 		}
+		$this->hoover->cleanup();
 		$haveIssues = false;
 		foreach($hooverResults as $idString => $hresults){
 			$arr = explode('-', $idString);
@@ -474,6 +548,7 @@ class wfScanEngine {
 		if($h->errorMsg){
 			return false;
 		}
+		$h->cleanup();
 		if(sizeof($hooverResults) > 0 && isset($hooverResults[1])){
 			$hresults = $hooverResults[1];	
 			foreach($hresults as $result){
@@ -506,16 +581,16 @@ class wfScanEngine {
 				} else {
 					$row['table'] = $prefix . $row['blog_id'] . '_' . $table;
 				}
-				array_push($blogsToScan, $row); 
+				$blogsToScan[] = $row; 
 			}
 		} else {
-			array_push($blogsToScan, array(
+			$blogsToScan[] = array(
 				'isMultisite' => false,
 				'table' => $prefix . $table,
 				'blog_id' => '1',
 				'domain' => '',
 				'path' => '',
-				));
+				);
 		}
 		return $blogsToScan;
 	}
@@ -703,7 +778,7 @@ class wfScanEngine {
 			foreach($cnameArrRec as $elem){ 
 				$this->status(2, 'info', "Scanning CNAME DNS record for " . $elem['host']);
 				if($elem['host'] == $host){ 
-					array_push($cnameArr, $elem); 
+					$cnameArr[] = $elem; 
 					$cnamesWeMustTrack[] = $elem['target'];
 				} 
 			}
@@ -731,7 +806,7 @@ class wfScanEngine {
 			foreach($aArrRec as $elem){ 
 				$this->status(2, 'info', "Scanning DNS A record for " . $elem['host']);
 				if($elem['host'] == $host || in_array($elem['host'], $cnamesWeMustTrack) ){ 
-					array_push($aArr, $elem); 
+					$aArr[] = $elem; 
 				} 
 			}
 			function wfAnonFunc2($a){ return $a['host'] . ' points to ' . $a['ip']; }
@@ -759,7 +834,7 @@ class wfScanEngine {
 			foreach($mxArrRec as $elem){
 				$this->status(2, 'info', "Scanning DNS MX record for " . $elem['host']); 
 				if($elem['host'] == $host){ 
-					array_push($mxArr, $elem); 
+					$mxArr[] = $elem; 
 				} 
 			}
 			function wfAnonFunc3($a){ return $a['target']; }
@@ -862,6 +937,7 @@ class wfScanEngine {
 	}
 	public static function startScan($isFork = false){
 		if(! $isFork){ //beginning of scan
+			wfConfig::inc('totalScansRun');	
 			wfConfig::set('wfKillRequested', 0);
 			wordfence::status(4, 'info', "Entering start scan routine");
 			if(wfUtils::isScanRunning()){
@@ -870,22 +946,25 @@ class wfScanEngine {
 		}
 		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
 		$testURL = admin_url('admin-ajax.php?action=wordfence_testAjax');
-		$testResult = wp_remote_post($testURL, array(
-			'timeout' => $timeout,
-			'blocking' => true,
-			'sslverify' => false,
-			'headers' => array()
-			));
-		
+		$testResults = false;
+		if(! wfConfig::get('startScansRemotely', false)){
+			$testResult = wp_remote_post($testURL, array(
+				'timeout' => $timeout,
+				'blocking' => true,
+				'sslverify' => false,
+				'headers' => array()
+				));
+			wordfence::status(4, 'info', "Test result of scan start URL fetch: " . var_export($testResult, true));	
+		}
 		$cronKey = wfUtils::bigRandomHex();
 		wfConfig::set('currentCronKey', time() . ',' . $cronKey);
-		if( (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
+		if( (! wfConfig::get('startScansRemotely', false)) && (! is_wp_error($testResult)) && is_array($testResult) && strstr($testResult['body'], 'WFSCANTESTOK') !== false){
 			//ajax requests can be sent by the server to itself
 			$cronURL = 'admin-ajax.php?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
 			$cronURL = admin_url($cronURL);
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
-			$result = wp_remote_post( $cronURL, array(
+			$result = wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
@@ -898,7 +977,8 @@ class wfScanEngine {
 			$cronURL .= '?action=wordfence_doScan&isFork=' . ($isFork ? '1' : '0') . '&cronKey=' . $cronKey;
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron via proxy at URL $cronURL");
-			$result = wp_remote_post( $cronURL, array(
+
+			$result = wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
