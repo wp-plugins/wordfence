@@ -720,7 +720,12 @@ class wfLog {
 						if(strtoupper($blocked) == strtoupper($country)){ //At this point we know the user has been blocked
 							if(wfConfig::get('cbl_action') == 'redir'){
 								$redirURL = wfConfig::get('cbl_redirURL');
-								if(wfUtils::extractBareURI($redirURL) == $bareRequestURI){ //Is this the URI we want to redirect to, then don't block it
+								$eRedirHost = wfUtils::extractHostname($redirURL);
+								$isExternalRedir = false;
+								if($eRedirHost && $eRedirHost != wfUtils::extractHostname(home_url())){ //It's an external redirect...
+									$isExternalRedir = true;
+								}
+								if( (! $isExternalRedir) && wfUtils::extractBareURI($redirURL) == $bareRequestURI){ //Is this the URI we want to redirect to, then don't block it
 									//Do nothing
 								/* Uncomment the following if page components aren't loading for the page we redirect to.
 								   Uncommenting is not recommended because it means that anyone from a blocked country

@@ -173,9 +173,16 @@ class wfUtils {
 			return false;
 		}
 	}
+	public static function extractHostname($str){
+		if(preg_match('/https?:\/\/([a-zA-Z0-9\.\-]+)(?:\/|$)/i', $str, $matches)){
+			return strtolower($matches[1]);
+		} else {
+			return false;
+		}
+	}
 	public static function getIP(){
 		//For debugging. 
-		//return '105.2.33.57';
+		//return '54.232.205.132';
 		//return self::makeRandomIP();
 		$howGet = wfConfig::get('howGetIPs', false);
 		if($howGet){
