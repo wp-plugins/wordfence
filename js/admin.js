@@ -33,6 +33,8 @@ window['wordfenceAdmin'] = {
 	currentPointer: false,
 	countryMap: false,
 	countryCodesToSave: "",
+	performanceScale: 3,
+	performanceMinWidth: 20,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
 		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
@@ -51,11 +53,27 @@ window['wordfenceAdmin'] = {
 			}
 		} else if(jQuery('#wordfenceMode_activity').length > 0){
 			this.mode = 'activity';
-			this.activityMode = 'hit';
+			var self = this;	
+			this.setupSwitches('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){});			
+			jQuery('#wfLiveTrafficOnOff').change(function(){
+				if(/^(?:falcon|php)$/.test(WordfenceAdminVars.cacheType) ){
+					jQuery('#wfLiveTrafficOnOff').attr('checked', false);
+					self.colorbox('400px', "Live Traffic not available in high performance mode", "Please note that you can't enable live traffic when Falcon Engine or basic caching is enabled. This is done for performance reasons. If you want live traffic, go to the 'Performance Setup' menu and disable caching.");
+				} else {
+					self.updateSwitch('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){ window.location.reload(true); }); 
+				}
+				});
+
+			if(WordfenceAdminVars.liveTrafficEnabled){
+				this.activityMode = 'hit';
+			} else {
+				this.activityMode = 'loginLogout';
+				this.switchTab(jQuery('#wfLoginLogoutTab'), 'wfTab1', 'wfDataPanel', 'wfActivity_loginLogout', function(){ WFAD.activityTabChanged(); });
+			}
 			startTicker = true;
 			if(! this.tourClosed){
 				var self = this;
-				this.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+				this.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about Site Performance", function(){ self.tourRedir('WordfenceSitePerf'); });
 			}
 		} else if(jQuery('#wordfenceMode_options').length > 0){
 			this.mode = 'options';
@@ -128,16 +146,75 @@ window['wordfenceAdmin'] = {
 				var self = this;	
 				this.tour('wfWelcomeContentScanSched', 'wfHeading', 'top', 'left', "Learn about WHOIS", function(){ self.tourRedir('WordfenceWhois'); });
 			}
+		} else if(jQuery('#wordfenceMode_caching').length > 0){
+			this.mode = 'caching';
+			startTicker = false;
+			if(! this.tourClosed){
+				var self = this;
+				this.tour('wfWelcomeContentCaching', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+			}
+			this.loadCacheExclusions();
+//		} else if(jQuery('#wordfenceMode_perfStats').length > 0){
+//			var self = this;
+//			this.loadAvgSitePerf();
+//			this.setupSwitches('wfPerfOnOff', 'perfLoggingEnabled', function(){});			
+//			jQuery('#wfPerfOnOff').change(function(){ self.updateSwitch('wfPerfOnOff', 'perfLoggingEnabled', function(){}); });
+//			this.mode = 'perfStats';
+//			startTicker = true;
+//			if(! this.tourClosed){
+//				var self = this;
+//				this.tour('wfWelcomeContentCaching', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
+//			}
 		} else {
 			this.mode = false;
 		}
 		if(this.mode){ //We are in a Wordfence page
 			var self = this;
 			if(startTicker){
+				this.updateTicker();
 				this.liveInt = setInterval(function(){ self.updateTicker(); }, WordfenceAdminVars.actUpdateInterval);
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
+	},
+	sendTestEmail: function(email){
+		var self = this;
+		this.ajax('wordfence_sendTestEmail', { email: email }, function(res){
+			if(res.result){
+				self.colorbox('400px', "Test Email Sent", "Your test email was sent to the requested email address. The result we received from the WordPress wp_mail() function was: " + 
+					res.result + "<br /><br />A 'True' result means WordPress thinks the mail was sent without errors. A 'False' result means that WordPress encountered an error sending your mail. Note that it's possible to get a 'True' response with an error elsewhere in your mail system that may cause emails to not be delivered.");
+			}
+			});
+	},
+	loadAvgSitePerf: function(){
+		var self = this;
+		this.ajax('wordfence_loadAvgSitePerf', { limit: jQuery('#wfAvgPerfNum').val() }, function(res){
+			res['scale'] = self.performanceScale;
+			res['min'] = self.performanceMinWidth;
+			jQuery('#wfAvgSitePerfContent').empty();
+			var newElem = jQuery('#wfAvgPerfTmpl').tmpl(res);
+			newElem.prependTo('#wfAvgSitePerfContent').fadeIn();
+			});
+	},
+	updateSwitch: function(elemID, configItem, cb){
+		var setting = jQuery('#' + elemID).is(':checked');
+		this.updateConfig(configItem, jQuery('#' + elemID).is(':checked') ? 1 : 0, cb);
+	},
+	setupSwitches: function(elemID, configItem, cb){
+		jQuery('.wfOnOffSwitch-checkbox').change(function(){ 
+			jQuery.data(this, 'lastSwitchChange', (new Date()).getTime()); 
+		});
+		var self = this;
+		jQuery('div.wfOnOffSwitch').mouseup( function(){ 
+			var elem = jQuery(this); 
+			setTimeout(function(){ 
+				var checkedElem = elem.find('.wfOnOffSwitch-checkbox');
+				if((new Date()).getTime() - jQuery.data(checkedElem[0], 'lastSwitchChange') > 300){ 
+					checkedElem.prop('checked', ! checkedElem.is(':checked') ); 
+					self.updateSwitch(elemID, configItem, cb);
+				}
+			}, 50); 
+		});
 	},
 	scanTourStart: function(){
 		var self = this;
@@ -149,6 +226,9 @@ window['wordfenceAdmin'] = {
 	},
 	tourRedir: function(menuItem){
 		window.location.href = 'admin.php?page=' + menuItem;
+	},
+	updateConfig: function(key, val, cb){
+		this.ajax('wordfence_updateConfig', { key: key, val: val }, function(){ cb(); });
 	},
 	tourFinish: function(){
 		this.ajax('wordfence_tourClosed', {}, function(res){});
@@ -331,7 +411,7 @@ window['wordfenceAdmin'] = {
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_PAIDONLY:') != -1){
 			var msg = item.msg.replace('SUM_PAIDONLY:', '');
-			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
+			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_FINAL:') != -1){
 			var msg = item.msg.replace('SUM_FINAL:', '');
@@ -368,6 +448,9 @@ window['wordfenceAdmin'] = {
 		var otherParams = '';
 		if(this.mode == 'activity' && /^(?:404|hit|human|ruser|gCrawler|crawler|loginLogout)$/.test(this.activityMode)){
 			alsoGet = 'logList_' + this.activityMode;
+			otherParams = this.newestActivityTime;
+		} else if(this.mode == 'perfStats'){
+			alsoGet = 'perfStats';
 			otherParams = this.newestActivityTime;
 		}
 		this.ajax('wordfence_ticker', { 
@@ -419,6 +502,36 @@ window['wordfenceAdmin'] = {
 			} else {
 				if(! haveEvents){
 					jQuery('#wfActivity_' + this.activityMode).html('<div>No events to report yet.</div>');
+				}
+			}
+			var self = this;
+			jQuery('.wfTimeAgo').each(function(idx, elem){
+				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
+				});
+		} else if(this.mode == 'perfStats'){
+			var haveEvents = false;
+			if(jQuery('#wfPerfStats .wfPerfEvent').length > 0){
+				haveEvents = true;
+			}
+			if(res.events.length > 0){
+				if(! haveEvents){
+					jQuery('#wfPerfStats').empty();
+				}
+				var curLength = parseInt(jQuery('#wfPerfStats').css('width'));
+				if(res.longestLine > curLength){
+					jQuery('#wfPerfStats').css('width', (res.longestLine + 200) + 'px');
+				}
+				this.newestActivityTime = res.events[0]['ctime'];
+				for(var i = res.events.length - 1; i >= 0; i--){
+					res.events[i]['scale'] = this.performanceScale;
+					res.events[i]['min'] = this.performanceMinWidth;
+					var newElem = jQuery('#wfPerfStatTmpl').tmpl(res.events[i]);
+					jQuery(newElem).find('.wfTimeAgo').data('wfctime', res.events[i].ctime);
+					newElem.prependTo('#wfPerfStats').fadeIn();
+				}
+			} else {
+				if(! haveEvents){
+					jQuery('#wfPerfStats').html('<p>No events to report yet.</p>');
 				}
 			}
 			var self = this;
@@ -512,7 +625,11 @@ window['wordfenceAdmin'] = {
 	},
 	displayIssues: function(res, callback){
 		var self = this;
-		res.summary['lastScanCompleted'] = res['lastScanCompleted'];
+		try {
+			res.summary['lastScanCompleted'] = res['lastScanCompleted'];
+		} catch(err){ 
+			res.summary['lastScanCompleted'] = 'Never';
+		}
 		jQuery('.wfIssuesContainer').hide();
 		for(issueStatus in res.issuesLists){ 
 			var containerID = 'wfIssues_dataTable_' + issueStatus;
@@ -524,7 +641,7 @@ window['wordfenceAdmin'] = {
 			if(res.issuesLists[issueStatus].length < 1){
 				if(issueStatus == 'new'){
 					if(res.lastScanCompleted == 'ok'){
-						jQuery('#' + containerID).html('<p style="font-size: 20px; color: #0A0;">Congratulations! You have no security issues on your site.</p>');
+						jQuery('#' + containerID).html('<p style="font-size: 20px; color: #0A0;">Congratulations! No security problems were detected by Wordfence.</p>');
 					} else if(res['lastScanCompleted']){
 						//jQuery('#' + containerID).html('<p style="font-size: 12px; color: #A00;">The latest scan failed: ' + res.lastScanCompleted + '</p>');
 					} else {
@@ -638,6 +755,39 @@ window['wordfenceAdmin'] = {
 	},
 	scanRunningMsg: function(){ this.colorbox('400px', "A scan is running", "A scan is currently in progress. Please wait until it finishes before starting another scan."); },
 	errorMsg: function(msg){ this.colorbox('400px', "An error occurred:", msg); },
+	bulkOperation: function(op){
+		var self = this;
+		if(op == 'del' || op == 'repair'){
+			var ids = jQuery('input.wf' + op + 'Checkbox:checked').map(function(){ return jQuery(this).val(); }).get();
+			if(ids.length < 1){
+				this.colorbox('400px', "No files were selected", "You need to select files to perform a bulk operation. There is a checkbox in each issue that lets you select that file. You can then select a bulk operation and hit the button to perform that bulk operation.");
+				return;
+			}
+			if(op == 'del'){
+				this.colorbox('400px', "Are you sure you want to delete?", "Are you sure you want to delete a total of " + ids.length + " files? Do not delete files on your system unless you're ABSOLUTELY sure you know what you're doing. If you delete the wrong file it could cause your WordPress website to stop functioning and you will probably have to restore from backups. If you're unsure, Cancel and work with your hosting provider to clean your system of infected files.<br /><br /><input type=\"button\" value=\"Delete Files\" onclick=\"WFAD.bulkOperationConfirmed('" + op + "');\" />&nbsp;&nbsp;<input type=\"button\" value=\"Cancel\" onclick=\"jQuery.colorbox.close();\" /><br />");
+			} else if(op == 'repair'){
+				this.colorbox('400px', "Are you sure you want to repair?", "Are you sure you want to repair a total of " + ids.length + " files? Do not repair files on your system unless you're sure you have reviewed the differences between the original file and your version of the file in the files you are repairing. If you repair a file that has been customized for your system by a developer or your hosting provider it may leave your system unusable. If you're unsure, Cancel and work with your hosting provider to clean your system of infected files.<br /><br /><input type=\"button\" value=\"Repair Files\" onclick=\"WFAD.bulkOperationConfirmed('" + op + "');\" />&nbsp;&nbsp;<input type=\"button\" value=\"Cancel\" onclick=\"jQuery.colorbox.close();\" /><br />");
+			}
+		} else {
+			return;
+		}
+	},
+	bulkOperationConfirmed: function(op){
+		jQuery.colorbox.close();
+		var self = this;
+		this.ajax('wordfence_bulkOperation', {
+			op: op,
+			ids: jQuery('input.wf' + op + 'Checkbox:checked').map(function(){ return jQuery(this).val(); }).get()
+			}, function(res){ self.doneBulkOperation(res); });
+	},
+	doneBulkOperation: function(res){
+		var self = this;
+		if(res.ok){
+			this.loadIssues(function(){ self.colorbox('400px', res.bulkHeading, res.bulkBody); });
+		} else {
+			this.loadIssues(function(){});
+		}
+	},
 	deleteFile: function(issueID){
 		var self = this;
 		this.ajax('wordfence_deleteFile', {
@@ -821,7 +971,13 @@ window['wordfenceAdmin'] = {
 			} else if(this.activityMode == 'throttledIPs'){
 				tmpl = '#wfThrottledIPsTmpl';
 			} else { return; }
-			jQuery(tmpl).tmpl(res).prependTo(contentElem);
+			var i, j, chunk = 1000;
+			var bigArray = res.results.slice(0);
+			res.results = false;
+			for(i = 0, j = bigArray.length; i < j; i += chunk){
+				res.results = bigArray.slice(i, i + chunk);
+				jQuery(tmpl).tmpl(res).appendTo(contentElem);
+			}
 			this.reverseLookupIPs();
 		} else {
 			if(this.activityMode == 'topScanners' || this.activityMode == 'topLeechers'){
@@ -939,6 +1095,7 @@ window['wordfenceAdmin'] = {
 		if(res.ok && res.result && res.result.rawdata && res.result.rawdata.length > 0){
 			var rawhtml = "";
 			for(var i = 0; i < res.result.rawdata.length; i++){
+				res.result.rawdata[i] = jQuery('<div />').text(res.result.rawdata[i]).html();
 				res.result.rawdata[i] = res.result.rawdata[i].replace(/([^\s\t\r\n:;]+@[^\s\t\r\n:;\.]+\.[^\s\t\r\n:;]+)/, "<a href=\"mailto:$1\">$1<\/a>"); 
 				res.result.rawdata[i] = res.result.rawdata[i].replace(/(https?:\/\/[^\/]+[^\s\r\n\t]+)/, "<a target=\"_blank\" href=\"$1\">$1<\/a>"); 
 				var redStyle = "";
@@ -1061,6 +1218,77 @@ window['wordfenceAdmin'] = {
 			setTimeout(function(){ jQuery(sel).fadeOut(); }, 2000);
 			});
 	},
+	getCacheStats: function(){
+		var self = this;
+		this.ajax('wordfence_getCacheStats', {}, function(res){
+			if(res.ok){
+				self.colorbox('400px', res.heading, res.body);
+			}
+			});
+	},
+	clearPageCache: function(){
+		var self = this;
+		this.ajax('wordfence_clearPageCache', {}, function(res){
+			if(res.ok){
+				self.colorbox('400px', res.heading, res.body);
+			}
+			});
+	},
+	switchToFalcon: function(){		
+		var self = this;
+		this.ajax('wordfence_checkFalconHtaccess', {
+			}, function(res){
+				if(res.ok){
+					self.colorbox('400px', "Enabling Falcon Engine", 'First read this <a href="http://www.wordfence.com/introduction-to-wordfence-falcon-engine/" target="_blank">Introduction to Falcon Engine</a>. Falcon modifies your website configuration file which is called your .htaccess file. To enable Falcon we ask that you make a backup of this file. This is a safety precaution in case for some reason Falcon is not compatible with your site.<br /><br /><a href="' + WordfenceAdminVars.ajaxURL + '?action=wordfence_downloadHtaccess&nonce=' + self.nonce + '" onclick="jQuery(\'#wfNextBut\').prop(\'disabled\', false); return true;">Click here to download a backup copy of your .htaccess file now</a><br /><br /><input type="button" name="but1" id="wfNextBut" value="Click to Enable Falcon Engine" disabled="disabled" onclick="WFAD.confirmSwitchToFalcon(0);" />');
+				} else if(res.nginx){
+					self.colorbox('400px', "Enabling Falcon Engine", 'You are using an Nginx web server and using a FastCGI processor like PHP5-FPM. To use Falcon you will need to manually modify your nginx.conf configuration file and reload your Nginx server for the changes to take effect. You can find the <a href="http://www.wordfence.com/blog/2014/05/nginx-wordfence-falcon-engine-php-fpm-fastcgi-fast-cgi/" target="_blank">rules you need to make these changes to nginx.conf on this page on wordfence.com</a>. Once you have made these changes, compressed cached files will be served to your visitors directly from Nginx making your site extremely fast. When you have made the changes and reloaded your Nginx server, you can click the button below to enable Falcon.<br /><br /><input type="button" name="but1" id="wfNextBut" value="Click to Enable Falcon Engine" onclick="WFAD.confirmSwitchToFalcon(1);" />');
+				} else if(res.err){
+					self.colorbox('400px', "We encountered a problem", "We can't modify your .htaccess file for you because: " + res.err + "<br /><br />Advanced users: If you would like to manually enable Falcon yourself by editing your .htaccess, you can add the rules below to the beginning of your .htaccess file. Then click the button below to enable Falcon. Don't do this unless you understand website configuration.<br /><textarea style='width: 300px; height:100px;' readonly>" + jQuery('<div/>').text(res.code).html() + "</textarea><br /><input type='button' value='Enable Falcon after manually editing .htaccess' onclick='WFAD.confirmSwitchToFalcon(1);' />");
+				}
+			});
+	},
+	confirmSwitchToFalcon: function(noEditHtaccess){
+		jQuery.colorbox.close();	
+		var cacheType = 'falcon';
+		var self = this;
+		this.ajax('wordfence_saveCacheConfig', {
+			cacheType: cacheType,
+			noEditHtaccess: noEditHtaccess
+			}, function(res){
+				if(res.ok){
+					self.colorbox('400px', res.heading, res.body);
+				}
+			}
+		);
+	},
+	saveCacheConfig: function(){
+		var cacheType = jQuery('input:radio[name=cacheType]:checked').val();
+		if(cacheType == 'falcon'){
+			return this.switchToFalcon();
+		}
+		var self = this;
+		this.ajax('wordfence_saveCacheConfig', {
+			cacheType: cacheType
+			}, function(res){
+				if(res.ok){
+					self.colorbox('400px', res.heading, res.body);
+				}
+			}
+		);
+	},
+	saveCacheOptions: function(){
+		var self = this;
+		this.ajax('wordfence_saveCacheOptions', {
+			allowHTTPSCaching: (jQuery('#wfallowHTTPSCaching').is(':checked') ? 1 : 0),
+			addCacheComment: (jQuery('#wfaddCacheComment').is(':checked') ? 1 : 0),
+			clearCacheSched: (jQuery('#wfclearCacheSched').is(':checked') ? 1 : 0)
+			}, function(res){
+				if(res.updateErr){
+					self.colorbox('400px', "You need to manually update your .htaccess", res.updateErr + "<br />Your option was updated but you need to change the Wordfence code in your .htaccess to the following:<br /><textarea style='width: 300px; height: 120px;'>" + jQuery('<div/>').text(res.code).html() + '</textarea>');
+				}
+			}
+		);
+	},
 	saveConfig: function(){
 		var qstr = jQuery('#wfConfigForm').serialize();
 		var self = this;
@@ -1180,6 +1408,7 @@ window['wordfenceAdmin'] = {
 		var redirURL = jQuery('#wfRedirURL').val();
 		var loggedInBlocked = jQuery('#wfLoggedInBlocked').is(':checked') ? '1' : '0';
 		var loginFormBlocked = jQuery('#wfLoginFormBlocked').is(':checked') ? '1' : '0';
+		var restOfSiteBlocked = jQuery('#wfRestOfSiteBlocked').is(':checked') ? '1' : '0';
 		var bypassRedirURL = jQuery('#wfBypassRedirURL').val();
 		var bypassRedirDest = jQuery('#wfBypassRedirDest').val();
 		var bypassViewURL = jQuery('#wfBypassViewURL').val();
@@ -1191,6 +1420,7 @@ window['wordfenceAdmin'] = {
 			redirURL: redirURL,
 			loggedInBlocked: loggedInBlocked,
 			loginFormBlocked: loginFormBlocked,
+			restOfSiteBlocked: restOfSiteBlocked,
 			bypassRedirURL: bypassRedirURL,
 			bypassRedirDest: bypassRedirDest,
 			bypassViewURL: bypassViewURL,
@@ -1204,7 +1434,7 @@ window['wordfenceAdmin'] = {
 		var pos = jQuery('#paidWrap').position();
 		var width = jQuery('#paidWrap').width();
 		var height = jQuery('#paidWrap').height();
-		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
+		jQuery('<div style="position: absolute; left: ' + pos.left + 'px; top: ' + pos.top + 'px; background-color: #FFF; width: ' + width + 'px; height: ' + height + 'px;"><div class="paidInnerMsg">' + msg + ' <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade and gain access to this feature.</div></div>').insertAfter('#paidWrap').fadeTo(10000, 0.7);
 	},
 	sched_modeChange: function(){
 		var self = this;
@@ -1357,6 +1587,38 @@ window['wordfenceAdmin'] = {
 			d = num%256 + '.' + d;
 		}
 		return d;
+	},
+	removeCacheExclusion: function(id){
+		this.ajax('wordfence_removeCacheExclusion', { id: id }, function(res){ window.location.reload(true); });
+	},
+	addCacheExclusion: function(patternType, pattern){
+		if(/^https?:\/\//.test(pattern)){
+			this.colorbox('400px', "Incorrect pattern for exclusion", "You can not enter full URL's for exclusion from caching. You entered a full URL that started with http:// or https://. You must enter relative URL's e.g. /exclude/this/page/. You can also enter text that might be contained in the path part of a URL or at the end of the path part of a URL.");
+			return;
+		}
+			
+		this.ajax('wordfence_addCacheExclusion', {
+			patternType: patternType,
+			pattern: pattern
+			}, function(res){
+				if(res.ok){ //Otherwise errorMsg will get caught
+					window.location.reload(true);
+				}
+			});
+	},
+	loadCacheExclusions: function(){
+		this.ajax('wordfence_loadCacheExclusions', {}, function(res){
+			if(res.ex instanceof Array && res.ex.length > 0){
+				for(var i = 0; i < res.ex.length; i++){
+					var newElem = jQuery('#wfCacheExclusionTmpl').tmpl(res.ex[i]);
+					newElem.prependTo('#wfCacheExclusions').fadeIn();
+				}
+				jQuery('<h2>Cache Exclusions</h2>').prependTo('#wfCacheExclusions');
+			} else {
+				jQuery('<h2>Cache Exclusions</h2><p style="width: 500px;">There are not currently any exclusions. If you have a site that does not change often, it is perfectly normal to not have any pages you want to exclude from the cache.</p>').prependTo('#wfCacheExclusions');
+			}
+
+			});
 	}
 };
 window['WFAD'] = window['wordfenceAdmin'];
