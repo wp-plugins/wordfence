@@ -177,6 +177,15 @@ window['wordfenceAdmin'] = {
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
 		}
 	},
+	sendTestEmail: function(email){
+		var self = this;
+		this.ajax('wordfence_sendTestEmail', { email: email }, function(res){
+			if(res.result){
+				self.colorbox('400px', "Test Email Sent", "Your test email was sent to the requested email address. The result we received from the WordPress wp_mail() function was: " + 
+					res.result + "<br /><br />A 'True' result means WordPress thinks the mail was sent without errors. A 'False' result means that WordPress encountered an error sending your mail. Note that it's possible to get a 'True' response with an error elsewhere in your mail system that may cause emails to not be delivered.");
+			}
+			});
+	},
 	loadAvgSitePerf: function(){
 		var self = this;
 		this.ajax('wordfence_loadAvgSitePerf', { limit: jQuery('#wfAvgPerfNum').val() }, function(res){

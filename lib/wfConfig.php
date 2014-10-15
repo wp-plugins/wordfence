@@ -752,13 +752,18 @@ class wfConfig {
 	public static function autoUpdate(){
 		try {
 			if(getenv('noabort') != '1' && stristr($_SERVER['SERVER_SOFTWARE'], 'litespeed') !== false){
-				 wordfence::alert("Wordfence Upgrade not run. Please modify your .htaccess", "To preserve the integrity of your website we are not running Wordfence auto-update.\n" .
-				 	"You are running the LiteSpeed web server which has been known to cause a problem with Wordfence auto-update.\n" .
-					"Please go to your website now and make a minor change to your .htaccess to fix this.\n" .
-					"You can find out how to make this change at:\n" .
-					"https://support.wordfence.com/solution/articles/1000129050-running-wordfence-under-litespeed-web-server-and-preventing-process-killing-or\n" .
-					"\nAlternatively you can disable auto-update on your website to stop receiving this message and upgrade Wordfence manually.\n"
-					);
+				$lastEmail = self::get('lastLiteSpdEmail', false);
+				if( (! $lastEmail) || (time() - (int)$lastEmail > (86400 * 30))){
+					self::set('lastLiteSpdEmail', time());
+					 wordfence::alert("Wordfence Upgrade not run. Please modify your .htaccess", "To preserve the integrity of your website we are not running Wordfence auto-update.\n" .
+						"You are running the LiteSpeed web server which has been known to cause a problem with Wordfence auto-update.\n" .
+						"Please go to your website now and make a minor change to your .htaccess to fix this.\n" .
+						"You can find out how to make this change at:\n" .
+						"https://support.wordfence.com/solution/articles/1000129050-running-wordfence-under-litespeed-web-server-and-preventing-process-killing-or\n" .
+						"\nAlternatively you can disable auto-update on your website to stop receiving this message and upgrade Wordfence manually.\n",
+						'127.0.0.1'
+						);
+				}
 				return;
 			}
 			require_once(ABSPATH . 'wp-admin/includes/class-wp-upgrader.php');

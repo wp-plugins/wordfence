@@ -289,6 +289,8 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=conntest&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to test connectivity to the Wordfence API servers</a></th></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=sysinfo&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Click to view your system's configuration in a new window</a></th></tr>
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=testmem&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's available memory</a></th></tr>
+	<tr><th>Send a test email from this WordPress server to an email address:</th><td><input type="text" id="testEmailDest" value="" size="20" maxlength="255" class="wfConfigElem" />
+		<input type="button" value="Send Test Email" onclick="WFAD.sendTestEmail(jQuery('#testEmailDest').val());" /></td></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	</div>

@@ -1017,6 +1017,11 @@ class wordfence {
 			return array('errorMsg' => wp_kses($e->getMessage(), array()));
 		}
 	}
+	public static function ajax_sendTestEmail_callback(){
+		$result = wp_mail($_POST['email'], "Wordfence Test Email", "This is a test email from " . site_url() . ".\nThe IP address that requested this was: " . wfUtils::getIP());
+		$result = $result ? 'True' : 'False';
+		return array('result' => $result);
+	}
 	public static function ajax_loadAvgSitePerf_callback(){
 		$limit = preg_match('/^\d+$/', $_POST['limit']) ? $_POST['limit'] : 10;
 		$wfdb = new wfDB();
@@ -1049,6 +1054,7 @@ class wordfence {
 		} else if(isset($codeResult['errorMsg']) && $codeResult['errorMsg']){
 			return array('errorMsg' => wp_kses($codeResult['errorMsg'], array()));
 		} else {
+			wordfence::status(4, 'info', "Could not gen verification code: " . var_export($codeResult, true));
 			return array('errorMsg' => "We could not generate a verification code.");
 		}
 		self::twoFactorAdd($user->ID, $phone, $code);
@@ -1867,14 +1873,13 @@ class wordfence {
 		return array('ok' => 1);
 	}
 	public static function ajax_whois_callback(){
-		if( ! class_exists( 'Whois' )){
-			require_once('whois/whois.main.php');
-		}
 		$val = trim($_POST['val']);
 		$val = preg_replace('/[^a-zA-Z0-9\.\-]+/', '', $val);
-		$whois = new Whois();
-		$result = $whois->Lookup($val);
-		return array('ok' => 1, 'result' => $result);
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+		$result = $api->call('whois', array(), array(
+			'val' => $val,
+			));
+		return array('ok' => 1, 'result' => $result['result']);
 	}
 	public static function ajax_blockIP_callback(){
 		$IP = trim($_POST['IP']);
@@ -2437,7 +2442,7 @@ EOL;
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'sendTestEmail', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 

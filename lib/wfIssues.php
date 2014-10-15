@@ -32,7 +32,12 @@ class wfIssues {
 		$ignoreC = md5($ignoreC);
 		$rec = $this->getDB()->querySingleRec("select status, ignoreP, ignoreC from " . $this->issuesTable . " where (ignoreP='%s' OR ignoreC='%s')", $ignoreP, $ignoreC);
 		if($rec){
-			if($rec['status'] == 'new' && ($rec['ignoreC'] == $ignoreC || $rec['ignoreP'] == $ignoreP)){ return false; }
+			if($rec['status'] == 'new' && ($rec['ignoreC'] == $ignoreC || $rec['ignoreP'] == $ignoreP)){ 
+				if($type != 'file'){ //Filter out duplicate new issues but not infected files because we want to see all infections even if file contents are identical
+					return false; 
+				}
+			}
+
 			if($rec['status'] == 'ignoreC' && $rec['ignoreC'] == $ignoreC){ return false; }
 			if($rec['status'] == 'ignoreP' && $rec['ignoreP'] == $ignoreP){ return false; }
 		}
