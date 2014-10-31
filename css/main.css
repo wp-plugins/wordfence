@@ -46,6 +46,18 @@ div.wordfenceLive p {
 div.wordfence-lock-icon {
 	background-image: url(../images/wordfence-logo-32x32.png);
 }
+a.wfhelp {
+	background-image: url(../images/help.png);
+	width: 12px;
+	height: 12px;
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	padding: 0;
+	margin: 0 3px 0 3px;
+	text-decoration: none;
+	display: inline-block;
+	vertical-align: middle;
+}
 
 .wordfence .resulticon {
 	display: block;
