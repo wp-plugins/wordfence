@@ -2,6 +2,24 @@
 require_once('wfConfig.php');
 require_once('wfCountryMap.php');
 class wfUtils {
+	private static $privateAddrs = array(
+		array('0.0.0.0/8',0,16777215),
+		array('10.0.0.0/8',167772160,184549375),
+		array('100.64.0.0/10',1681915904,1686110207),
+		array('127.0.0.0/8',2130706432,2147483647),
+		array('169.254.0.0/16',2851995648,2852061183),
+		array('172.16.0.0/12',2886729728,2887778303),
+		array('192.0.0.0/29',3221225472,3221225479),
+		array('192.0.2.0/24',3221225984,3221226239),
+		array('192.88.99.0/24',3227017984,3227018239),
+		array('192.168.0.0/16',3232235520,3232301055),
+		array('198.18.0.0/15',3323068416,3323199487),
+		array('198.51.100.0/24',3325256704,3325256959),
+		array('203.0.113.0/24',3405803776,3405804031),
+		array('224.0.0.0/4',3758096384,4026531839),
+		array('240.0.0.0/4',4026531840,4294967295),
+		array('255.255.255.255/32',4294967295,4294967295)
+	);
 	private static $isWindows = false;
 	public static $scanLockFH = false;
 	private static $lastErrorReporting = false;
@@ -65,7 +83,20 @@ class wfUtils {
 		return long2ip(-$long);
 	}
 	public static function inet_aton($ip){
+		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
+	}
+	public static function hasLoginCookie(){
+		if(isset($_COOKIE)){
+			if(is_array($_COOKIE)){
+				foreach($_COOKIE as $key => $val){
+					if(strpos($key, 'wordpress_logged_in') == 0){
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 	public static function getBaseURL(){
 		return plugins_url() . '/wordfence/';
@@ -75,94 +106,106 @@ class wfUtils {
 		//return ABSPATH . 'wp-content/plugins/';
 	}
 	public static function defaultGetIP(){
-		$IP = 0;
-		if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
-			$IP = $_SERVER['HTTP_X_FORWARDED_FOR'];
-			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
-		}
-		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['HTTP_X_REAL_IP'])){
-			$IP = $_SERVER['HTTP_X_REAL_IP'];
-			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
-		}
-		if((! preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)) && isset($_SERVER['REMOTE_ADDR'])){
-			$IP = $_SERVER['REMOTE_ADDR'];
-			if(is_array($IP) && isset($IP[0])){ $IP = $IP[0]; } //It seems that some hosts may modify _SERVER vars into arrays.
-		}
 		return $IP;
 	}
-	public static function getIP(){
-		$howGet = wfConfig::get('howGetIPs', false);
-		if($howGet){
-			$IP = $_SERVER[$howGet];
-			if( $howGet == "HTTP_CF_CONNECTING_IP" && (! self::isValidIP($IP)) ){
-				$IP = $_SERVER['REMOTE_ADDR'];
+	public static function makeRandomIP(){
+		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
+	}
+	public static function isPrivateAddress($addr){
+		$num = self::inet_aton($addr);
+		foreach(self::$privateAddrs as $a){
+			if($num >= $a[1] && $num <= $a[2]){
+				return true;
 			}
-		} else {
-			$IP = wfUtils::defaultGetIP();
 		}
-		if(preg_match('/,/', $IP)){
-			$parts = explode(',', $IP); //Some users have "unknown,100.100.100.100" for example so we take the first thing that looks like an IP.
-			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
-					$IP = trim($part);
-					break;
-				}
-			}
-		} else if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)\s+(\d+)\.(\d+)\.(\d+)\.(\d+)/', $IP)){
-			$parts = explode(' ', $IP); //Some users have "unknown 100.100.100.100" for example so we take the first thing that looks like an IP.
-			foreach($parts as $part){
-				if(preg_match('/(\d+)\.(\d+)\.(\d+)\.(\d+)/', $part)){
-					$IP = trim($part);
-					break;
-				}
-			}
-			
-		}
-		if(preg_match('/:\d+$/', $IP)){
-			$IP = preg_replace('/:\d+$/', '', $IP);
-		}
-		if(self::isValidIP($IP)){
-			if(wfConfig::get('IPGetFail', false)){
-				if(preg_match('/^(?:10\.|192\.168|127\.|172\.)/', $IP)){
-					wordfence::status(1, 'error', "Wordfence is receiving IP addresses, but we received an internal IP of $IP so your config may still be incorrect.");
-				} else {
-					wordfence::status(1, 'error', "Wordfence is now receiving IP addresses correctly. We received $IP from a visitor.");
-				}
-				wfConfig::set('IPGetFail', '');
-			}
-			return $IP;
-		} else {
-			$xFor = "";
-			if(isset($_SERVER['HTTP_X_FORWARDED_FOR']) ){
-				$xFor = $_SERVER['HTTP_X_FORWARDED_FOR'];
-			}
-			$msg = "Wordfence can't get the IP of clients and therefore can't operate. We received IP: $IP. X-Forwarded-For was: " . $xFor . " REMOTE_ADDR was: " . $_SERVER['REMOTE_ADDR'];
-			$possible = array();
-			foreach($_SERVER as $key => $val){
-				if(is_string($val) && preg_match('/^\d+\.\d+\.\d+\.\d+/', $val) && strlen($val) < 255){
-					if($val != '127.0.0.1'){
-						$possible[$key] = $val;
+		return false;
+	}
+	private static function getCleanIP($arr){ //Expects an array of items. The items are either IP's or IP's separated by comma, space or tab. Or an array of IP's.
+						//  We then examine all IP's looking for a public IP and storing private IP's in an array. If we find no public IPs we return the first private addr we found.
+		$privates = array(); //Store private addrs until end as last resort. 
+		for($i = 0; $i < count($arr); $i++){ 
+			$item = $arr[$i];
+			if(is_array($item)){ 
+				foreach($item as $j){
+					$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+					if(self::isValidIP($j)){
+						if(self::isPrivateAddress($j)){
+							$privates[] = $j;
+						} else {
+							return $j;
+						}
 					}
 				}
+				continue; //This was an array so we can skip to the next item
 			}
-			if(sizeof($possible) > 0){
-				$msg .= "  Report the following on the Wordfence forums and they may be able to help. Headers that may contain the client IP: ";
-				foreach($possible as $key => $val){
-					$msg .= "$key => $val   ";
+			$skipToNext = false;
+			foreach(array(',', ' ', "\t") as $char){
+				if(strpos($item, $char) !== false){ 
+					$sp = explode($char, $item);
+					foreach($sp as $j){
+						$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+						if(self::isValidIP($j)){
+							if(self::isPrivateAddress($j)){
+								$privates[] = $j;
+							} else {
+								return $j;
+							}
+						}
+					}
+					$skipToNext = true;
+					break;
 				}
 			}
-			wordfence::status(1, 'error', $msg);
-			wfConfig::set('IPGetFail', 1);
+			if($skipToNext){ continue; } //Skip to next item because this one had a comma, space or tab so was delimited and we didn't find anything.
+
+			$item = preg_replace('/:\d+$/', '', $item); //Strip off port
+			if(self::isValidIP($item)){
+				if(self::isPrivateAddress($item)){
+					$privates[] = $item;
+				} else {
+					return $item;
+				}
+			}
+		}
+		if(sizeof($privates) > 0){
+			return $privates[0]; //Return the first private we found so that we respect the order the IP's were passed to this function.
+		} else {
 			return false;
 		}
+	}
+	public static function extractHostname($str){
+		if(preg_match('/https?:\/\/([a-zA-Z0-9\.\-]+)(?:\/|$)/i', $str, $matches)){
+			return strtolower($matches[1]);
+		} else {
+			return false;
+		}
+	}
+	public static function getIP(){
+		//For debugging. 
+		//return '54.232.205.132';
+		//return self::makeRandomIP();
+		$howGet = wfConfig::get('howGetIPs', false);
+		if($howGet){
+			if($howGet == 'REMOTE_ADDR'){
+				$IP = self::getCleanIP(array($_SERVER['REMOTE_ADDR']));
+			} else {
+				$IP = self::getCleanIP(array($_SERVER[$howGet], $_SERVER['REMOTE_ADDR']));
+			}
+		} else {
+			$IPs = array($_SERVER['REMOTE_ADDR']);
+			if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){ $IPs[] = $_SERVER['HTTP_X_FORWARDED_FOR']; }
+			if(isset($_SERVER['HTTP_X_REAL_IP'])){ $IPs[] = $_SERVER['HTTP_X_REAL_IP']; }
+			$IP = self::getCleanIP($IPs); 
+		}
+		return $IP; //Returns a valid IP or false. 
 	}
 	public static function isValidIP($IP){
 		if(preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/', $IP, $m)){
 			if(
-				$m[0] >= 0 && $m[0] <= 255 &&
 				$m[1] >= 0 && $m[1] <= 255 &&
 				$m[2] >= 0 && $m[2] <= 255 &&
-				$m[3] >= 0 && $m[3] <= 255
+				$m[3] >= 0 && $m[3] <= 255 &&
+				$m[4] >= 0 && $m[4] <= 255
 			){
 				return true;
 			}
@@ -175,7 +218,11 @@ class wfUtils {
 		} else {
 			$host = $_SERVER['SERVER_NAME'];
 		}
-		return (@$_SERVER['HTTPS'] ? 'https' : 'http') . '://' . $host . $_SERVER['REQUEST_URI'];
+		$prefix = 'http';
+		if( isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ){
+			$prefix = 'https';
+		}
+		return $prefix . '://' . $host . $_SERVER['REQUEST_URI'];
 	}
 
 	public static function editUserLink($userID){
@@ -270,14 +317,26 @@ class wfUtils {
 			self::iniSet('memory_limit', $maxMem . 'M');
 		}
 	}
-	public static function isAdmin(){
-		if(is_multisite()){
-			if(current_user_can('manage_network')){
-				return true;
+	public static function isAdmin($user = false){
+		if($user){
+			if(is_multisite()){
+				if(user_can($user, 'manage_network')){
+					return true;
+				}
+			} else {
+				if(user_can($user, 'manage_options')){
+					return true;
+				}
 			}
 		} else {
-			if(current_user_can('manage_options')){
-				return true;
+			if(is_multisite()){
+				if(current_user_can('manage_network')){
+					return true;
+				}
+			} else {
+				if(current_user_can('manage_options')){
+					return true;
+				}
 			}
 		}
 		return false;
@@ -363,7 +422,11 @@ class wfUtils {
 						if($value == 'failed'){
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
 							$IPLocs[$IP] = false;
-						} else {
+						} else if(is_array($value)){
+							for($i = 0; $i <= 5; $i++){
+								//Prevent warnings in debug mode about uninitialized values
+								if(! isset($value[$i])){ $value[$i] = ''; }
+							}
 							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
 								($isInt ? $IP : self::inet_aton($IP)),
 								$value[3], //city
@@ -426,6 +489,7 @@ class wfUtils {
 		self::iniSet('display_errors', self::$lastDisplayErrors);
 		if(class_exists('wfScan')){ wfScan::$errorHandlingOn = true; }
 	}
+	//Note this function may report files that are too big which actually are not too big but are unseekable and throw an error on fseek(). But that's intentional
 	public static function fileTooBig($file){ //Deals with files > 2 gigs on 32 bit systems which are reported with the wrong size due to integer overflow
 		wfUtils::errorsOff();
 		$fh = @fopen($file, 'r');
@@ -433,25 +497,28 @@ class wfUtils {
 		if(! $fh){ return false; }
 		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1; 
 		$tooBig = false;
-		if(fseek($fh, $offset, SEEK_SET) === 0){
-			if(strlen(fread($fh, 1)) === 1){
-				$tooBig = true;
-			}
-		} //Otherwise we couldn't seek there so it must be smaller
-		fclose($fh);
-		return $tooBig;
+		try {
+			if(@fseek($fh, $offset, SEEK_SET) === 0){
+				if(strlen(fread($fh, 1)) === 1){
+					$tooBig = true;
+				}
+			} //Otherwise we couldn't seek there so it must be smaller
+			fclose($fh);
+			return $tooBig;
+		} catch(Exception $e){ return true; } //If we get an error don't scan this file, report it's too big.
 	}
-	public static function fileOver2Gigs($file){
+	public static function fileOver2Gigs($file){ //Surround calls to this func with try/catch because fseek may throw error.
 		$fh = @fopen($file, 'r');
 		if(! $fh){ return false; }
 		$offset = 2147483647; 
 		$tooBig = false;
-		if(fseek($fh, $offset, SEEK_SET) === 0){
+		//My throw an error so surround calls to this func with try/catch
+		if(@fseek($fh, $offset, SEEK_SET) === 0){
 			if(strlen(fread($fh, 1)) === 1){
 				$tooBig = true;
 			}
 		} //Otherwise we couldn't seek there so it must be smaller
-		fclose($fh);
+		@fclose($fh);
 		return $tooBig;
 	}
 	public static function countryCode2Name($code){
@@ -489,6 +556,9 @@ class wfUtils {
 	public static function localHumanDate(){
 		return date('l jS \of F Y \a\t h:i:s A', time() + (3600 * get_option('gmt_offset')));
 	}
+	public static function localHumanDateShort(){
+		return date('D jS F \@ h:i:sA', time() + (3600 * get_option('gmt_offset')));
+	}
 	public static function funcEnabled($func){
 		if(! function_exists($func)){ return false; }
 		$disabled = explode(',', ini_get('disable_functions'));
@@ -505,14 +575,74 @@ class wfUtils {
 	public static function doNotCache(){
 		header("Cache-Control: no-cache, must-revalidate");
 		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); //In the past
-		define('DONOTCACHEPAGE', true);
-		define('DONOTCACHEDB', true);
-		define('DONOTCDN', true);
-		define('DONOTCACHEOBJECT', true);
-
+		if(! defined('DONOTCACHEPAGE')){ define('DONOTCACHEPAGE', true); }
+		if(! defined('DONOTCACHEDB')){ define('DONOTCACHEDB', true); }
+		if(! defined('DONOTCDN')){ define('DONOTCDN', true); }
+		if(! defined('DONOTCACHEOBJECT')){ define('DONOTCACHEOBJECT', true); }
+		wfCache::doNotCache();
 	}
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
 		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
+	}
+	public static function rangeToCIDRs($startIP, $endIP){
+		$startIPBin = sprintf('%032b', $startIP);
+		$endIPBin = sprintf('%032b', $endIP);
+		$IPIncBin = $startIPBin;
+		$CIDRs = array();
+		while(strcmp($IPIncBin, $endIPBin) <= 0){
+			$longNetwork = 32;
+			$IPNetBin = $IPIncBin;
+			while(($IPIncBin[$longNetwork - 1] == '0') && (strcmp(substr_replace($IPNetBin, '1', $longNetwork - 1, 1), $endIPBin) <= 0)){
+				$IPNetBin[$longNetwork - 1] = '1';
+				$longNetwork--;
+			}
+			$CIDRs[] = long2ip(bindec($IPIncBin)) . ($longNetwork < 32 ? '/' . $longNetwork : '');
+			$IPIncBin = sprintf('%032b', bindec($IPNetBin) + 1);
+		}
+		return $CIDRs;
+	}
+	public static function setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly){
+		if(version_compare(PHP_VERSION, '5.2.0') >= 0){
+			@setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly);
+		} else {
+			@setcookie($name, $value, $expire, $path);
+		}
+	}
+	public static function isNginx(){
+		$sapi = php_sapi_name();
+		$serverSoft = $_SERVER['SERVER_SOFTWARE'];
+		if($sapi == 'fpm-fcgi' || stripos($serverSoft, 'nginx') !== false){
+			return true;
+		}
+	}
+	public static function getLastError(){
+		$err = error_get_last();
+		if(is_array($err)){
+			return $err['message'];
+		}
+		return '';
+	}
+	public static function hostNotExcludedFromProxy($url){
+		if(! defined('WP_PROXY_BYPASS_HOSTS')){
+			return true; //No hosts are excluded
+		}
+		$hosts = explode(',', WP_PROXY_BYPASS_HOSTS);
+		$url = preg_replace('/^https?:\/\//i', '', $url);
+		$url = preg_replace('/\/.*$/', '', $url);
+		$url = strtolower($url);
+		foreach($hosts as $h){
+			if(strtolower(trim($h)) == $url){
+				return false;
+			}
+		}
+		return true;
+	}
+	public static function hasXSS($URL){
+		if(! preg_match('/^https?:\/\/[a-z0-9\.\-]+\/[^\':<>\"\\\]*$/i', $URL)){
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 
