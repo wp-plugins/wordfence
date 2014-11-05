@@ -291,6 +291,14 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 	<tr><th colspan="2"><a href="<?php echo wfUtils::siteURLRelative(); ?>?_wfsf=testmem&nonce=<?php echo wp_create_nonce('wp-ajax'); ?>" target="_blank">Test your WordPress host's available memory</a><a href="http://docs.wordfence.com/en/Wordfence_options#Test_your_WordPress_host.27s_available_memory" target="_blank" class="wfhelp"></a></th></tr>
 	<tr><th>Send a test email from this WordPress server to an email address:<a href="http://docs.wordfence.com/en/Wordfence_options#Send_a_test_email_from_this_WordPress_server_to_an_email_address" target="_blank" class="wfhelp"></a></th><td><input type="text" id="testEmailDest" value="" size="20" maxlength="255" class="wfConfigElem" />
 		<input type="button" value="Send Test Email" onclick="WFAD.sendTestEmail(jQuery('#testEmailDest').val());" /></td></tr>
+
+	<tr><td colspan="2">
+		<div class="wfMarker" id="wfMarkerExportOptions"></div>
+		<h3 class="wfConfigHeading">Exporting and Importing Wordfence Settings<a href="http://docs.wordfence.com/en/Wordfence_options#Exporting_and_Importing_Wordfence_Settings" target="_blank" class="wfhelp"></a></h3>
+		</td></tr>
+
+	<tr><th>Export this site's Wordfence settings for import on another site:</th><td><input type="button" id="exportSettingsBut" value="Export Wordfence Settings" onclick="WFAD.exportSettings(); return false;" /></td></tr>
+	<tr><th>Import Wordfence settings from another site using a token:</th><td><input type="text" size="20" value="" id="importToken" />&nbsp;<input type="button" name="importSettingsButton" value="Import Settings" onclick="WFAD.importSettings(jQuery('#importToken').val()); return false;" /></td></tr>
 	</table>
 	<p><table border="0" cellpadding="0" cellspacing="0"><tr><td><input type="button" id="button1" name="button1" class="button-primary" value="Save Changes" onclick="WFAD.saveConfig();" /></td><td style="height: 24px;"><div class="wfAjax24"></div><span class="wfSavedMsg">&nbsp;Your changes have been saved!</span></td></tr></table></p>
 	</div>

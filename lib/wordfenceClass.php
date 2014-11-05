@@ -2180,6 +2180,58 @@ class wordfence {
 			return array("ok" => 1);
 		}
 	}
+	public static function ajax_exportSettings_callback(){
+		$keys = wfConfig::getExportableOptionsKeys();
+		$export = array();
+		foreach($keys as $key){
+			$export[$key] = wfConfig::get($key, '');
+		}
+		try {
+			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+			$res = $api->call('export_options', array(), $export);
+			if($res['ok'] && $res['token']){
+				return array(
+					'ok' => 1,
+					'token' => $res['token'],
+					);
+			} else {
+				throw new Exception("Invalid response: " . var_export($res, true));
+			}
+		} catch(Exception $e){
+			return array('err' => "An error occurred: " . $e->getMessage());	
+		}
+	}
+	public static function importSettings($token){
+		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
+		$res = $api->call('import_options', array(), array('token' => $token));
+		$totalSet = 0;
+		if($res['ok'] && $res['options']){
+			$keys = wfConfig::getExportableOptionsKeys();
+			foreach($keys as $key){
+				if(isset($res['options'][$key])){
+					wfConfig::set($key, $res['options'][$key]);
+					$totalSet++;
+				}
+			}
+			return $totalSet;
+		} else if($res['err']){
+			throw new Exception($res['err']);
+		} else {
+			throw new Exception("Invalid response from Wordfence servers during import.");
+		}
+	}	
+	public static function ajax_importSettings_callback(){
+		$token = $_POST['token'];
+		try {
+			$totalSet = self::importSettings($token);
+			return array(
+				'ok' => 1,
+				'totalSet' => $totalSet,
+				);
+		} catch(Exception $e){
+			return array('err' => "An error occurred: " . $e->getMessage());
+		}
+	}
 	public static function startScan(){
 		wfScanEngine::startScan();
 	}
@@ -2442,7 +2494,7 @@ EOL;
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'sendTestEmail', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
+		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'exportSettings', 'importSettings', 'bulkOperation', 'deleteFile', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'sendTestEmail', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions') as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 

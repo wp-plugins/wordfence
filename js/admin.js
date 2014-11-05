@@ -1619,6 +1619,30 @@ window['wordfenceAdmin'] = {
 			}
 
 			});
+	},
+	exportSettings: function(){
+		var self = this;
+		this.ajax('wordfence_exportSettings', {}, function(res){
+			if(res.ok && res.token){
+				self.colorbox('400px', "Export Successful", "We successfully exported your site settings. To import your site settings on another site, copy and paste the token below into the import text box on the destination site. Keep this token secret. It is like a password. If anyone else discovers the token it will allow them to import your settings excluding your API key.<br /><br />Token:<input type=\"text\" size=\"20\" value=\"" + res.token + "\" onclick=\"this.select();\" /><br />");
+			} else if(res.err){
+				self.colorbox('400px', "Error during Export", res.err);
+			} else {
+				self.colorbox('400px', "An unknown error occurred", "An unknown error occurred during the export. We received an undefined error from your web server.");
+			}
+		});
+	},
+	importSettings: function(token){
+		var self = this;
+		this.ajax('wordfence_importSettings', { token: token }, function(res){
+			if(res.ok){
+				self.colorbox('400px', "Import Successful", "You successfully imported " + res.totalSet + " options. Your import is complete. Please reload this page or click the button below to reload it:<br /><br /><input type=\"button\" value=\"Reload Page\" onclick=\"window.location.reload(true);\" />");
+			} else if(res.err){
+				self.colorbox('400px', "Error during Import", res.err);
+			} else {
+				self.colorbox('400px', "Error during Export", "An unknown error occurred during the import");
+			}
+		});
 	}
 };
 window['WFAD'] = window['wordfenceAdmin'];
