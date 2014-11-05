@@ -1,5 +1,6 @@
 <div class="wordfenceModeElem" id="wordfenceMode_whois"></div>
 <div class="wrap" id="paidWrap">
+	<?php require('menuHeader.php'); ?>
 	<?php $pageTitle = "WHOIS Lookup"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p style="width: 600px;">
@@ -27,7 +28,7 @@ if(! function_exists('fsockopen')){
 		<?php if( isset( $_GET['wfnetworkblock'] ) && $_GET['wfnetworkblock']){ ?>
 		<h2>How to block a network</h2>
 		<p style="width: 600px;">
-			You've chosen to block the network that <span style="color: #F00;"><?php echo $_GET['whoisval']; ?></span> is part of.
+			You've chosen to block the network that <span style="color: #F00;"><?php echo wp_kses($_GET['whoisval'], array()); ?></span> is part of.
 			We've marked the networks we found that this IP address belongs to in red below.
 			Make sure you read all the WHOIS information so that you see all networks this IP belongs to. We recommend blocking the network with the lowest number of addresses.
 			You may find this is listed at the end as part of the 'rWHOIS' query which contacts
@@ -50,7 +51,7 @@ if(! function_exists('fsockopen')){
 </div>
 </script>
 <script type="text/javascript">
-var whoisval = "<?php if( isset( $_GET['whoisval'] ) ) { echo $_GET['whoisval']; } ?>";
+var whoisval = "<?php if( isset( $_GET['whoisval'] ) ) { echo wp_kses($_GET['whoisval'], array()); } ?>";
 if(whoisval){
 	jQuery(function(){
 		jQuery('#wfwhois').val(whoisval);

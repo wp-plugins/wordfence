@@ -26,6 +26,15 @@ class wfAPI {
 		}
 
 		$dat = json_decode($json, true);
+		if(isset($dat['_isPaidKey'])){
+			wfConfig::set('keyExpDays', $dat['_keyExpDays']);
+			if($dat['_keyExpDays'] > -1){
+				wfConfig::set('isPaid', 1);
+			} else if($dat['_keyExpDays'] < 0){
+				wfConfig::set('isPaid', '');
+			}
+		}
+				
 		if(! is_array($dat)){
 			throw new Exception("We received a data structure that is not the expected array when contacting the Wordfence scanning servers and calling the '$action' function.");
 		}
@@ -43,6 +52,13 @@ class wfAPI {
 			$this->curlDataWritten = 0;
 			$this->curlContent = "";
 			$curl = curl_init($url);
+			if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy($url) ){
+				curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
+				curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
+				if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
+					curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
+				}
+			}
 			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
 			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
@@ -71,7 +87,7 @@ class wfAPI {
 			if($data === false){
 				$err = error_get_last();
 				if($err){
-					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . $err);
+					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . var_export($err, true));
 				} else {
 					throw new Exception("We received an empty response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function.");
 				}
@@ -106,6 +122,14 @@ class wfAPI {
 		$url = $this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
 		if(function_exists('curl_init')){
 			$curl = curl_init($url);
+			if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy($url) ){
+				error_log("BINCALL PROXY");
+				curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
+				curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
+				if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
+					curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
+				}
+			}
 			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
 			//curl_setopt($curl, CURLOPT_VERBOSE, true);
 			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");

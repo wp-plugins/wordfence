@@ -39,7 +39,7 @@ class wfScan {
 		} //keys only last 60 seconds and are used within milliseconds of creation
 		self::status(4, 'info', "Checking saved cronkey against cronkey param");
 		if($savedKey[1] != $_GET['cronKey']){ 
-			self::errorExit("Wordfence could not start a scan because the cron key does not match the saved key.");
+			self::errorExit("Wordfence could not start a scan because the cron key does not match the saved key. Saved: " . $savedKey[1] . " Sent: " . $_GET['cronKey'] . " Current unexploded: " . $currentCronKey);
 		}
 		/* --------- end cronkey check ---------- */
 
@@ -80,6 +80,7 @@ class wfScan {
 		} else {
 			wordfence::statusPrep(); //Re-initializes all status counters
 			$scan = new wfScanEngine();
+			$scan->deleteNewIssues();
 		}
 		try {
 			$scan->go();

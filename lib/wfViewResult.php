@@ -6,7 +6,7 @@
 <body>
 <h1>Wordfence: File Viewer</h1>
 <table border="0" style="margin: 0 0 20px 0;" class="summary">
-<tr><td>Filename:</td><td><?php echo $localFile; ?></td></tr>
+<tr><td>Filename:</td><td><?php echo wp_kses($localFile, array()); ?></td></tr>
 <tr><td>File Size:</td><td><?php echo $fileSize; ?></td></tr>
 <tr><td>File last modified:</td><td><?php echo $fileMTime; ?></td></tr>
 </table>
@@ -21,6 +21,6 @@
 	
 
 
-<div class="diffFooter">&copy;&nbsp;2011 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</a>
+<div class="diffFooter">&copy;&nbsp;2011 to 2014 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</a>
 </body>
 </html>
