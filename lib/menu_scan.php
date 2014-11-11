@@ -1,17 +1,18 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scan"></div>
 <div class="wrap wordfence">
-	<?php $pageTitle = "Wordfence Scan"; include('pageTitle.php'); ?>
+	<?php require('menuHeader.php'); ?>
+	<?php $pageTitle = "Wordfence Scan"; $helpLink="http://docs.wordfence.com/en/Wordfence_scanning"; $helpLabel="Learn more about scanning"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap">
 		<div class="wordfenceScanButton">
 			<table border="0" cellpadding="0" cellspacing="0" style="width: 800px;">
 			<tr>
 				<td style="width: 250px; padding-top: 10px;">
 					<input type="button" value="Start a Wordfence Scan" id="wfStartScanButton1" class="wfStartScanButton button-primary" onclick="wordfenceAdmin.startScan();" /><br />
-					&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.killScan(); return false;" style="font-size: 10px; color: #AAA;">Click here to kill a running scan.</a>
+					&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.killScan(); return false;" style="font-size: 10px; color: #AAA;">Click to kill the current scan.</a>
 				</td>
 				<td>
 					<div style="border: 1px solid #CCC; padding: 4px;">
-						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://www.wordfence.com/forums/">visit our support forums for help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a>. Spreading the word helps us keep the best features free.
+						<a href="http://docs.wordfence.com/en/Wordfence_scanning" target="_blank" class="wfhelp"></a><a href="http://docs.wordfence.com/en/Wordfence_scanning" target="_blank">Read our scanning documentation</a>. You can also <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://support.wordfence.com/">visit our support website help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a> or <a href="http://www.wordfence.com/" target="_blank">www.wordfence.com</a>. Spreading the word helps us keep the best features free.
 					</div>
 				</td>
 			</tr>
@@ -28,7 +29,7 @@
 			<?php if(sizeof($events) < 1){ ?>
 				<div style="width: 500px;">
 					Welcome to Wordfence!<br /><br />
-					To get started, simply click the blue button at the top of this page to start your first scan.
+					To get started, simply click the "Scan" button at the top of this page to start your first scan.
 				</div>
 			<?php } ?>
 			</div></div></div>
@@ -38,7 +39,7 @@
 			</div>
 			<?php } else { ?>
 			<div style="margin: 0 0 20px 5px; width: 795px;">
-				<strong>How to upgrade:</strong> If you would like to control how often your site is checked for security vulnerabilities and infections, and you would like to be able to block countries, <a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">visit www.wordfence.com</a> and sign up for our paid option. Then go to the Wordfence options page on this site and replace your free API key with your new premium key. You will then be able to activate the premium scanning options on the Wordfence options page.
+				<strong style="color: #F00;">How to upgrade:</strong> If you would like access to our <a href="http://support.wordfence.com/" target="_blank">Premium Support help system</a> and features like Cellphone Sign-in, Country Blocking, external site scanning and the ability to schedule scans, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">visit our Wordfence Premium sign-up page</a> and sign up for a Premium Wordfence API key. Then go to the Wordfence options page on this site and replace your free API key with your new premium key. You will immediately be upgraded to Wordfence Premium with all the features it includes and you will have instant access to our ticketing system on <a href="http://support.wordfence.com/" target="_blank">support.wordfence.com</a>.
 			</div>
 
 			<?php } ?>
@@ -79,9 +80,8 @@
 				<a href="#" target="_blank" class="wfALogViewLink" id="wfALogViewLink">View activity log</a>
 			</div>
 			<div style="margin: 0 0 20px 5px; width: 795px;">
-				<strong>Docs:</strong> Our <a href="http://www.wordfence.com/docs/" target="_blank">Wordfence Documentation</a> has tips on <a href="http://www.wordfence.com/docs/using-wordfence-to-analyze-changes-in-wordpress-files/" target="_blank">dealing with changed files</a>, <a href="http://www.wordfence.com/docs/how-to-clean-a-hacked-wordpress-site-using-wordfence/" target="_blank">how to clean a hacked site</a> and our <a href="http://www.wordfence.com/docs/frequently-asked-questions/" target="_blank">FAQ</a>.
+				<strong>Docs:</strong> Our <a href="http://support.wordfence.com/" target="_blank">Support Site</a> can answer many common (and some less common) questions. It also includes our priority support ticketing system for Premium Wordfence users. 
 				<?php $unknownFilesLink = wfUtils::siteURLRelative() . '?_wfsf=unknownFiles&nonce=' . wp_create_nonce('wp-ajax'); ?>
-				<br /><strong>Tools:</strong> Cleaning a hacked system? See a <a href="<?php echo $unknownFilesLink ?>&sort=3&dir=rev" target="_blank">list of files that are not in the WordPress core, plugin or theme repositories</a> after your first scan.
 			</div>
 
 		</div>
@@ -97,6 +97,18 @@
 						The list below shows new problems or warnings that Wordfence found with your site.
 						If you have fixed all the issues below, you can <a href="#" onclick="WFAD.updateAllIssues('deleteNew'); return false;">click here to mark all new issues as fixed</a>.
 						You can also <a href="#" onclick="WFAD.updateAllIssues('ignoreAllNew'); return false;">ignore all new issues</a> which will exclude all issues listed below from future scans.
+					</p>
+					<p>
+						<a href="#" onclick="jQuery('#wfBulkOps').toggle(); return false;">Bulk operation&raquo;&raquo;</a>
+						<div id="wfBulkOps" style="display: none;">
+							<input type="button" name="but2" value="Select All Repairable files" onclick="jQuery('input.wfrepairCheckbox').prop('checked', true); return false;" />
+							&nbsp;<input type="button" name="but1" value="Bulk Repair Selected Files" onclick="WFAD.bulkOperation('repair'); return false;" />
+							<br />
+							<br />
+							<input type="button" name="but2" value="Select All Deletable files" onclick="jQuery('input.wfdelCheckbox').prop('checked', true); return false;" />
+							&nbsp;<input type="button" name="but1" value="Bulk Delete Selected Files" onclick="WFAD.bulkOperation('del'); return false;" />
+						</div>
+
 					</p>
 					 <div id="wfIssues_dataTable_new">
 					 </div>
@@ -518,6 +530,12 @@
 		{{if data.canDiff}}
 		<a href="${WFAD.makeDiffLink(data)}" target="_blank">See how the file has changed.</a>
 		{{/if}}
+		{{if data.canFix}}
+		<br />&nbsp;<input type="checkbox" class="wfrepairCheckbox" value="${id}" />&nbsp;Select for bulk repair
+		{{/if}}
+		{{if data.canDelete}}
+		<br />&nbsp;<input type="checkbox" class="wfdelCheckbox" value="${id}" />&nbsp;Select for bulk delete
+		{{/if}}
 	</div>
 	<div class="wfIssueOptions">
 		{{if status == 'new'}}
@@ -603,6 +621,98 @@
 </div>
 </script>
 
+<script type="text/x-jquery-template" id="issueTmpl_heartbleed">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreC' }}This redirect will be ignored until it changes.{{/if}}
+			{{if status == 'ignoreP' }}This redirect is permanently ignored.{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+	{{if status == 'new'}}
+		<strong>Resolve:</strong> 
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore this problem</a>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
+<script type="text/x-jquery-template" id="issueTmpl_checkSpamIP">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreC' }}This redirect will be ignored until it changes.{{/if}}
+			{{if status == 'ignoreP' }}This redirect is permanently ignored.{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+	{{if status == 'new'}}
+		<strong>Resolve:</strong> 
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore this problem</a>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
+
+<script type="text/x-jquery-template" id="issueTmpl_spamvertizeCheck">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreC' }}This redirect will be ignored until it changes.{{/if}}
+			{{if status == 'ignoreP' }}This redirect is permanently ignored.{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+	{{if status == 'new'}}
+		<strong>Resolve:</strong> 
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Ignore this problem</a>
+	{{/if}}
+	{{if status == 'ignoreP' || status == 'ignoreC'}}
+		<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue</a>
+	{{/if}}
+	</div>
+</div>
+</div>
+</script>
+
 
 
 
@@ -615,8 +725,6 @@
 		<tr><td>
 			Your first Wordfence scan should be automatically starting now
 			and you will see the scan details in the "Activity Log" above in a few seconds.
-			While you're waiting, why not visit the <a href="http://www.wordfence.com/forums/" target="_blank">Wordfence Forums</a>
-			where you can post your comments or questions. We would love to hear from you.
 		</td></tr>
 		<tr><td>
 			<div class="wordfenceScanButton"><input type="button" value="Start a Wordfence Scan" id="wfStartScanButton2" class="wfStartScanButton button-primary" /></div>
@@ -632,8 +740,9 @@
 <div>
 <h3>Welcome to Wordfence</h3>
 <p>
-	Wordfence is a robust and complete security system for WordPress. It protects your WordPress site
+	Wordfence is a robust and complete security system and performance enhancer for WordPress. It protects your WordPress site
 	from security threats and keeps you off Google's SEO black-list by providing a firewall, brute force protection, continuous scanning and many other security enhancements. 
+	Wordfence will also make your site <strong>up to 50 times faster</strong> than a standard WordPress site by installing Falcon Engine, the high performance web engine available exclusively with Wordfence.
 </p>
 <p>
 	Wordfence also detects if there are any security problems on 
@@ -670,7 +779,7 @@
 <h3>How to use Wordfence</h3>
 <strong><p>Start with a Scan</p></strong>
 <p>
-	Using Wordfence is simple. Start by doing a scan. One is probably already running if you just installed Wordfence.
+	Using Wordfence is simple. Start by doing a scan. 
 	Once the scan is complete, a list of issues will appear at the bottom of this page. Work through each issue one at a time. If you know an 
 	issue is not a security problem, simply choose to ignore it. When you click "ignore" it will be moved to the list of ignored issues.
 </p>

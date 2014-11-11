@@ -1,32 +1,21 @@
 <div class="wordfenceModeElem" id="wordfenceMode_twoFactor"></div>
 <div class="wrap" id="paidWrap">
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Cellphone Sign-in</h2>
+	<?php require('menuHeader.php'); ?>
+	<?php $pageTitle = "Cellphone Sign-in"; $helpLink="http://docs.wordfence.com/en/Cellphone_sign-in"; $helpLabel="Learn more about Cellphone Sign-in"; include('pageTitle.php'); ?>
+<?php if(! wfConfig::get('isPaid')){ ?>
+			<div class="wfPaidOnlyNotice">
+				<strong>Cellphone Sign-in is only available to Premium Members at this time</strong><br /><br />
+				Cellphone Sign-in is a premium feature because we are charged per SMS we send when a user signs in. If you would like to
+				activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page.
+				<br /><br />
+				Wordfence's Cellphone Sign-in uses a technique called "Two Factor Authentication" which is used by banks, government agencies and military world-wide as one of the most secure forms of remote system authentication. It's now available from Wordfence for your WordPress website. We recommend you enable Cellphone Sign-in for all Administrator level accounts. You can <a href="http://docs.wordfence.com/en/Cellphone_sign-in" target="_blank">learn more about Cellphone Sign-in on our documentation website</a>.
+			</div>
+<?php } ?>
+
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p style="width: 500px;">
-			Wordfence's Cellphone Sign-in uses a technique called "Two Factor Authentication" which is used by banks, government agencies and military world-wide as one of the most secure forms of remote system authentication. 
-			It's now available from Wordfence for your WordPress website. "Two Factor" relies on two things: Something you know (your password) and something you have (your cellphone). 
-			To access your website, you need to know your password and have your cellphone with you.
-			<br /><br />
-			Cellphone sign-in is a two step sign-in process. When you enable this feature for a member, they first sign-in using their username and password.
-			Then they receive an SMS on their cellphone containing a code. Then they sign in again using their username, and they reenter their
-			password with a space and the code they received at the end of the password. 
-			<br /><br />
-			Cellphone Sign-in eliminates all common forms of brute force hacking. For a hacker to access a user account with Cellphone Sign-in enabled, they would have to steal
-			a member's cellphone to access their account. 
-			We recommend you enable Cellphone Sign-in for all Administrator level accounts.
 		</p>
 		<p>
-			To enable Cellphone Sign-in Authentication for a user account:
-			<ol>
-				<li>Enter the username.</li>
-				<li>Enter a phone number where the code will be sent when the member wants to sign in.</li>
-				<li>Hit the enable button.</li>
-				<li>An activation code is sent to the member's phone.</li>
-				<li>Get the activation code from the member and enter it next to the username in the list below.</li>
-				<li>Click the "Enable" button to enable Cellphone Sign-in for that member.</li>
-				<li>From now on the user will only be able to sign-in by using Cellphone Sign-in.</li>
-			</ol>
-			<br />
 			<table border="0">
 			<tr><td>Enter a username to enable Cellphone Sign-in:</td><td><input type="text" id="wfUsername" value="" size="20" /></td></tr>
 			<tr><td>Enter a phone number where the code will be sent:</td><td><input type="text" id="wfPhone" value="" size="20" />Format: +1-123-555-5034</td></tr>
@@ -61,13 +50,6 @@
 	</table>
 </div>
 </script>
-<script type="text/javascript">
-<?php
-if( (! wfConfig::get('isPaid')) && (wfConfig::get('tourClosed', 0) == '1') ){
-	echo 'WFAD.paidUsersOnly("Wordfence Cellphone Sign-in uses a technique called \'Two Factor Authentication\'. Two Factor Authentication is used by banks, government agencies and military world-wide as one of the most secure forms of remote system authentication. It\'s now available for all paid Wordfence members to permanently stop all brute force hacks. <br /><br />When you enable Cellphone Sign-in on a member\'s account, they complete a two-step process to sign in. First they enter their username and password as per normal. If the username and password are correct, we send a code to their phone. Then they enter their username and their password again but this time they add a space and the code to the end of their password. This form of authentication provides the highest level of security. It is called Two Factor in the security industry because it relies on two factors: Something you know (your password) and something you have (your phone).");';
-}
-?>
-</script>
 <script type="text/x-jquery-template" id="wfWelcomeTwoFactor">
 <div>
 <h3>Secure Sign-in using your Cellphone</h3>
@@ -96,7 +78,7 @@ if(wfConfig::get('isPaid')){
 } else {
 ?>
 	If you would like access to this premium feature, please 
-	<a href="https://www.wordfence.com/choose-a-wordfence-membership-type/?s2-ssl=yes" target="_blank">upgrade to our premium version</a>.
+	<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
 <?php
 }
 ?>

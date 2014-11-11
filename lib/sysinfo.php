@@ -16,6 +16,6 @@ $out = preg_replace('/<\/a>/', '', $out);
 $out = preg_replace('/<title>[^<]*<\/title>/','', $out);
 echo $out;
 ?>
-<div class="diffFooter">&copy;&nbsp;2011 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</a>
+<div class="diffFooter">&copy;&nbsp;2011 to 2014 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</a>
 </body>
 </html>
