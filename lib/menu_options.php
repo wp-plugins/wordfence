@@ -7,7 +7,7 @@ var WFSLevels = <?php echo json_encode(wfConfig::$securityLevels); ?>;
 <div class="wordfenceModeElem" id="wordfenceMode_options"></div>
 <div class="wrap">
 	<?php require('menuHeader.php'); ?>
-	<?php $pageTitle = "Wordfence Options"; include('pageTitle.php'); ?>
+	<?php $helpLink="http://docs.wordfence.com/en/Wordfence_options"; $helpLabel="Learn more about Wordfence Options"; $pageTitle = "Wordfence Options"; include('pageTitle.php'); ?>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>

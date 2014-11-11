@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.3.1
 Tested up to: 4.0
-Stable tag: 5.2.9
+Stable tag: 5.3.1
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -12,6 +12,8 @@ Wordfence Security is a free enterprise class security and performance plugin th
 Wordfence starts by checking if your site is already infected. We do a deep server-side scan of your source code comparing it to the Official WordPress repository for core, themes and plugins. Then Wordfence secures your site and makes it up to 50 times faster. 
 
 Wordfence Security is 100% free. We also offer a Premium API key that gives you access to our premium support ticketing system at [support.wordfence.com](http://support.wordfence.com/) along with two factor authentication via SMS, country blocking and the ability to schedule scans for specific times.
+
+You can find our official documentation at [docs.wordfence.com](http://docs.wordfence.com/) and our Frequently Asked Questions on our support portal at [support.wordfence.com](https://support.wordfence.com/solution/categories/1000023037/folders/1000035543). We are also active in our community support forums on [wordpress.org](https://wordpress.org/support/plugin/wordfence) if you are one of our free users.
 
 This is a brief introductory video for Wordfence:
 
@@ -162,6 +164,19 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.3.1 =
+* IP to Country database updated to November 4th 2014 version. 
+* Options export and import now also exports Country Blocking and Scan Schedule configuration.
+* Scans fully documented at docs.wordfence.com. Link on 'Scan' page under heading.
+* Live Traffic fully documented at docs.wordfence.com. Link on Live Traffic page.
+* Falcon Engine/Wordfence Caching fully documented. Link on Performance Setup page.
+* Blocked IPs, locking and throttling fully documented. Link on Blocked IPs page.
+* Cellphone Sign-in fully documented. Link under title on Cellphone sign-in page.
+* Country blocking fully documented. Link on Country blocking page. 
+* Scan Scheduling fully documented. Link on Scan Scheduling page under title.
+* Whois and Advanced Blocking documented including how Live Traffic, Whois and Advanced blocking work together.
+* Removed unnecessary text from several menu items and moved into official docs where needed. 
 
 = 5.2.9 =
 * Added ability to export Wordfence settings and reimport on one or many sites using secure token.

@@ -4,7 +4,7 @@ $w = new wfConfig();
 <div class="wordfenceModeElem" id="wordfenceMode_caching"></div>
 <div class="wrap">
 	<?php require('menuHeader.php'); ?>
-	<?php $pageTitle = "Your Site Performance"; include('pageTitle.php'); ?>
+	<?php $pageTitle = "Your Site Performance"; $helpLink="http://docs.wordfence.com/en/Falcon_Cache"; $helpLabel="Learn more about Wordfence Caching"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<h2>Caching</h2>
 		<table border="0">

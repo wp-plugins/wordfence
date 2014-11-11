@@ -1,7 +1,7 @@
 <div class="wordfenceModeElem" id="wordfenceMode_blockedIPs"></div>
 <div class="wrap">
 	<?php require('menuHeader.php'); ?>
-	<?php $pageTitle = "Wordfence Blocked IPs"; include('pageTitle.php'); ?>
+	<?php $helpLink="http://docs.wordfence.com/en/Blocked_IPs"; $helpLabel="Learn more about Blocked IPs"; $pageTitle = "Wordfence Blocked IPs"; include('pageTitle.php'); ?>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>

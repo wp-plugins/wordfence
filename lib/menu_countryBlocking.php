@@ -7,13 +7,12 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 <div class="wordfenceModeElem" id="wordfenceMode_countryBlocking"></div>
 <div class="wrap" id="paidWrap">
 	<?php require('menuHeader.php'); ?>
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Block specific countries from accessing your site</h2>
+	<?php $pageTitle = "Block Selected Countries from Accessing your Site"; $helpLink="http://docs.wordfence.com/en/Country_blocking"; $helpLabel="Learn more about Country Blocking"; include('pageTitle.php'); ?>
 <?php if(! wfConfig::get('isPaid')){ ?>
 		<div class="wfPaidOnlyNotice">
 			<strong>Country Blocking is only available to Premium Members at this time</strong><br /><br />
 			Country Blocking is a premium feature because we have licensed a very accurate commercial geolocation database to provide this feature. If you would like to
-			activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options
-			page.
+			activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page. You can <a href="http://docs.wordfence.com/en/Country_blocking" target="_blank">learn more about Country Blocking on our documentation website</a>.
 		</div>
 <?php } ?>
 		<?php if(wfConfig::get('cacheType') == 'falcon'){ ?>

@@ -1,7 +1,7 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scanScheduling"></div>
 <div class="wrap" id="paidWrap">
 	<?php require('menuHeader.php'); ?>
-	<div class="wordfence-lock-icon wordfence-icon32"><br /></div><h2 id="wfHeading">Schedule Wordfence Scanning</h2>
+	<?php $pageTitle = "Schedule when Wordfence Scans Occur"; $helpLink="http://docs.wordfence.com/en/Wordfence_scan_scheduling"; $helpLabel="Learn more about Scheduling Wordfence Scans"; include('pageTitle.php'); ?>
 <?php if(! wfConfig::get('isPaid')){ ?>
 			<div class="wfPaidOnlyNotice">
 				<strong>Scan Scheduling is only available to Premium Members at this time</strong><br /><br />
@@ -23,17 +23,6 @@
 				}
 			?>
 			</span>
-		</p>
-		<p style="width: 600px;">
-			Wordfence provides continuous real-time security for your site. Occasionally we run a full scan of all files, posts, pages, comments, user password and other site components. 
-			The scheduler below lets you choose when those full scans will run.<br /><br />
-
-			We have displayed the current time your WordPress site uses above.
-			You can go to the Settings/General menu to change your timezone.
-			Use the links provided as shortcuts to select scan times. Try clicking 
-			the links several times to advance the time. You can also manually select scan start times for each day.
-			<br /><br />
-			NOTE: Scans run within 1 hour after scheduled time. E.g. A scan scheduled for 1pm will run between 1pm and 2pm. This prevents a stampede on our scanning server at the top of the hour.
 		</p>
 		<p>
 			<strong>Scan mode:</strong><select id="schedMode" onchange="WFAD.sched_modeChange();">

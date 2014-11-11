@@ -1,20 +1,10 @@
 <div class="wordfenceModeElem" id="wordfenceMode_rangeBlocking"></div>
 <div class="wrap" id="paidWrap">
 	<?php require('menuHeader.php'); ?>
-	<?php $pageTitle = "Advanced Blocking"; include('pageTitle.php'); ?>
+	<?php $helpLink="http://docs.wordfence.com/en/Advanced_Blocking"; $helpLabel="Learn more about Advanced Blocking"; $pageTitle = "Advanced Blocking"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
 		<p>
-			<div style="width: 600px; margin-bottom: 15px;">
 			<?php if(! wfConfig::get('firewallEnabled')){ ?><div style="color: #F00; font-weight: bold;">Firewall is disabled. You can enable it on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options page</a> at the top.</div><br /><?php } ?>
-			This page lets you block visitors who are from a range of IP addresses or are using a certain web browser or browser pattern. 
-			You can also block a certain web browser that is visiting your site from a certain range of IP addresses. This can be useful when
-			blocking someone pretending to be Google and using a specific Internet Service Provider or Web Host.<br /><br /> 
-			<ul style="list-style-type:circle;">
-				<li>To block a range of IP addresses, enter the range and leave the User-Agent field blank.</li>
-				<li>To block a certain kind of web browser, enter the browser or browser pattern in the User-Agent field and leave the IP range blank</li>
-				<li>To block a certain kind of web browser that is accessing your site from a certain range of IP addresses, enter both the IP address range and the pattern to use to match the web browser</li>
-			</ul>
-			</div>
 			<table class="wfConfigForm">
 				<tr><th>Block anyone that has an IP address in this range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if( isset( $_GET['wfBlockRange'] ) && $_GET['wfBlockRange']){ echo wp_kses($_GET['wfBlockRange'], array()); } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> 192.168.200.200 - 192.168.200.220</td></tr>

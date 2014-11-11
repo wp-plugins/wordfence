@@ -2186,6 +2186,9 @@ class wordfence {
 		foreach($keys as $key){
 			$export[$key] = wfConfig::get($key, '');
 		}
+		$export['scanScheduleJSON'] = json_encode(wfConfig::get_ser('scanSched', array()));
+		$export['schedMode'] = wfConfig::get('schedMode', '');
+
 		try {
 			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 			$res = $api->call('export_options', array(), $export);
@@ -2212,6 +2215,12 @@ class wordfence {
 					wfConfig::set($key, $res['options'][$key]);
 					$totalSet++;
 				}
+			}
+			if(isset($res['options']['scanScheduleJSON']) && isset($res['options']['schedMode'])){
+				$scanSched = json_decode($res['options']['scanScheduleJSON']);
+				wfConfig::set_ser('scanSched', $scanSched);
+				wfConfig::set('schedMode', $res['options']['schedMode']);
+				$totalSet += 2;
 			}
 			return $totalSet;
 		} else if($res['err']){

@@ -17,7 +17,7 @@
 		</div>
 	</h2>
 	<br clear="both" />
-
+	<a href="http://docs.wordfence.com/en/Live_traffic" target="_blank" class="wfhelp"></a><a href="http://docs.wordfence.com/en/Live_traffic" target="_blank">Learn more about Wordfence Live Traffic</a>
 	<div class="wordfenceLive">
 		<table border="0" cellpadding="0" cellspacing="0">
 		<tr><td><h2>Wordfence Live Activity:</h2></td><td id="wfLiveStatus"></td></tr>

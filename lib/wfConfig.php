@@ -444,6 +444,9 @@ class wfConfig {
 				$ret[] = $key;
 			}
 		}
+		foreach(array('cbl_action', 'cbl_countries', 'cbl_redirURL', 'cbl_loggedInBlocked', 'cbl_loginFormBlocked', 'cbl_restOfSiteBlocked', 'cbl_bypassRedirURL', 'cbl_bypassRedirDest', 'cbl_bypassViewURL') as $key){
+			$ret[] = $key;
+		}
 		return $ret;
 	}
 	public static function parseOptions(){

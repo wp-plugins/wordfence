@@ -1,18 +1,18 @@
 <div class="wordfenceModeElem" id="wordfenceMode_scan"></div>
 <div class="wrap wordfence">
 	<?php require('menuHeader.php'); ?>
-	<?php $pageTitle = "Wordfence Scan"; include('pageTitle.php'); ?>
+	<?php $pageTitle = "Wordfence Scan"; $helpLink="http://docs.wordfence.com/en/Wordfence_scanning"; $helpLabel="Learn more about scanning"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap">
 		<div class="wordfenceScanButton">
 			<table border="0" cellpadding="0" cellspacing="0" style="width: 800px;">
 			<tr>
 				<td style="width: 250px; padding-top: 10px;">
 					<input type="button" value="Start a Wordfence Scan" id="wfStartScanButton1" class="wfStartScanButton button-primary" onclick="wordfenceAdmin.startScan();" /><br />
-					&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.killScan(); return false;" style="font-size: 10px; color: #AAA;">Click here to kill a running scan.</a>
+					&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.killScan(); return false;" style="font-size: 10px; color: #AAA;">Click to kill the current scan.</a>
 				</td>
 				<td>
 					<div style="border: 1px solid #CCC; padding: 4px;">
-						You can <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://support.wordfence.com/">visit our support website help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a> or <a href="http://www.wordfence.com/" target="_blank">www.wordfence.com</a>. Spreading the word helps us keep the best features free.
+						<a href="http://docs.wordfence.com/en/Wordfence_scanning" target="_blank" class="wfhelp"></a><a href="http://docs.wordfence.com/en/Wordfence_scanning" target="_blank">Read our scanning documentation</a>. You can also <a href="#" onclick="WFAD.startTourAgain(); return false;">start the tour again</a>, <a href="http://www.wordfence.com/subscribe-to-the-wordfence-email-list/" target="_blank">subscribe to get WordPress Security Alerts and Product News</a> or <a target="_blank" href="http://support.wordfence.com/">visit our support website help.</a> Love Wordfence? You can help by doing two simple things: <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">Go to WordPress.org now and give this plugin a 5&#9733; rating</a>. Blog about Wordfence and link to the <a href="http://wordpress.org/extend/plugins/wordfence/" target="_blank">plugin page</a> or <a href="http://www.wordfence.com/" target="_blank">www.wordfence.com</a>. Spreading the word helps us keep the best features free.
 					</div>
 				</td>
 			</tr>
