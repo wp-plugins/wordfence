@@ -1845,12 +1845,16 @@ class wordfence {
 	public static function ajax_blockIPUARange_callback(){
 		$ipRange = trim($_POST['ipRange']);
 		$uaRange = trim($_POST['uaRange']);
+		$referer = trim($_POST['referer']);
 		$reason = trim($_POST['reason']);
-		if(preg_match('/\|+/', $ipRange . $uaRange)){
-			return array('err' => 1, 'errorMsg' => "You are not allowed to include a pipe character \"|\" in your IP range or browser pattern");
+		if(preg_match('/\|+/', $ipRange . $uaRange . $referer)){
+			return array('err' => 1, 'errorMsg' => "You are not allowed to include a pipe character \"|\" in your IP range, browser pattern or referer");
 		}
 		if( (! $ipRange) && wfUtils::isUABlocked($uaRange)){
 			return array('err' => 1, 'errorMsg' => "The browser pattern you specified will block you from your own website. We have not accepted this pattern to protect you from being blocked.");
+		}
+		if(fnmatch($referer, site_url(), FNM_CASEFOLD)){
+			return array('err' => 1, 'errorMsg' => "The referer pattern you specified matches your own website and will block visitors as they surf from one page to another on your site. You can't enter this pattern.");
 		}
 		if($ipRange && (! preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $ipRange ))){
 			return array('err' => 1, 'errorMsg' => "The IP range you specified is not valid. Please specify an IP range like the following example: \"1.2.3.4 - 1.2.3.8\" without quotes.");
@@ -1868,7 +1872,7 @@ class wordfence {
 			}
 			$ipRange = $ip1 . '-' . $ip2;
 		}
-		$range = $ipRange . '|' . $uaRange;
+		$range = $ipRange . '|' . $uaRange . '|' . $referer;
 		self::getLog()->blockRange('IU', $range, $reason);
 		return array('ok' => 1);
 	}
@@ -2645,7 +2649,6 @@ EOL;
 	public static function menu_whois(){
 		require 'menu_whois.php';
 	}
-
 	public static function menu_rangeBlocking(){
 		require 'menu_rangeBlocking.php';
 	}
@@ -2897,6 +2900,25 @@ EOL;
 	//PUBLIC API
 	public static function doNotCache(){ //Call this to prevent Wordfence from caching the current page. 
 		wfCache::doNotCache();
+		return true;
+	}
+	public static function whitelistIP($IP){ //IP as a string in dotted quad notation e.g. '10.11.12.13'
+		$IP = trim($IP);
+		if(! preg_match('/^[\[\]\-\d]+\.[\[\]\-\d]+\.[\[\]\-\d]+\.[\[\]\-\d]+$/', $IP)){
+			throw new Exception("The IP you provided must be in dotted quad notation or use ranges with square brackets. e.g. 10.11.12.13 or 10.11.12.[1-50]");
+		}
+		$whites = wfConfig::get('whitelisted', '');
+		$arr = explode(',', $whites);
+		$arr2 = array();
+		foreach($arr as $e){
+			if($e == $IP){
+				return false;
+			}
+			$arr2[] = trim($e);
+		}
+		$arr2[] = $IP;
+		wfConfig::set('whitelisted', implode(',', $arr2));
+		return true;
 	}
 }
 ?>

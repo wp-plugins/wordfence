@@ -1119,7 +1119,7 @@ window['wordfenceAdmin'] = {
 			jQuery('#wfrawhtml').html('<span style="color: #F00;">Sorry, but no data for that IP or domain was found.</span>');
 		}
 	},
-	blockIPUARange: function(ipRange, uaRange, reason){
+	blockIPUARange: function(ipRange, uaRange, referer, reason){
 		if(! /\w+/.test(reason)){
 			this.colorbox('300px', "Please specify a reason", "You forgot to include a reason you're blocking this IP range. We ask you to include this for your own record keeping.");
 			return;
@@ -1131,7 +1131,7 @@ window['wordfenceAdmin'] = {
 				return;
 			}
 		}
-		if( ! (/\w+/.test(ipRange) || /\w+/.test(uaRange))){
+		if( ! (/\w+/.test(ipRange) || /\w+/.test(uaRange) || /\w+/.test(referer)) ){
 			this.colorbox('300px', 'Specify an IP range or Browser pattern', "Please specify either an IP address range or a web browser pattern to match.");
 			return;
 		}
@@ -1139,6 +1139,7 @@ window['wordfenceAdmin'] = {
 		this.ajax('wordfence_blockIPUARange', {
 			ipRange: ipRange,
 			uaRange: uaRange,
+			referer: referer,
 			reason: reason
 			}, function(res){
 				if(res.ok){

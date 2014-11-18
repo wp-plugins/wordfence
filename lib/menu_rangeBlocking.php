@@ -6,14 +6,16 @@
 		<p>
 			<?php if(! wfConfig::get('firewallEnabled')){ ?><div style="color: #F00; font-weight: bold;">Firewall is disabled. You can enable it on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options page</a> at the top.</div><br /><?php } ?>
 			<table class="wfConfigForm">
-				<tr><th>Block anyone that has an IP address in this range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if( isset( $_GET['wfBlockRange'] ) && $_GET['wfBlockRange']){ echo wp_kses($_GET['wfBlockRange'], array()); } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
+				<tr><th>IP address range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if( isset( $_GET['wfBlockRange'] ) && $_GET['wfBlockRange']){ echo wp_kses($_GET['wfBlockRange'], array()); } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> 192.168.200.200 - 192.168.200.220</td></tr>
-				<tr><th>...you can also enter a User-Agent (browser) that matches:</th><td><input id="uaRange" type="text" size="30" maxlength="255" >&nbsp;(Case insensitive)</td></tr>
-				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *badRobot*, AnotherBadRobot*, *someKindOfSuffix</td></tr>
+				<tr><th>User-Agent (browser) that matches:</th><td><input id="uaRange" type="text" size="30" maxlength="255" >&nbsp;(Case insensitive)</td></tr>
+				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *badRobot*, AnotherBadRobot*, *someBrowserSuffix</td></tr>
+				<tr><th>Referer (website visitor arrived from) that matches:</th><td><input id="wfreferer" type="text" size="30" maxlength="255" >&nbsp;(Case insensitive)</td></tr>
+				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *badWebsite*, AnotherBadWebsite*, *someWebsiteSuffix</td></tr>
 				<tr><th>Enter a reason you're blocking this visitor pattern:</th><td><input id="wfReason" type="text" size="30" maxlength="255"></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Why a reason:</strong> The reason you specify above is for your own record keeping.</td></tr>
 				<tr><td colspan="2" style="padding-top: 15px;">
-					<input type="button" name="but3" class="button-primary" value="Block Visitors Matching this Pattern" onclick="WFAD.blockIPUARange(jQuery('#ipRange').val(), jQuery('#uaRange').val(), jQuery('#wfReason').val()); return false;" />
+					<input type="button" name="but3" class="button-primary" value="Block Visitors Matching this Pattern" onclick="WFAD.blockIPUARange(jQuery('#ipRange').val(), jQuery('#uaRange').val(), jQuery('#wfreferer').val(), jQuery('#wfReason').val()); return false;" />
 				</td></tr>
 			</table>
 		</p>
@@ -31,7 +33,7 @@
 <tr><td>
 	{{if patternDisabled}}
 	<div style="width: 500px; margin-top: 20px;">
-		<span style="color: #F00;">Pattern Below has been DISABLED:</span> Falcon engine does not support advanced blocks that include BOTH an IP address range AND a browser pattern.
+		<span style="color: #F00;">Pattern Below has been DISABLED:</span> Falcon engine does not support advanced blocks that include combinations of IP range, browser pattern and referring website. You can only specify one of the three in patterns when using Falcon.
 	</div>
 	<div style="color: #AAA;">
 	{{/if}}
@@ -40,6 +42,9 @@
 	</div>
 	<div>
 		<strong>Browser Pattern:</strong>&nbsp;${browserPattern}
+	</div>
+	<div>
+		<strong>Source website:</strong>&nbsp;${refererPattern}
 	</div>
 	<div>
 		<strong>Reason:</strong>&nbsp;${reason}
@@ -53,7 +58,7 @@
 	<ul>
 	<li>${totalBlocked} blocked hits</li>
 	{{if lastBlockedAgo}}
-	<li>Last blocked: ${lastBlockedAgo} ago</li>
+	<li>Last blocked: ${lastBlockedAgo}</li>
 	{{/if}}
 	</ul>
 </td></tr>

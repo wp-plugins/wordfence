@@ -601,10 +601,10 @@ EOT;
 					$arr = explode('|', $r);
 					$range = isset($arr[0]) ? $arr[0] : false;
 					$browser = isset($arr[1]) ? $arr[1] : false;
+					$referer = isset($arr[2]) ? $arr[2] : false;
 
-					if($range && $browser){
-						continue; //Don't process browser and range combos
-					} else if($range){
+					if($range){
+						if($browser || $referer){ continue; } //We don't allow combos in falcon
 						$ips = explode('-', $range);
 						$cidrs = wfUtils::rangeToCIDRs($ips[0], $ips[1]);
 						$hIPs = wfUtils::inet_ntoa($ips[0]) . ' - ' . wfUtils::inet_ntoa($ips[1]);
@@ -616,10 +616,18 @@ EOT;
 							$lines[] = '#End of blocking code for IP range: ' . $hIPs . "\n";
 						}
 					} else if($browser){
+						if($range || $referer){ continue; }
 						$browserLines[] = "\t#Blocking code for browser pattern: $browser\n";
 						$browser = preg_replace('/([\-\_\.\+\!\@\#\$\%\^\&\(\)\[\]\{\}\/])/', "\\\\$1", $browser);
 						$browser = preg_replace('/\*/', '.*', $browser);
 						$browserLines[] = "\tSetEnvIf User-Agent " . $browser . " WordfenceBadBrowser=1\n";
+						$browserAdded = true;
+					} else if($referer){
+						if($browser || $range){ continue; }
+						$browserLines[] = "\t#Blocking code for referer pattern: $referer\n";
+						$referer = preg_replace('/([\-\_\.\+\!\@\#\$\%\^\&\(\)\[\]\{\}\/])/', "\\\\$1", $referer);
+						$referer = preg_replace('/\*/', '.*', $referer);
+						$browserLines[] = "\tSetEnvIf Referer " . $referer . " WordfenceBadBrowser=1\n";
 						$browserAdded = true;
 					}
 				}

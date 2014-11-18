@@ -584,6 +584,9 @@ class wfUtils {
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
 		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
 	}
+	public static function isRefererBlocked($refPattern){
+		return fnmatch($refPattern, $_SERVER['HTTP_REFERER'], FNM_CASEFOLD);
+	}
 	public static function rangeToCIDRs($startIP, $endIP){
 		$startIPBin = sprintf('%032b', $startIP);
 		$endIPBin = sprintf('%032b', $endIP);
