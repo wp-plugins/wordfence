@@ -122,6 +122,7 @@ class wfSchema {
 	KEY k2(endTime)
 ) default charset=utf8",
 "wfStatus" => "(
+	id bigint UNSIGNED NOT NULL auto_increment PRIMARY KEY,
 	ctime DOUBLE(17,6) UNSIGNED NOT NULL,
 	level tinyint UNSIGNED NOT NULL,
 	type char(5) NOT NULL,
@@ -159,6 +160,27 @@ class wfSchema {
 	totalBlocked int UNSIGNED default 0,
 	lastBlocked int UNSIGNED default 0
 ) default charset=utf8"
+/*
+'wfPerfLog' => "(
+	id int UNSIGNED NOT NULL auto_increment PRIMARY KEY,
+	IP int UNSIGNED NOT NULL,
+	userID int UNSIGNED NOT NULL,
+	UA varchar(1000) NOT NULL,
+	URL varchar(1000) NOT NULL,
+	ctime int UNSIGNED NOT NULL,
+	fetchStart int UNSIGNED NOT NULL,
+	domainLookupStart int UNSIGNED NOT NULL,
+	domainLookupEnd int UNSIGNED NOT NULL,
+	connectStart int UNSIGNED NOT NULL,
+	connectEnd int UNSIGNED NOT NULL,
+	requestStart int UNSIGNED NOT NULL,
+	responseStart int UNSIGNED NOT NULL,
+	responseEnd int UNSIGNED NOT NULL,
+	domReady int UNSIGNED NOT NULL,
+	loaded int UNSIGNED NOT NULL,
+	KEY k1(ctime)
+) default charset=utf8"
+*/
 );
 	private $db = false;
 	private $prefix = 'wp_';
