@@ -1,10 +1,8 @@
 <div class="wordfenceModeElem" id="wordfenceMode_whois"></div>
 <div class="wrap" id="paidWrap">
-	<?php $pageTitle = "WHOIS Lookup"; include('pageTitle.php'); ?>
+	<?php require('menuHeader.php'); ?>
+	<?php $pageTitle = "WHOIS Lookup"; $helpLink="http://docs.wordfence.com/en/Whois_Lookup"; $helpLabel="Learn more about Whois Lookups"; include('pageTitle.php'); ?>
 	<div class="wordfenceWrap" style="margin: 20px 20px 20px 30px;">
-		<p style="width: 600px;">
-			Wordfence WHOIS queries the WHOIS servers on the Internet and gets information about domain name or IP address owners. This helps you determine who is hacking your site and helps you report them to the relevant authorities. If you see a malicious IP address, do a WHOIS lookup, find out who is responsible for that IP address and send an email reporting them to the 'abuse' email address provided.<br /><br />
-		</p>
 <?php
 if(! function_exists('fsockopen')){
 ?>
@@ -27,7 +25,7 @@ if(! function_exists('fsockopen')){
 		<?php if( isset( $_GET['wfnetworkblock'] ) && $_GET['wfnetworkblock']){ ?>
 		<h2>How to block a network</h2>
 		<p style="width: 600px;">
-			You've chosen to block the network that <span style="color: #F00;"><?php echo $_GET['whoisval']; ?></span> is part of.
+			You've chosen to block the network that <span style="color: #F00;"><?php echo wp_kses($_GET['whoisval'], array()); ?></span> is part of.
 			We've marked the networks we found that this IP address belongs to in red below.
 			Make sure you read all the WHOIS information so that you see all networks this IP belongs to. We recommend blocking the network with the lowest number of addresses.
 			You may find this is listed at the end as part of the 'rWHOIS' query which contacts
@@ -50,7 +48,7 @@ if(! function_exists('fsockopen')){
 </div>
 </script>
 <script type="text/javascript">
-var whoisval = "<?php if( isset( $_GET['whoisval'] ) ) { echo $_GET['whoisval']; } ?>";
+var whoisval = "<?php if( isset( $_GET['whoisval'] ) ) { echo wp_kses($_GET['whoisval'], array()); } ?>";
 if(whoisval){
 	jQuery(function(){
 		jQuery('#wfwhois').val(whoisval);
