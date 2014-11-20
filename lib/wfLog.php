@@ -668,7 +668,7 @@ class wfLog {
 				$bDat = explode('|', $blockRec['blockString']);
 				$ipRange = $bDat[0];
 				$uaPattern = $bDat[1];
-				$refPattern = $bDat[2];
+				$refPattern = isset($bDat[2]) ? $bDat[2] : '';
 				if($ipRange){
 					$ips = explode('-', $ipRange);
 					if($IPnum >= $ips[0] && $IPnum <= $ips[1]){

@@ -2,23 +2,24 @@
 require_once('wfConfig.php');
 require_once('wfCountryMap.php');
 class wfUtils {
+	#We've modified this and removed some addresses which may be routable on the Net and cause auto-whitelisting. 
 	private static $privateAddrs = array(
-		array('0.0.0.0/8',0,16777215),
-		array('10.0.0.0/8',167772160,184549375),
-		array('100.64.0.0/10',1681915904,1686110207),
-		array('127.0.0.0/8',2130706432,2147483647),
-		array('169.254.0.0/16',2851995648,2852061183),
-		array('172.16.0.0/12',2886729728,2887778303),
-		array('192.0.0.0/29',3221225472,3221225479),
-		array('192.0.2.0/24',3221225984,3221226239),
-		array('192.88.99.0/24',3227017984,3227018239),
-		array('192.168.0.0/16',3232235520,3232301055),
-		array('198.18.0.0/15',3323068416,3323199487),
-		array('198.51.100.0/24',3325256704,3325256959),
-		array('203.0.113.0/24',3405803776,3405804031),
-		array('224.0.0.0/4',3758096384,4026531839),
-		array('240.0.0.0/4',4026531840,4294967295),
-		array('255.255.255.255/32',4294967295,4294967295)
+		//array('0.0.0.0/8',0,16777215), #Broadcast addr
+		array('10.0.0.0/8',167772160,184549375), #Private addrs
+		//array('100.64.0.0/10',1681915904,1686110207), #carrier-grade-nat for comms between ISP and subscribers
+		array('127.0.0.0/8',2130706432,2147483647), #loopback
+		//array('169.254.0.0/16',2851995648,2852061183), #link-local when DHCP fails e.g. os x
+		array('172.16.0.0/12',2886729728,2887778303), #private addrs
+		array('192.0.0.0/29',3221225472,3221225479), #used for NAT with IPv6, so basically a private addr
+		//array('192.0.2.0/24',3221225984,3221226239), #Only for use in docs and examples, not for public use
+		//array('192.88.99.0/24',3227017984,3227018239), #Used by 6to4 anycast relays
+		array('192.168.0.0/16',3232235520,3232301055), #Used for local communications within a private network
+		//array('198.18.0.0/15',3323068416,3323199487), #Used for testing of inter-network communications between two separate subnets
+		//array('198.51.100.0/24',3325256704,3325256959), #Assigned as "TEST-NET-2" in RFC 5737 for use solely in documentation and example source code and should not be used publicly.
+		//array('203.0.113.0/24',3405803776,3405804031), #Assigned as "TEST-NET-3" in RFC 5737 for use solely in documentation and example source code and should not be used publicly.
+		//array('224.0.0.0/4',3758096384,4026531839), #Reserved for multicast assignments as specified in RFC 5771
+		//array('240.0.0.0/4',4026531840,4294967295), #Reserved for future use, as specified by RFC 6890
+		//array('255.255.255.255/32',4294967295,4294967295) #Reserved for the "limited broadcast" destination address, as specified by RFC 6890
 	);
 	private static $isWindows = false;
 	public static $scanLockFH = false;

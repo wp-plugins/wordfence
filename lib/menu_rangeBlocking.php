@@ -6,7 +6,9 @@
 		<p>
 			<?php if(! wfConfig::get('firewallEnabled')){ ?><div style="color: #F00; font-weight: bold;">Firewall is disabled. You can enable it on the <a href="admin.php?page=WordfenceSecOpt">Wordfence Options page</a> at the top.</div><br /><?php } ?>
 			<table class="wfConfigForm">
-				<tr><th>IP address range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php if( isset( $_GET['wfBlockRange'] ) && $_GET['wfBlockRange']){ echo wp_kses($_GET['wfBlockRange'], array()); } ?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
+				<tr><th>IP address range:</th><td><input id="ipRange" type="text" size="30" maxlength="255" value="<?php 
+					if( isset( $_GET['wfBlockRange'] ) && preg_match('/^[\d\.\s\t\-]+$/', $_GET['wfBlockRange']) ){ echo wp_kses($_GET['wfBlockRange'], array()); } 
+					?>" onkeyup="WFAD.calcRangeTotal();">&nbsp;<span id="wfShowRangeTotal"></span></td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> 192.168.200.200 - 192.168.200.220</td></tr>
 				<tr><th>User-Agent (browser) that matches:</th><td><input id="uaRange" type="text" size="30" maxlength="255" >&nbsp;(Case insensitive)</td></tr>
 				<tr><td></td><td style="padding-bottom: 15px;"><strong>Examples:</strong> *badRobot*, AnotherBadRobot*, *someBrowserSuffix</td></tr>
