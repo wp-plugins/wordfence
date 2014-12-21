@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.3.1
-Tested up to: 4.0
-Stable tag: 5.3.3
+Tested up to: 4.1
+Stable tag: 5.3.4
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -165,8 +165,13 @@ cause a security hole on your site.
 
 == Changelog ==
 
+= 5.3.4 =
+* Changed FAQ link when locked out and email unlock doesn't work to correct link.
+* Falcon cache now creates files as mode 0644 for improved security. 
+* Updated GeoIP database to December 2014 version. 
+
 = 5.3.3 =
-* Security fix. Thanks Matt B! 
+* Security fix. Thanks Matt Barry.
 * Changed what we consider to be private addresses to a smaller range of addresses. See current range at: http://docs.wordfence.com/en/How_Wordfence_handles_Private_Addresses
 * Fixed a warning about an undefined value which appeared after we added referer blocking in 5.3.2.
 
