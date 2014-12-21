@@ -161,11 +161,11 @@ class wfCache {
 		}
 
 		@file_put_contents($file, $buffer . $append, LOCK_EX);
-		chmod($file, 0655);
+		chmod($file, 0644);
 		if(self::$cacheType == 'falcon'){ //create gzipped files so we can send precompressed files
 			$file .= '_gzip';
 			@file_put_contents($file, gzencode($buffer . $appendGzip, 9), LOCK_EX);
-			chmod($file, 0655);
+			chmod($file, 0644);
 		}
 		return $buffer;
 	}
