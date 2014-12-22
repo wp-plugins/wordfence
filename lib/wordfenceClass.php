@@ -1750,8 +1750,16 @@ class wordfence {
 		} else if($opts['autoUpdate'] == '0'){
 			wfConfig::disableAutoUpdate();
 		}
-			
-			
+		
+		try {
+			if ($opts['disableCodeExecutionUploads']) {
+				wfConfig::disableCodeExecutionForUploads();
+			} else {
+				wfConfig::removeCodeExecutionProtectionForUploads();
+			}
+		} catch (wfConfigException $e) {
+			return array('errorMsg' => $e->getMessage());
+		}
 		
 		$paidKeyMsg = false;
 
