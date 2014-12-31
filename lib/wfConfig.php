@@ -842,7 +842,7 @@ Options -ExecCGI
 			}
 			$uploads_htaccess_has_content = strlen(trim($htaccess_contents)) > 0;
 		}
-		if (@file_put_contents($uploads_htaccess_file_path, ($uploads_htaccess_has_content ? "\n\n" : "") . self::$_disable_scripts_htaccess, FILE_APPEND) === false) {
+		if (@file_put_contents($uploads_htaccess_file_path, ($uploads_htaccess_has_content ? "\n\n" : "") . self::$_disable_scripts_htaccess, FILE_APPEND | LOCK_EX) === false) {
 			throw new wfConfigException("Unable to save the .htaccess file needed to disable script execution in the uploads directory.  Please check your permissions on that directory.");
 		}
 		return true;
@@ -866,7 +866,7 @@ Options -ExecCGI
 					throw new wfConfigException($error_message);
 				}
 				
-			} elseif (@file_put_contents($uploads_htaccess_file_path, $htaccess_contents) === false) {
+			} elseif (@file_put_contents($uploads_htaccess_file_path, $htaccess_contents, LOCK_EX) === false) {
 				throw new wfConfigException($error_message);
 			}
 		}
