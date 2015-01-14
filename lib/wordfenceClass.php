@@ -12,6 +12,7 @@ require_once('wfLog.php');
 require_once('wfConfig.php');
 require_once('wfSchema.php');
 require_once('wfCache.php');
+require_once('wfImage.php');
 class wordfence {
 	public static $printStatus = false;
 	public static $wordfence_wp_version = false;
@@ -2265,7 +2266,12 @@ class wordfence {
 		self::doEarlyAccessLogging();
 		//End logging
 
-
+		
+		if ($wfFunc == 'badURLImage') {
+			self::wfFunc_badURLImage();
+			exit;
+		}
+		
 		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'sysinfo' || $wfFunc == 'conntest' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
 			return;
 		}
@@ -2496,6 +2502,34 @@ EOL;
 		require 'diffResult.php';
 		exit(0);
 	}
+	
+	public static function wfFunc_badURLImage() {
+		// verify hash here
+		if (!empty($_GET['url']) && !empty($_GET['key'])) {
+			$bad_url = base64_decode($_GET['url']);
+			if (hash_equals(wp_hash($bad_url), $_GET['key'])) {
+				$tmp_dir = wfConfig::getTempDir();
+				$image_path = $tmp_dir . '/' . $_GET['key'] . '.jpg';
+				
+				$image = new wfImage;
+				if (!file_exists($image_path)) {
+					// TODO: clear out old images periodically
+					$image->drawText($bad_url)
+						->save($image_path, 'jpg');
+				}
+				
+				if (file_exists($image_path)) {
+					header('Content-type: image/jpeg');
+					readfile($image_path);
+					exit;
+				} else {
+					$image->output();
+				}
+			}
+		}
+		wp_die("Invalid key.");
+	}
+	
 	public static function initAction(){
 		global $wp;
 		if (!is_object($wp)) return; //Suggested fix for compatability with "Portable phpmyadmin"
