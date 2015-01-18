@@ -664,7 +664,7 @@ class wfConfig {
 			@unlink($filename);
 		}
 	}
-	private static function getTempDir(){
+	public static function getTempDir(){
 		if(! self::$tmpDirCache){
 			$dirs = self::getPotentialTempDirs();
 			$finalDir = 'notmp';
