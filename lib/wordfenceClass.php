@@ -1182,8 +1182,6 @@ class wordfence {
 	}
 	public static function wordfenceStartScheduledScan(){
 		
-		error_log('wordfenceStartScheduledScan: ' . var_export(func_get_args()), E_USER_NOTICE);
-		
 		//If scheduled scans are not enabled in the global config option, then don't run a scheduled scan.
 		if(wfConfig::get('scheduledScansEnabled') != '1'){
 			return;
@@ -1250,23 +1248,9 @@ class wordfence {
 	}
 	private static function scheduleSingleScan($futureTime){
 		wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan');
-		// $schedArgs = wfConfig::get_ser('schedScanArgs', array());
-		// if(! is_array($schedArgs)){ //paranoia
-		// 	$schedArgs = array();
-		// }
-		// $schedArgs[] = $futureTime;
-		// wfConfig::set_ser('schedScanArgs', $schedArgs);
 	}
 	private static function unscheduleAllScans(){
-		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Unschedule legacy scans without args
-
-		// $schedArgs = wfConfig::get_ser('schedScanArgs', array());
-		// if(is_array($schedArgs)){
-		// 	foreach($schedArgs as $futureTime){
-		// 		wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
-		// 	}
-		// }
-		// wfConfig::set_ser('schedScanArgs', array());
+		wp_clear_scheduled_hook('wordfence_start_scheduled_scan');
 	}
 	public static function ajax_saveCountryBlocking_callback(){
 		if(! wfConfig::get('isPaid')){
