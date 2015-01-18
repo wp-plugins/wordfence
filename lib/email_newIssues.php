@@ -10,7 +10,7 @@
 <?php foreach($issues as $i){ if($i['severity'] == 1){ ?>
 <p>* <?php echo $i['shortMsg'] ?></p>
 <?php if (!empty($i['tmplData']['badURL'])): ?>
-<p><img src="<?php echo sprintf("http://noc1.wordfence.com/v2.14/?v=4.1&s=%s&k=%s&action=image&txt=%s", rawurlencode(site_url()), rawurlencode(wfConfig::get('apiKey')), rawurlencode(base64_encode($i['tmplData']['badURL']))) ?>" alt="" /></p>
+<p><img src="<?php echo sprintf("http://noc1.wordfence.com/v2.14/?v=%s&s=%s&k=%s&action=image&txt=%s", rawurlencode(wfUtils::getWPVersion()), rawurlencode(site_url()), rawurlencode(wfConfig::get('apiKey')), rawurlencode(base64_encode($i['tmplData']['badURL']))) ?>" alt="" /></p>
 <?php endif ?>
 
 <?php } } } ?>
