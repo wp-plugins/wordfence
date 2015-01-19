@@ -8,9 +8,9 @@
 <p>Critical Problems:</p>
 
 <?php foreach($issues as $i){ if($i['severity'] == 1){ ?>
-<p>* <?php echo $i['shortMsg'] ?></p>
+<p>* <?php echo htmlspecialchars($i['shortMsg']) ?></p>
 <?php if (!empty($i['tmplData']['badURL'])): ?>
-<p><img src="<?php echo sprintf("http://noc1.wordfence.com/v2.14/?v=%s&s=%s&k=%s&action=image&txt=%s", rawurlencode(wfUtils::getWPVersion()), rawurlencode(site_url()), rawurlencode(wfConfig::get('apiKey')), rawurlencode(base64_encode($i['tmplData']['badURL']))) ?>" alt="" /></p>
+<p><img src="<?php echo sprintf("http://noc1.wordfence.com/v2.14/?v=%s&s=%s&k=%s&action=image&txt=%s", rawurlencode(wfUtils::getWPVersion()), rawurlencode(home_url()), rawurlencode(wfConfig::get('apiKey')), rawurlencode(base64_encode($i['tmplData']['badURL']))) ?>" alt="" /></p>
 <?php endif ?>
 
 <?php } } } ?>
@@ -19,7 +19,7 @@
 <p>Warnings:</p>
 
 <?php foreach($issues as $i){ if($i['severity'] == 2){  ?>
-<p>* <?php echo $i['shortMsg'] ?></p>
+<p>* <?php echo htmlspecialchars($i['shortMsg']) ?></p>
 
 <?php } } } ?>
 
@@ -35,7 +35,7 @@ can scan more than once per day.</p>
 priority support tickets using our ticketing system. </p>
 
 <p>Click here to sign-up for the Premium version of Wordfence now.<br>
-https://www.wordfence.com/wordfence-signup/</p>
+<a href="https://www.wordfence.com/wordfence-signup/">https://www.wordfence.com/wordfence-signup/</a></p>
 
 <?php } ?>
 

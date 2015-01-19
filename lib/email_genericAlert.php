@@ -16,7 +16,7 @@ can scan more than once per day.</p>
 priority support tickets using our ticketing system. </p>
 
 <p>Click here to sign-up for the Premium version of Wordfence now.<br>
-https://www.wordfence.com/wordfence-signup/</p>
+<a href="https://www.wordfence.com/wordfence-signup/">https://www.wordfence.com/wordfence-signup/<a></p>
 
 <?php } ?>
 
