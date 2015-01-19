@@ -464,7 +464,9 @@ class wfUtils {
 		$host = $db->querySingle("select host from " . $reverseTable . " where IP=%s and unix_timestamp() - lastUpdate < %d", $IPn, WORDFENCE_REVERSE_LOOKUP_CACHE_TIME);
 		if(! $host){
 			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
-			$host = @dns_get_record($ptr, DNS_PTR);
+			if (function_exists('dns_get_record')) {
+				$host = @dns_get_record($ptr, DNS_PTR);
+			}
 			if($host == null){
 				$host = 'NONE';
 			} else {
