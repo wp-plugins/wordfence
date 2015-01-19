@@ -152,6 +152,6 @@ if($fileList){
 
 ?>
 
-<div class="diffFooter">&copy;&nbsp;2011 to 2014 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</div>
+<div class="diffFooter">&copy;&nbsp;2011 to 2015 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</div>
 </body>
 </html>

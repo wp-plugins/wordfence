@@ -160,7 +160,7 @@ class wordfenceScanner {
 									'severity' => 1,
 									'ignoreP' => $this->path . $file,
 									'ignoreC' => $fileSum,
-									'shortMsg' => "This file appears to be malicious",
+									'shortMsg' => "File appears to be malicious: " . $file,
 									'longMsg' => "This file appears to be installed by a hacker to perform malicious activity. If you know about this file you can choose to ignore it to exclude it from future scans. The text we found in this file that matches a known malicious file is: <strong style=\"color: #F00;\">\"" . $matches[1] . "\"</strong>.",
 									'data' => array(
 										'file' => $file,

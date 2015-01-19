@@ -225,6 +225,7 @@ class wfConfig {
 				"startScansRemotely" => false,
 				"disableConfigCaching" => false,
 				"addCacheComment" => false,
+				"disableCodeExecutionUploads" => false,
 				"allowHTTPSCaching" => false,
 				"debugOn" => false
 			),
@@ -663,7 +664,7 @@ class wfConfig {
 			@unlink($filename);
 		}
 	}
-	private static function getTempDir(){
+	public static function getTempDir(){
 		if(! self::$tmpDirCache){
 			$dirs = self::getPotentialTempDirs();
 			$finalDir = 'notmp';
@@ -805,5 +806,74 @@ class wfConfig {
 			@ob_end_clean();
 		} catch(Exception $e){}
 	}
+	
+	/**
+	 * .htaccess file contents to disable all script execution in a given directory.
+	 */
+	private static $_disable_scripts_htaccess = '# BEGIN Wordfence code execution protection
+<IfModule mod_php5.c>
+php_flag engine 0
+</IfModule>
+
+AddHandler cgi-script .php .phtml .php3 .pl .py .jsp .asp .htm .shtml .sh .cgi
+Options -ExecCGI
+# END Wordfence code execution protection
+';
+	
+	private static function _uploadsHtaccessFilePath() {
+		$upload_dir = wp_upload_dir();
+		return $upload_dir['basedir'] . '/.htaccess';
+	}
+	
+	/**
+	 * Add/Merge .htaccess file in the uploads directory to prevent code execution.
+	 *
+	 * @return bool
+	 */
+	public static function disableCodeExecutionForUploads() {
+		$uploads_htaccess_file_path = self::_uploadsHtaccessFilePath();
+		$uploads_htaccess_has_content = false;
+		if (file_exists($uploads_htaccess_file_path)) {
+			$htaccess_contents = file_get_contents($uploads_htaccess_file_path);
+			
+			// htaccess exists and contains our htaccess code to disable script execution, nothing more to do
+			if (strpos($htaccess_contents, self::$_disable_scripts_htaccess) !== false) {
+				return true;
+			}
+			$uploads_htaccess_has_content = strlen(trim($htaccess_contents)) > 0;
+		}
+		if (@file_put_contents($uploads_htaccess_file_path, ($uploads_htaccess_has_content ? "\n\n" : "") . self::$_disable_scripts_htaccess, FILE_APPEND | LOCK_EX) === false) {
+			throw new wfConfigException("Unable to save the .htaccess file needed to disable script execution in the uploads directory.  Please check your permissions on that directory.");
+		}
+		return true;
+	}
+	
+	/**
+	 * Remove script execution protections for our the .htaccess file in the uploads directory.
+	 *
+	 * @return bool
+	 */
+	public static function removeCodeExecutionProtectionForUploads() {
+		$uploads_htaccess_file_path = self::_uploadsHtaccessFilePath();
+		if (file_exists($uploads_htaccess_file_path)) {
+			$htaccess_contents = file_get_contents($uploads_htaccess_file_path);
+			$htaccess_contents = str_replace(self::$_disable_scripts_htaccess, '', $htaccess_contents);
+			
+			$error_message = "Unable to remove code execution protections applied to the .htaccess file in the uploads directory.  Please check your permissions on that file.";
+			if (strlen(trim($htaccess_contents)) === 0) {
+				// empty file, remove it
+				if (!@unlink($uploads_htaccess_file_path)) {
+					throw new wfConfigException($error_message);
+				}
+				
+			} elseif (@file_put_contents($uploads_htaccess_file_path, $htaccess_contents, LOCK_EX) === false) {
+				throw new wfConfigException($error_message);
+			}
+		}
+		return true;
+	}
 }
+
+class wfConfigException extends Exception {}
+
 ?>

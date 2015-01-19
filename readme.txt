@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.3.1
 Tested up to: 4.1
-Stable tag: 5.3.4
+Stable tag: 5.3.5
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -164,6 +164,13 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.3.5 =
+* Update: Upgraded the geoIP country database to Jan 2015 version. 
+* Improvement: Added an option to disable execution of PHP code in the uploads directory as an added level of protection. Under "Other Options" on the Wordfence options page.
+* Improvement: We now email you any malware URLs encountered and they won't be filtered by your spam filter because the URL is included in the alert email as an image.
+* Fix: Fixed an issue that would cause multiple scans to be scheduled if the plugin was disabled and then reenabled. 
+* Fix: The name of malicious files detected are now included in the alert email sent containing your issues. 
 
 = 5.3.4 =
 * Changed FAQ link when locked out and email unlock doesn't work to correct link.
