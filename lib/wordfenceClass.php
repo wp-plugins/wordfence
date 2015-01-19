@@ -1247,24 +1247,10 @@ class wordfence {
 		}
 	}
 	private static function scheduleSingleScan($futureTime){
-		wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan', array($futureTime));
-		$schedArgs = wfConfig::get_ser('schedScanArgs', array());
-		if(! is_array($schedArgs)){ //paranoia
-			$schedArgs = array();
-		}
-		$schedArgs[] = $futureTime;
-		wfConfig::set_ser('schedScanArgs', $schedArgs);
+		wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan');
 	}
 	private static function unscheduleAllScans(){
-		wp_clear_scheduled_hook('wordfence_start_scheduled_scan'); //Unschedule legacy scans without args
-
-		$schedArgs = wfConfig::get_ser('schedScanArgs', array());
-		if(is_array($schedArgs)){
-			foreach($schedArgs as $futureTime){
-				wp_clear_scheduled_hook('wordfence_start_scheduled_scan', array($futureTime));
-			}
-		}
-		wfConfig::set_ser('schedScanArgs', array());
+		wp_clear_scheduled_hook('wordfence_start_scheduled_scan');
 	}
 	public static function ajax_saveCountryBlocking_callback(){
 		if(! wfConfig::get('isPaid')){
@@ -1750,8 +1736,16 @@ class wordfence {
 		} else if($opts['autoUpdate'] == '0'){
 			wfConfig::disableAutoUpdate();
 		}
-			
-			
+		
+		try {
+			if ($opts['disableCodeExecutionUploads']) {
+				wfConfig::disableCodeExecutionForUploads();
+			} else {
+				wfConfig::removeCodeExecutionProtectionForUploads();
+			}
+		} catch (wfConfigException $e) {
+			return array('errorMsg' => $e->getMessage());
+		}
 		
 		$paidKeyMsg = false;
 
