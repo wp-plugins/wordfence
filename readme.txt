@@ -165,6 +165,9 @@ cause a security hole on your site.
 
 == Changelog ==
 
+= 5.3.4 =
+* Fix: The slider revolution hack protection page would not fully generate the 'unlock email' form.
+
 = 5.3.3 =
 * Security fix. Thanks Matt B! 
 * Changed what we consider to be private addresses to a smaller range of addresses. See current range at: http://docs.wordfence.com/en/How_Wordfence_handles_Private_Addresses
