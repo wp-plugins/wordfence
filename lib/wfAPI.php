@@ -7,7 +7,6 @@ class wfAPI {
 	private $curlContent = 0;
 	private $APIKey = '';
 	private $wordpressVersion = '';
-	private static $maintMsg = "The Wordfence scanning server could not be contacted.";
 	public function __construct($apiKey, $wordpressVersion){
 		$this->APIKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
@@ -69,7 +68,7 @@ class wfAPI {
 			curl_setopt($curl, CURLOPT_POST, true);
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $postParams);
 			wordfence::status(4, 'info', "CURL fetching URL: " . $url);
-			$curlResult = curl_exec($curl);
+			curl_exec($curl);
 
 			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 			$this->lastCurlErrorNo = curl_errno($curl);
@@ -97,7 +96,6 @@ class wfAPI {
 
 	}
 	private function fileGet($url, $postParams){
-		$body = "";
 		if(is_array($postParams)){
 			$bodyArr = array();
 			foreach($postParams as $key => $val){

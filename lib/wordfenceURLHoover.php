@@ -151,8 +151,6 @@ class wordfenceURLHoover {
 	}
 	public function getBaddies(){
 		$allHostKeys = array();
-		$stime = microtime(true);
-		$allHostKeys = array();
 		if($this->useDB){
 			$q1 = $this->db->querySelect("select distinct hostKey as hostKey from $this->table");
 			foreach($q1 as $hRec){

@@ -236,7 +236,6 @@ class wordfenceScanner {
 					}
 				}
 				fclose($fh);
-				$mtime = sprintf("%.5f", microtime(true) - $stime);
 				$this->totalFilesScanned++;
 				if(microtime(true) - $this->lastStatusTime > 1){
 					$this->lastStatusTime = microtime(true);
@@ -304,19 +303,6 @@ class wordfenceScanner {
 	}
 	private function writeScanningStatus(){
 		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " additional files at " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " per second");
-	}
-	public static function containsCode($arr){
-		foreach($arr as $elem){
-			if(preg_match($this->patterns['pat3'], $elem)){
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private static function hostInURL($host, $url){
-		$host = str_replace('.', '\\.', $host);
-		return preg_match('/(?:^|^http:\/\/|^https:\/\/|^ftp:\/\/)' . $host . '(?:$|\/)/i', $url);
 	}
 	private function addResult($result){
 		for($i = 0; $i < sizeof($this->results); $i++){

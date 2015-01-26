@@ -11,7 +11,6 @@ window['wordfenceAdmin'] = {
 	iconErrorMsgs: [],
 	scanIDLoaded: 0,
 	colorboxQueue: [],
-	colorboxOpen: false,
 	mode: '',
 	visibleIssuesPanel: 'new',
 	preFirstScanMsgsLoaded: false,
@@ -35,11 +34,15 @@ window['wordfenceAdmin'] = {
 	countryCodesToSave: "",
 	performanceScale: 3,
 	performanceMinWidth: 20,
+	tourClosed: false,
+	welcomeClosed: false,
 	init: function(){
 		this.nonce = WordfenceAdminVars.firstNonce; 
 		this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
 		this.tourClosed = WordfenceAdminVars.tourClosed == '1' ? true : false;
+		this.welcomeClosed = WordfenceAdminVars.welcomeClosed == '1' ? true : false;
 		var startTicker = false;
+		var self = this;
 		if(jQuery('#wordfenceMode_scan').length > 0){
 			this.mode = 'scan';
 			jQuery('#wfALogViewLink').prop('href', WordfenceAdminVars.siteBaseURL + '?_wfsf=viewActivityLog&nonce=' + this.nonce);
@@ -48,13 +51,12 @@ window['wordfenceAdmin'] = {
 			this.noScanHTML = jQuery('#wfNoScanYetTmpl').tmpl().html();
 			this.loadIssues();
 			this.startActivityLogUpdates();
-			if(! this.tourClosed){
+			if(this.needTour()){
 				this.scanTourStart();
 			}
 		} else if(jQuery('#wordfenceMode_activity').length > 0){
 			this.mode = 'activity';
-			var self = this;	
-			this.setupSwitches('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){});			
+			this.setupSwitches('wfLiveTrafficOnOff', 'liveTrafficEnabled', function(){});
 			jQuery('#wfLiveTrafficOnOff').change(function(){
 				if(/^(?:falcon|php)$/.test(WordfenceAdminVars.cacheType) ){
 					jQuery('#wfLiveTrafficOnOff').attr('checked', false);
@@ -71,8 +73,7 @@ window['wordfenceAdmin'] = {
 				this.switchTab(jQuery('#wfLoginLogoutTab'), 'wfTab1', 'wfDataPanel', 'wfActivity_loginLogout', function(){ WFAD.activityTabChanged(); });
 			}
 			startTicker = true;
-			if(! this.tourClosed){
-				var self = this;
+			if(this.needTour()){
 				this.tour('wfWelcomeContent3', 'wfHeading', 'top', 'left', "Learn about Site Performance", function(){ self.tourRedir('WordfenceSitePerf'); });
 			}
 		} else if(jQuery('#wordfenceMode_options').length > 0){
@@ -80,9 +81,8 @@ window['wordfenceAdmin'] = {
 			jQuery('.wfConfigElem').change(function(){ jQuery('#securityLevel').val('CUSTOM'); });
 			this.updateTicker(true);
 			startTicker = true;
-			if(! this.tourClosed){
-				var self = this;
-				this.tour('wfContentBasicOptions', 'wfMarkerBasicOptions', 'top', 'left', "Learn about Live Traffic Options", function(){ 
+			if(this.needTour()){
+				this.tour('wfContentBasicOptions', 'wfMarkerBasicOptions', 'top', 'left', "Learn about Live Traffic Options", function(){
 					self.tour('wfContentLiveTrafficOptions', 'wfMarkerLiveTrafficOptions', 'bottom', 'left', "Learn about Scanning Options", function(){
 						self.tour('wfContentScansToInclude', 'wfMarkerScansToInclude', 'bottom', 'left', "Learn about Firewall Rules", function(){
 							self.tour('wfContentFirewallRules', 'wfMarkerFirewallRules', 'bottom', 'left', "Learn about Login Security", function(){
@@ -99,15 +99,13 @@ window['wordfenceAdmin'] = {
 			this.staticTabChanged();
 			this.updateTicker(true);
 			startTicker = true;
-			if(! this.tourClosed){
-				var self = this;
+			if(this.needTour()){
 				this.tour('wfWelcomeContent4', 'wfHeading', 'top', 'left', "Learn about Cellphone Sign-in", function(){ self.tourRedir('WordfenceTwoFactor'); });
 			}
 		} else if(jQuery('#wordfenceMode_twoFactor').length > 0){
 			this.mode = 'twoFactor';
 			startTicker = false;
-			if(! this.tourClosed){
-				var self = this;
+			if(this.needTour()){
 				this.tour('wfWelcomeTwoFactor', 'wfHeading', 'top', 'left', "Learn how to Block Countries", function(){ self.tourRedir('WordfenceCountryBlocking'); });
 			}
 			this.loadTwoFactor();
@@ -115,15 +113,13 @@ window['wordfenceAdmin'] = {
 		} else if(jQuery('#wordfenceMode_countryBlocking').length > 0){
 			this.mode = 'countryBlocking';
 			startTicker = false;
-			if(! this.tourClosed){
-				var self = this;	
+			if(this.needTour()){
 				this.tour('wfWelcomeContentCntBlk', 'wfHeading', 'top', 'left', "Learn how to Schedule Scans", function(){ self.tourRedir('WordfenceScanSchedule'); });
 			}
 		} else if(jQuery('#wordfenceMode_rangeBlocking').length > 0){
 			this.mode = 'rangeBlocking';
 			startTicker = false;
-			if(! this.tourClosed){
-				var self = this;
+			if(this.needTour()){
 				this.tour('wfWelcomeContentRangeBlocking', 'wfHeading', 'top', 'left', "Learn how to Customize Wordfence", function(){ self.tourRedir('WordfenceSecOpt'); });
 			}
 			this.calcRangeTotal();
@@ -131,8 +127,7 @@ window['wordfenceAdmin'] = {
 		} else if(jQuery('#wordfenceMode_whois').length > 0){
 			this.mode = 'whois';
 			startTicker = false;
-			if(! this.tourClosed){
-				var self = this;
+			if(this.needTour()){
 				this.tour('wfWelcomeContentWhois', 'wfHeading', 'top', 'left', "Learn how to use Advanced Blocking", function(){ self.tourRedir('WordfenceRangeBlocking'); });
 			}
 			this.calcRangeTotal();
@@ -142,39 +137,32 @@ window['wordfenceAdmin'] = {
 			this.mode = 'scanScheduling';
 			startTicker = false;
 			this.sched_modeChange();
-			if(! this.tourClosed){
-				var self = this;	
+			if(this.needTour()){
 				this.tour('wfWelcomeContentScanSched', 'wfHeading', 'top', 'left', "Learn about WHOIS", function(){ self.tourRedir('WordfenceWhois'); });
 			}
 		} else if(jQuery('#wordfenceMode_caching').length > 0){
 			this.mode = 'caching';
 			startTicker = false;
-			if(! this.tourClosed){
-				var self = this;
+			if(this.needTour()){
 				this.tour('wfWelcomeContentCaching', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
 			}
 			this.loadCacheExclusions();
-//		} else if(jQuery('#wordfenceMode_perfStats').length > 0){
-//			var self = this;
-//			this.loadAvgSitePerf();
-//			this.setupSwitches('wfPerfOnOff', 'perfLoggingEnabled', function(){});			
-//			jQuery('#wfPerfOnOff').change(function(){ self.updateSwitch('wfPerfOnOff', 'perfLoggingEnabled', function(){}); });
-//			this.mode = 'perfStats';
-//			startTicker = true;
-//			if(! this.tourClosed){
-//				var self = this;
-//				this.tour('wfWelcomeContentCaching', 'wfHeading', 'top', 'left', "Learn about IP Blocking", function(){ self.tourRedir('WordfenceBlockedIPs'); });
-//			}
 		} else {
 			this.mode = false;
 		}
 		if(this.mode){ //We are in a Wordfence page
-			var self = this;
 			if(startTicker){
 				this.updateTicker();
 				this.liveInt = setInterval(function(){ self.updateTicker(); }, WordfenceAdminVars.actUpdateInterval);
 			}
 			jQuery(document).bind('cbox_closed', function(){ self.colorboxIsOpen = false; self.colorboxServiceQueue(); });
+		}
+	},
+	needTour: function(){
+		if( (! this.tourClosed) && this.welcomeClosed) {
+			return true;
+		} else {
+			return false;
 		}
 	},
 	sendTestEmail: function(email){
@@ -275,9 +263,11 @@ window['wordfenceAdmin'] = {
 		}
 	},
 	startTourAgain: function(){
-		this.ajax('wordfence_startTourAgain', {}, function(res){});
-		this.tourClosed = false;
-		this.scanTourStart();
+		var self = this;
+		this.ajax('wordfence_startTourAgain', {}, function(res){
+			self.tourClosed = false;
+			self.scanTourStart();
+		});
 	},
 	showLoading: function(){
 		this.loadingCount++;
@@ -381,46 +371,47 @@ window['wordfenceAdmin'] = {
 		}
 	},
 	processSummaryLine: function(item){
+		var msg, summaryUpdated;
 		if(item.msg.indexOf('SUM_START:') != -1){
-			var msg = item.msg.replace('SUM_START:', '');
+			msg = item.msg.replace('SUM_START:', '');
 			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><div class="wfSummaryLoading"></div></div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDBAD') != -1){
-			var msg = item.msg.replace('SUM_ENDBAD:', '');
+			msg = item.msg.replace('SUM_ENDBAD:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Problems found.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDFAILED') != -1){
-			var msg = item.msg.replace('SUM_ENDFAILED:', '');
+			msg = item.msg.replace('SUM_ENDFAILED:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryBad').html('Failed.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDOK') != -1){
-			var msg = item.msg.replace('SUM_ENDOK:', '');
+			msg = item.msg.replace('SUM_ENDOK:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Secure.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDSUCCESS') != -1){
-			var msg = item.msg.replace('SUM_ENDSUCCESS:', '');
+			msg = item.msg.replace('SUM_ENDSUCCESS:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryOK').html('Success.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_ENDERR') != -1){
-			var msg = item.msg.replace('SUM_ENDERR:', '');
+			msg = item.msg.replace('SUM_ENDERR:', '');
 			jQuery('div.wfSummaryMsg:contains("' + msg + '")').next().addClass('wfSummaryErr').html('An error occurred.');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_DISABLED:') != -1){
-			var msg = item.msg.replace('SUM_DISABLED:', '');
+			msg = item.msg.replace('SUM_DISABLED:', '');
 			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult">Disabled [<a href="admin.php?page=WordfenceSecOpt">Visit Options to Enable</a>]</div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_PAIDONLY:') != -1){
-			var msg = item.msg.replace('SUM_PAIDONLY:', '');
+			msg = item.msg.replace('SUM_PAIDONLY:', '');
 			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult"><a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid Members Only</a></div><div class="wfClear"></div>');
 			summaryUpdated = true;
 		} else if(item.msg.indexOf('SUM_FINAL:') != -1){
-			var msg = item.msg.replace('SUM_FINAL:', '');
+			msg = item.msg.replace('SUM_FINAL:', '');
 			jQuery('#consoleSummary').append('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg wfSummaryFinal">' + msg + '</div><div class="wfSummaryResult wfSummaryOK">Scan Complete.</div><div class="wfClear"></div>');
 		} else if(item.msg.indexOf('SUM_PREP:') != -1){
-			var msg = item.msg.replace('SUM_PREP:', '');
+			msg = item.msg.replace('SUM_PREP:', '');
 			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult" id="wfStartingScan"><div class="wfSummaryLoading"></div></div><div class="wfClear"></div>');
 		} else if(item.msg.indexOf('SUM_KILLED:') != -1){
-			var msg = item.msg.replace('SUM_KILLED:', '');
+			msg = item.msg.replace('SUM_KILLED:', '');
 			jQuery('#consoleSummary').empty().html('<div class="wfSummaryLine"><div class="wfSummaryDate">[' + item.date + ']</div><div class="wfSummaryMsg">' + msg + '</div><div class="wfSummaryResult wfSummaryOK">Scan Complete.</div><div class="wfClear"></div>');
 		}
 	},
@@ -470,13 +461,13 @@ window['wordfenceAdmin'] = {
 		if(newMsg && newMsg != oldMsg){
 			jQuery('#wfLiveStatus').hide().html(newMsg).fadeIn(200);
 		}
-
+		var haveEvents, newElem;
 		if(this.mode == 'activity'){
 			if(res.alsoGet != 'logList_' + this.activityMode){ return; } //user switched panels since ajax request started
 			if(res.events.length > 0){
 				this.newestActivityTime = res.events[0]['ctime'];
 			}
-			var haveEvents = false;
+			haveEvents = false;
 			if(jQuery('#wfActivity_' + this.activityMode + ' .wfActEvent').length > 0){
 				haveEvents = true;
 			}
@@ -488,7 +479,6 @@ window['wordfenceAdmin'] = {
 					var elemID = '#wfActEvent_' + res.events[i].id;
 					if(jQuery(elemID).length < 1){
 						res.events[i]['activityMode'] = this.activityMode;
-						var newElem;
 						if(this.activityMode == 'loginLogout'){
 							newElem = jQuery('#wfLoginLogoutEventTmpl').tmpl(res.events[i]);
 						} else {
@@ -509,7 +499,7 @@ window['wordfenceAdmin'] = {
 				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
 				});
 		} else if(this.mode == 'perfStats'){
-			var haveEvents = false;
+			haveEvents = false;
 			if(jQuery('#wfPerfStats .wfPerfEvent').length > 0){
 				haveEvents = true;
 			}
@@ -525,7 +515,7 @@ window['wordfenceAdmin'] = {
 				for(var i = res.events.length - 1; i >= 0; i--){
 					res.events[i]['scale'] = this.performanceScale;
 					res.events[i]['min'] = this.performanceMinWidth;
-					var newElem = jQuery('#wfPerfStatTmpl').tmpl(res.events[i]);
+					newElem = jQuery('#wfPerfStatTmpl').tmpl(res.events[i]);
 					jQuery(newElem).find('.wfTimeAgo').data('wfctime', res.events[i].ctime);
 					newElem.prependTo('#wfPerfStats').fadeIn();
 				}
@@ -534,7 +524,6 @@ window['wordfenceAdmin'] = {
 					jQuery('#wfPerfStats').html('<p>No events to report yet.</p>');
 				}
 			}
-			var self = this;
 			jQuery('.wfTimeAgo').each(function(idx, elem){
 				jQuery(elem).html(self.makeTimeAgo(res.serverTime - jQuery(elem).data('wfctime')) + ' ago');
 				});
@@ -565,7 +554,7 @@ window['wordfenceAdmin'] = {
 				if(res.ok){
 					jQuery('.wfReverseLookup').each(function(idx, elem){
 						var txt = jQuery(elem).text();
-						for(ip in res.ips){ 
+						for(var ip in res.ips){
 							if(txt == ip){
 								if(res.ips[ip]){
 									jQuery(elem).html('<strong>Hostname:</strong>&nbsp;' + res.ips[ip]);
@@ -591,7 +580,7 @@ window['wordfenceAdmin'] = {
 	startScan: function(){
 		var scanReqAnimation = setInterval(function(){
 			var str = jQuery('#wfStartScanButton1').prop('value');
-			ch = str.charAt(str.length - 1);
+			var ch = str.charAt(str.length - 1);
 			if(ch == '/'){ ch = '-'; }
 			else if(ch == '-'){ ch = '\\'; }
 			else if(ch == '\\'){ ch = '|'; }
@@ -631,7 +620,7 @@ window['wordfenceAdmin'] = {
 			res.summary['lastScanCompleted'] = 'Never';
 		}
 		jQuery('.wfIssuesContainer').hide();
-		for(issueStatus in res.issuesLists){ 
+		for(var issueStatus in res.issuesLists){
 			var containerID = 'wfIssues_dataTable_' + issueStatus;
 			var tableID = 'wfIssuesTable_' + issueStatus;
 			if(jQuery('#' + containerID).length < 1){
@@ -672,8 +661,7 @@ window['wordfenceAdmin'] = {
 						"sClass": "center",
 						"sType": 'severity',
 						"fnRender": function(obj) {
-							var cls = "";
-							cls = 'wfProbSev' + obj.aData.severity;
+							var cls = 'wfProbSev' + obj.aData.severity;
 							return '<span class="' + cls + '"></span>';
 						}
 					},
@@ -833,6 +821,7 @@ window['wordfenceAdmin'] = {
 	},
 	updateAllIssues: function(op){ // deleteIgnored, deleteNew, ignoreAllNew
 		var head = "Please confirm";
+		var body;
 		if(op == 'deleteIgnored'){
 			body = "You have chosen to remove all ignored issues. Once these issues are removed they will be re-scanned by Wordfence and if they have not been fixed, they will appear in the 'new issues' list. Are you sure you want to do this?";
 		} else if(op == 'deleteNew'){
@@ -1391,8 +1380,7 @@ window['wordfenceAdmin'] = {
 				}
 			}
 			});
-		var codes = codesArr.join(',');
-		this.countryCodesToSave = codes;
+		this.countryCodesToSave = codesArr.join(',');
 		if(ownCountryBlocked){
 			this.colorbox('400px', "Please confirm blocking yourself", "You are about to block your own country. This could lead to you being locked out. Please make sure that your user profile on this machine has a current and valid email address and make sure you know what it is. That way if you are locked out, you can send yourself an unlock email. If you're sure you want to block your own country, click 'Confirm' below, otherwise click 'Cancel'.<br />" +
 				'<input type="button" name="but1" value="Confirm" onclick="jQuery.colorbox.close(); WFAD.confirmSaveCountryBlocking();" />&nbsp;<input type="button" name="but1" value="Cancel" onclick="jQuery.colorbox.close();" />');
@@ -1503,7 +1491,7 @@ window['wordfenceAdmin'] = {
 			}
 			schedule[day] = hours.join(',');
 		}
-		scheduleTxt = schedule.join('|');
+		var scheduleTxt = schedule.join('|');
 		var self = this;
 		this.ajax('wordfence_saveScanSchedule', {
 			schedMode: schedMode,

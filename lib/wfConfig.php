@@ -53,6 +53,7 @@ class wfConfig {
 				"loginSec_disableAuthorScan" => false,
 				"other_hideWPVersion" => false,
 				"other_noAnonMemberComments" => false,
+				"other_blockBadPOST" => false,
 				"other_scanComments" => false,
 				"other_pwStrengthOnUpdate" => false,
 				"other_WFNet" => true,
@@ -134,6 +135,7 @@ class wfConfig {
 				"loginSec_disableAuthorScan" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
+				"other_blockBadPOST" => false,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
@@ -215,6 +217,7 @@ class wfConfig {
 				"loginSec_disableAuthorScan" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
+				"other_blockBadPOST" => false,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
@@ -297,6 +300,7 @@ class wfConfig {
 				"loginSec_disableAuthorScan" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
+				"other_blockBadPOST" => false,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
@@ -378,6 +382,7 @@ class wfConfig {
 				"loginSec_disableAuthorScan" => true,
 				"other_hideWPVersion" => true,
 				"other_noAnonMemberComments" => true,
+				"other_blockBadPOST" => false,
 				"other_scanComments" => true,
 				"other_pwStrengthOnUpdate" => true,
 				"other_WFNet" => true,
@@ -586,7 +591,6 @@ class wfConfig {
 			$dir = self::getTempDir();
 			if($dir){
 				$obj = false;
-				$foundFiles = false;
 				$fullFile = $dir . $filename;
 				if(file_exists($fullFile)){
 					wordfence::status(4, 'info', "Loading serialized data from file $fullFile");
@@ -613,14 +617,12 @@ class wfConfig {
 		//We serialize some very big values so this is memory efficient. We don't make any copies of $val and don't use ON DUPLICATE KEY UPDATE
 		// because we would have to concatenate $val twice into the query which could also exceed max packet for the mysql server
 		$serialized = serialize($val);
-		$val = '';
 		$tempFilename = 'wordfence_tmpfile_' . $key . '.php';
 		if((strlen($serialized) * 1.1) > self::getDB()->getMaxAllowedPacketBytes()){ //If it's greater than max_allowed_packet + 10% for escaping and SQL
 			if($canUseDisk){
 				$dir = self::getTempDir();
 				$potentialDirs = self::getPotentialTempDirs();
 				if($dir){
-					$fh = false;
 					$fullFile = $dir . $tempFilename;
 					self::deleteOldTempFile($fullFile);
 					$fh = fopen($fullFile, 'w');
@@ -710,7 +712,6 @@ class wfConfig {
 		if(self::get($key) == $val){ echo ' selected '; }
 	}
 	public static function getArray(){
-		$ret = array();
 		$q = self::getDB()->querySelect("select name, val from " . self::table());
 		foreach($q as $row){
 			self::$cache[$row['name']] = $row['val'];

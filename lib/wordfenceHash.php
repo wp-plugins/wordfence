@@ -88,7 +88,6 @@ class wordfenceHash {
 		}
 		if(! is_readable($path)){
 			throw new Exception("Could not read directory " . $this->path . " to do scan.");
-			exit();
 		}
 		$this->haveIssues = array(
 			'core' => false,

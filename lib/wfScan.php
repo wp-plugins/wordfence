@@ -66,7 +66,6 @@ class wfScan {
 		@error_reporting(E_ALL);
 		wfUtils::iniSet('display_errors','On');
 		self::status(4, 'info', "Setting up scanRunning and starting scan");
-		$scan = false;
 		if($isFork){
 			$scan = wfConfig::get_ser('wfsd_engine', false, true);
 			if($scan){
@@ -129,7 +128,6 @@ class wfScan {
 	public static function becomeAdmin(){
 		$db = new wfDB();
 		global $wpdb;
-		$adminUserID = false;
 		$userSource = '';
 		if(is_multisite()){
 			$users = get_users('role=super&fields=ID');

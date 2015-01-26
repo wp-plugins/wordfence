@@ -161,7 +161,6 @@ class wfIssues {
 		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
 	}
 	public function updateIssue($id, $status){ //ignoreC, ignoreP, delete or new
-		$currentStatus = $this->getDB()->querySingle("select status from " . $this->issuesTable . " where id=%d", $id);
 		if($status == 'delete'){
 			$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
 		} else if($status == 'ignoreC' || $status == 'ignoreP' || $status == 'new'){
@@ -174,7 +173,6 @@ class wfIssues {
 		return $rec;
 	}
 	public function getIssues(){ 
-		$issues = wfConfig::get('wf_issues', array());
 		$ret = array(
 			'new' => array(),
 			'ignored' => array()

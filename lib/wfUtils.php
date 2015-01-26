@@ -43,7 +43,6 @@ class wfUtils {
 			$minutes -= $hours * 60;
 			return self::pluralize($hours, 'hour', $minutes, 'min');
 		} else if($minutes) {
-			$secs -= $minutes * 60;
 			return self::pluralize($minutes, 'min');
 		} else {
 			if($noSeconds){
@@ -105,9 +104,6 @@ class wfUtils {
 	public static function getPluginBaseDir(){
 		return WP_CONTENT_DIR . '/plugins/';
 		//return ABSPATH . 'wp-content/plugins/';
-	}
-	public static function defaultGetIP(){
-		return $IP;
 	}
 	public static function makeRandomIP(){
 		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
@@ -259,7 +255,6 @@ class wfUtils {
 	public static function lcmem(){
 		$trace=debug_backtrace(); 
 		$caller=array_shift($trace); 
-		$c2 = array_shift($trace);
 		$mem = memory_get_usage(true);
 		error_log("$mem at " . $caller['file'] . " line " . $caller['line']);
 	}
@@ -464,7 +459,9 @@ class wfUtils {
 		$host = $db->querySingle("select host from " . $reverseTable . " where IP=%s and unix_timestamp() - lastUpdate < %d", $IPn, WORDFENCE_REVERSE_LOOKUP_CACHE_TIME);
 		if(! $host){
 			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
-			$host = @dns_get_record($ptr, DNS_PTR);
+			if (function_exists('dns_get_record')) {
+				$host = @dns_get_record($ptr, DNS_PTR);
+			}
 			if($host == null){
 				$host = 'NONE';
 			} else {

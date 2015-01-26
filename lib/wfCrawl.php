@@ -21,7 +21,6 @@ class wfCrawl {
 				return false;
 			}
 		}
-		$wfLog = new wfLog(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$host = wfUtils::reverseLookup($IP);
 		if(! $host){ 
 			$db->queryWrite("insert into $table (IP, patternSig, status, lastUpdate, PTR) values (%s, UNHEX(MD5('%s')), '%s', unix_timestamp(), '%s') ON DUPLICATE KEY UPDATE status='%s', lastUpdate=unix_timestamp(), PTR='%s'", $IPn, $hostPattern, 'noPTR', '', 'noPTR', '');

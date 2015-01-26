@@ -70,12 +70,6 @@ class wfLog {
 		$id = get_current_user_id();
 		return $id ? $id : 0;
 	}
-	private function getPagename(){
-		global $wp_query;
-		$post = $wp_query->get_queried_object();
-		$pagename = $post->post_name;
-		return $pagename;
-	}
 	public function logLeechAndBlock($type){ //404 or hit
 		if(wfConfig::get('firewallEnabled')){
 			//Moved the following block into the "is fw enabled section" for optimization. 
@@ -139,6 +133,11 @@ class wfLog {
 						}
 					}
 				}
+			}
+			if(wfConfig::get('other_blockBadPOST') == '1' && $_SERVER['REQUEST_METHOD'] == 'POST' && empty($_SERVER['HTTP_USER_AGENT']) && empty($_SERVER['HTTP_REFERER'])){
+				$this->blockIP($IP, "POST received with blank user-agent and referer");
+				$this->do503(3600, "POST received with blank user-agent and referer");
+				//exits
 			}
 			if(isset($_SERVER['HTTP_USER_AGENT']) && wfCrawl::isCrawler($_SERVER['HTTP_USER_AGENT'])){
 				if($type == 'hit' && wfConfig::get('maxRequestsCrawlers') != 'DISABLED' && $hitsPerMinute > wfConfig::get('maxRequestsCrawlers')){
@@ -240,12 +239,8 @@ class wfLog {
 			}
 			$blockDat = explode('|', $elem['blockString']);
 			$elem['ipPattern'] = "";
-			$haveIPBlock = false;
-			$haveBrowserBlock = false;
-			$haveRefererBlock = false;
 			$numBlockElements = 0;
 			if($blockDat[0]){
-				$haveIPBlock = true;
 				$numBlockElements++;
 				$ipDat = explode('-', $blockDat[0]);
 				$elem['ipPattern'] = "Block visitors with IP addresses in the range: " . wfUtils::inet_ntoa($ipDat[0]) . ' - ' . wfUtils::inet_ntoa($ipDat[1]);
@@ -253,14 +248,12 @@ class wfLog {
 				$elem['ipPattern'] = 'Allow all IP addresses';
 			}
 			if($blockDat[1]){
-				$haveBrowserBlock = true;
 				$numBlockElements++;
 				$elem['browserPattern'] = "Block visitors whos browsers match the pattern: " . $blockDat[1];
 			} else {
 				$elem['browserPattern'] = 'Allow all browsers';
 			}
 			if($blockDat[2]){
-				$haveRefererBlock = true;
 				$numBlockElements++;
 				$elem['refererPattern'] = "Block visitors from websites that match the pattern: " . $blockDat[2];
 			} else {
@@ -904,7 +897,6 @@ class wfLog {
 			}
 		}
 		$results = $this->getDB()->querySelect("select ctime, level, type, msg from " . $this->statusTable . " where ctime > %f order by ctime asc", $lastCtime);
-		$lastTime = false;
 		$timeOffset = 3600 * get_option('gmt_offset');
 		foreach($results as &$rec){
 			//$rec['timeAgo'] = wfUtils::makeTimeAgo(time() - $rec['ctime']);
@@ -915,7 +907,6 @@ class wfLog {
 	}
 	public function getSummaryEvents(){
 		$results = $this->getDB()->querySelect("select ctime, level, type, msg from " . $this->statusTable . " where level = 10 order by ctime desc limit 100");
-		$lastTime = false;
 		$timeOffset = 3600 * get_option('gmt_offset');
 		foreach($results as &$rec){
 			$rec['date'] = date('M d H:i:s', $rec['ctime'] + $timeOffset);
