@@ -7,19 +7,17 @@ require_once('wfIssues.php');
 require_once('wfDB.php');
 require_once('wfUtils.php');
 class wfScanEngine {
-	private static $cronTestFailedURLs = array();
 	public $api = false;
 	private $dictWords = array();
 	private $forkRequested = false;
 
 	//Beginning of serialized properties on sleep
 	private $hasher = false;
-	private $hashes = false;
 	private $jobList = array();
 	private $i = false;
+	private $wp_version = false;
 	private $apiKey = false;
 	private $startTime = 0;
-	private $scanStep = 0;
 	public $maxExecTime = false; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
 	private $publicScanEnabled = false;
 	private $fileContentsResults = false;
@@ -36,7 +34,7 @@ class wfScanEngine {
 	private $userPasswdQueue = "";
 	private $passwdHasIssues = false;
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
-		return array('hasher', 'hashes', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'scanStep', 'maxExecTime', 'publicScanEnabled', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
+		return array('hasher', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'maxExecTime', 'publicScanEnabled', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
 	}
 	public function __construct(){
 		$this->startTime = time();
@@ -274,13 +272,13 @@ class wfScanEngine {
 		$this->status(2, 'info', "Getting theme list from WordPress");
 		$themeData = get_themes();
 		$knownFilesThemes = array();
-		foreach($themeData as $themeName => $themeData){
-			if(preg_match('/\/([^\/]+)$/', $themeData['Stylesheet Dir'], $matches)){
+		foreach($themeData as $themeName => $themeVal){
+			if(preg_match('/\/([^\/]+)$/', $themeVal['Stylesheet Dir'], $matches)){
 				$shortDir = $matches[1]; //e.g. evo4cms
-				$fullDir = substr($themeData['Stylesheet Dir'], strlen(ABSPATH)); //e.g. wp-content/themes/evo4cms
+				$fullDir = substr($themeVal['Stylesheet Dir'], strlen(ABSPATH)); //e.g. wp-content/themes/evo4cms
 				$knownFilesThemes[$themeName] = array(
-					'Name' => $themeData['Name'], 
-					'Version' => $themeData['Version'],
+					'Name' => $themeVal['Name'],
+					'Version' => $themeVal['Version'],
 					'ShortDir' => $shortDir,
 					'FullDir' => $fullDir
 					);
@@ -539,7 +537,7 @@ class wfScanEngine {
 		if($email){
 			$cDesc .= "Email: $email ";
 		}
-		$cDesc = "Source IP: $IP ";
+		$cDesc .= "Source IP: $IP ";
 		$this->status(2, 'info', "Scanning comment with $cDesc");
 
 		$h = new wordfenceURLHoover($this->apiKey, $this->wp_version);
@@ -625,7 +623,6 @@ class wfScanEngine {
 	private function scan_passwds_main(){
 		global $wpdb;
 		$wfdb = new wfDB();
-		$haveIssues = false;
 		while(strlen($this->userPasswdQueue) > 3){
 			$usersLeft = strlen($this->userPasswdQueue) / 4; //4 byte ints
 			if($usersLeft % 100 == 0){
@@ -654,9 +651,6 @@ class wfScanEngine {
 		$passwdHasher = new PasswordHash(8, TRUE);
 		$userDat = get_userdata($userID);
 		$this->status(4, 'info', "Checking password strength of user '" . $userDat->user_login . "'");
-		$shortMsg = "";
-		$longMsg = "";
-		$level = 1;
 		$highCap = $this->highestCap($userDat->wp_capabilities);
 		if($this->isEditor($userDat->wp_capabilities)){ 
 			$shortMsg = "User \"" . $userDat->user_login . "\" with \"" . $highCap . "\" access has an easy password.";
@@ -727,7 +721,6 @@ class wfScanEngine {
 			return;
 		}
 		$this->status(2, 'info', "Total disk space: " . sprintf('%.4f', ($total / 1024 / 1024 / 1024)) . "GB -- Free disk space: " . sprintf('%.4f', ($free / 1024 / 1024 / 1024)) . "GB");
-		$level = false;
 		$freeMegs = sprintf('%.2f', $free / 1024 / 1024);
 		$this->status(2, 'info', "The disk has $freeMegs MB space available");
 		if($freeMegs < 5){
@@ -930,7 +923,6 @@ class wfScanEngine {
 	public static function checkForKill(){
 		$kill = wfConfig::get('wfKillRequested', 0);
 		if($kill && time() - $kill < 600){ //Kill lasts for 10 minutes
-			$wfdb = new wfDB();
 			wordfence::status(10, 'info', "SUM_KILLED:Previous scan was killed successfully.");
 			throw new Exception("Scan was killed on administrator request.");
 		}
@@ -946,7 +938,6 @@ class wfScanEngine {
 		}
 		$timeout = self::getMaxExecutionTime() - 2; //2 seconds shorter than max execution time which ensures that only 2 HTTP processes are ever occupied
 		$testURL = admin_url('admin-ajax.php?action=wordfence_testAjax');
-		$testResults = false;
 		if(! wfConfig::get('startScansRemotely', false)){
 			$testResult = wp_remote_post($testURL, array(
 				'timeout' => $timeout,
@@ -964,7 +955,7 @@ class wfScanEngine {
 			$cronURL = admin_url($cronURL);
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron with normal ajax at URL $cronURL");
-			$result = wp_remote_get( $cronURL, array(
+			wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,
@@ -978,7 +969,7 @@ class wfScanEngine {
 			$headers = array();
 			wordfence::status(4, 'info', "Starting cron via proxy at URL $cronURL");
 
-			$result = wp_remote_get( $cronURL, array(
+			wp_remote_get( $cronURL, array(
 				'timeout' => $timeout, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 				'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
 				'sslverify' => false,

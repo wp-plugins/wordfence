@@ -31,6 +31,6 @@
 
 </table>
 
-<div class="footer">&copy;&nbsp;2011 to 2015 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</a>
+<div class="footer">&copy;&nbsp;2011 to 2015 Wordfence &mdash; Visit <a href="http://wordfence.com/">Wordfence.com</a> for help, security updates and more.</div>
 </body>
 </html>

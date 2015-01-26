@@ -383,7 +383,7 @@ class wfCache {
 			if(strpos($dir, 'wfcache/') === false){
 				self::$lastRecursiveDeleteError = "Not deleting directory $dir because it appears to be in the wrong path.";
 				self::$cacheStats['totalErrors']++;
-				return; //Safety check that we're in a subdir of the cache
+				return false; //Safety check that we're in a subdir of the cache
 			}
 			if(@rmdir($dir)){
 				self::$cacheStats['dirsDeleted']++;
@@ -396,7 +396,6 @@ class wfCache {
 		} else {
 			return true;
 		}
-		return true;
 	}
 	public static function addHtaccessCode($action){
 		if($action != 'add' && $action != 'remove'){

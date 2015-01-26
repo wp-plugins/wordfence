@@ -4,13 +4,13 @@ Plugin Name: Wordfence Security
 Plugin URI: http://www.wordfence.com/
 Description: Wordfence Security - Anti-virus, Firewall and High Speed Cache
 Author: Wordfence
-Version: 5.3.5
+Version: 5.3.6
 Author URI: http://www.wordfence.com/
 */
 if(defined('WP_INSTALLING') && WP_INSTALLING){
 	return;
 }
-define('WORDFENCE_VERSION', '5.3.5');
+define('WORDFENCE_VERSION', '5.3.6');
 if(get_option('wordfenceActivated') != 1){
 	add_action('activated_plugin','wordfence_save_activation_error'); function wordfence_save_activation_error(){ update_option('wf_plugin_act_error',  ob_get_contents()); }
 }
@@ -24,5 +24,6 @@ if(! defined('WORDFENCE_VERSIONONLY_MODE')){ //Used to get version from file.
 	require_once('lib/wordfenceClass.php');
 	wordfence::install_actions();
 }
+
 
 ?>

@@ -1,11 +1,5 @@
 <?php
 class wfDB {
-	private $dbh = false;
-	private static $dbhCache = array();
-	private $dbhost = false;
-	private $dbpassword = false;
-	private $dbname = false;
-	private $dbuser = false;
 	public $errorMsg = false;
 	public function __construct(){
 	}

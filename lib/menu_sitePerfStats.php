@@ -110,7 +110,7 @@
 		visited
 		<a href="${URL}" target="_blank">${URL}</a>
 	</div>
-	<div clas="wfPerfLine">
+	<div class="wfPerfLine">
 		<span class="wfTimeAgo">${timeAgo} ago</span>&nbsp;&nbsp; <strong>IP:</strong> <a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a>
 	</div>
 	{{if browser && browser.browser != 'Default Browser'}}<div class="wfPerfLine"><strong>Browser:</strong> ${browser.browser}{{if browser.version}} version ${browser.version}{{/if}}{{if browser.platform && browser.platform != 'unknown'}} running on ${browser.platform}{{/if}}</div>{{/if}}
