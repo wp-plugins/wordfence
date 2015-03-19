@@ -102,8 +102,11 @@ class wfUtils {
 		return plugins_url() . '/wordfence/';
 	}
 	public static function getPluginBaseDir(){
-		return WP_CONTENT_DIR . '/plugins/';
-		//return ABSPATH . 'wp-content/plugins/';
+		if(defined('WP_PLUGIN_DIR')) {
+			return wp_normalize_path(WP_PLUGIN_DIR . '/');
+		}
+		return wp_normalize_path(WP_CONTENT_DIR . '/plugins/');
+
 	}
 	public static function makeRandomIP(){
 		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
@@ -612,7 +615,7 @@ class wfUtils {
 	public static function isNginx(){
 		$sapi = php_sapi_name();
 		$serverSoft = $_SERVER['SERVER_SOFTWARE'];
-		if($sapi == 'fpm-fcgi' || stripos($serverSoft, 'nginx') !== false){
+		if($sapi == 'fpm-fcgi' && stripos($serverSoft, 'nginx') !== false){
 			return true;
 		}
 	}
