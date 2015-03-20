@@ -1,9 +1,9 @@
 === Wordfence Security ===
 Contributors: mmaunder 
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
-Requires at least: 3.3.1
-Tested up to: 4.1
-Stable tag: 5.3.6
+Requires at least: 3.9
+Tested up to: 4.1.1
+Stable tag: 5.3.8
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -164,6 +164,15 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.3.8 =
+* Customers running WP versions older than 3.9 don't support wp_normalize_path(). Added support for older WP versions to fix an error being thrown. 
+
+= 5.3.7 =
+* Improvement: Updated country blocking database to the newest version (March 2015)
+* Improvement: Added detection for many new samples we received (thanks all!) including a nasty polymorphic infection.
+* Fix: Changed the way we find the plugin directory to fix a possible issue that would cause alerts to return blank plugin names.
+* Fix: Improved Nginx detection so that we don't accidentally detect Nginx if you're running Apache.
 
 = 5.3.6 =
 * Feature: You can now block POST requests to your WordPress site that have an empty User-Agent and Referer header. This is a common pattern among badly written brute force bots. 
