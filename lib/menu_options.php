@@ -320,6 +320,51 @@ $w = new wfConfig();
 				</tr>
 				<tr>
 					<td colspan="2">
+						<div class="wfMarker" id="wfMarkerEmailSummary"></div>
+						<h3 class="wfConfigHeading">Email Summary<a
+								href="http://docs.wordfence.com/en/Wordfence_options#Email_Summary" target="_blank"
+								class="wfhelp"></a></h3>
+					</td>
+				</tr>
+				<tr>
+					<th>Enable email summary:</th>
+					<td>&nbsp;<input type="checkbox" id="email_summary_enabled" name="email_summary_enabled"
+					                 value="1" <?php $w->cb('email_summary_enabled'); ?> />
+					</td>
+				</tr>
+				<tr>
+					<th>Email summary frequency:</th>
+					<td>
+						<select id="email_summary_interval" class="wfConfigElem" name="email_summary_interval">
+							<option value="weekly"<?php $w->sel( 'email_summary_interval', 'weekly' ); ?>>Once a week</option>
+							<option value="biweekly"<?php $w->sel( 'email_summary_interval', 'biweekly' ); ?>>Once every 2 weeks</option>
+							<option value="monthly"<?php $w->sel( 'email_summary_interval', 'monthly' ); ?>>Once a month</option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th>Comma-separated list of directories to exclude from recently modified file list:</th>
+					<td>
+						<input name="email_summary_excluded_directories" type="text" value="<?php $w->f('email_summary_excluded_directories') ?>"/>
+					</td>
+				</tr>
+				<?php if ((defined('WP_DEBUG') && WP_DEBUG) || wfConfig::get('debugOn', 0)): ?>
+					<tr>
+						<th>Send test email:</th>
+						<td>
+							<input type="email" id="email_summary_email_address_debug" />
+							<a class="button" href="javascript:void(0);" onclick="WFAD.ajax('wordfence_email_summary_email_address_debug', {email: jQuery('#email_summary_email_address_debug').val()});">Send Email</a>
+						</td>
+					</tr>
+				<?php endif ?>
+				<tr>
+					<th>Enable activity report widget on dashboard:</th>
+					<td>&nbsp;<input type="checkbox" id="email_summary_dashboard_widget_enabled" name="email_summary_dashboard_widget_enabled"
+					                 value="1" <?php $w->cb('email_summary_dashboard_widget_enabled'); ?> />
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2">
 						<div class="wfMarker" id="wfMarkerLiveTrafficOptions"></div>
 						<h3 class="wfConfigHeading">Live Traffic View<a
 								href="http://docs.wordfence.com/en/Wordfence_options#Live_Traffic_View" target="_blank"
@@ -359,7 +404,7 @@ $w = new wfConfig();
 								href="http://docs.wordfence.com/en/Wordfence_options#Scan_public_facing_site"
 								target="_blank" class="wfhelp"></a></th>
 						<td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem"
-						           name="scansEnabled_public" value="1" <?php $w->cb( 'scansEnabled_public' ); ?></td>
+						           name="scansEnabled_public" value="1" <?php $w->cb( 'scansEnabled_public' ); ?> /></td>
 					</tr>
 				<?php } else { ?>
 					<tr>
@@ -377,7 +422,7 @@ $w = new wfConfig();
 							href="http://docs.wordfence.com/en/Wordfence_options#Scan_for_the_HeartBleed_vulnerability"
 							target="_blank" class="wfhelp"></a></th>
 					<td><input type="checkbox" id="scansEnabled_heartbleed" class="wfConfigElem"
-					           name="scansEnabled_heartbleed" value="1" <?php $w->cb( 'scansEnabled_heartbleed' ); ?>
+					           name="scansEnabled_heartbleed" value="1" <?php $w->cb( 'scansEnabled_heartbleed' ); ?> />
 					</td>
 				</tr>
 				<tr>

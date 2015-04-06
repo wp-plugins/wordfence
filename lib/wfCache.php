@@ -142,6 +142,7 @@ class wfCache {
 
 		$file = self::fileFromRequest( ($_SERVER['HTTP_HOST'] ? $_SERVER['HTTP_HOST'] : $_SERVER['SERVER_NAME']), $_SERVER['REQUEST_URI']);
 		self::makeDirIfNeeded($file);
+		// self::writeCacheDirectoryHtaccess();
 		$append = "";
 		$appendGzip = "";
 		if(wfConfig::get('addCacheComment', false)){
@@ -219,8 +220,38 @@ class wfCache {
 			}
 			return $msg;
 		}
-		return false; //Everything is OK
+		self::removeCacheDirectoryHtaccess();
+		return false;
+		// return self::writeCacheDirectoryHtaccess(); //Everything is OK
 	}
+
+	/**
+	 * Returns false on success to match wfCache::cacheDirectoryTest
+	 *
+	 * @see wfCache::cacheDirectoryTest
+	 *
+	 * @return bool|string
+	 */
+	public static function writeCacheDirectoryHtaccess() {
+		$cacheDir = WP_CONTENT_DIR . '/wfcache/';
+		if (!file_exists($cacheDir . '.htaccess') && !@file_put_contents($cacheDir . '.htaccess', 'Deny from all', LOCK_EX)) {
+			$err = error_get_last();
+			$msg = "We could not write to the file $cacheDir" . ".htaccess.";
+			if($err){
+				$msg .= " The error was: " . $err['message'];
+			}
+			return $msg;
+		}
+		return false;
+	}
+
+	public static function removeCacheDirectoryHtaccess() {
+		$cacheDir = WP_CONTENT_DIR . '/wfcache/';
+		if (file_exists($cacheDir . '.htaccess')) {
+			unlink($cacheDir . '.htaccess');
+		}
+	}
+
 	public static function action_publishPost($id){
 		$perm = get_permalink($id);
 		self::deleteFileFromPermalink($perm);
