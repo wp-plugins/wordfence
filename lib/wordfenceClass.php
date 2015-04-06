@@ -324,6 +324,11 @@ class wordfence {
 			wfConfig::set('scansEnabled_heartbleed', 1);
 		}
 
+		if (wfConfig::get('cacheType') == 'php' || wfConfig::get('cacheType') == 'falcon') {
+			wfCache::removeCacheDirectoryHtaccess();
+		}
+
+
 		//Must be the final line
 	}
 	private static function doEarlyAccessLogging(){

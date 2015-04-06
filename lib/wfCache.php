@@ -142,7 +142,7 @@ class wfCache {
 
 		$file = self::fileFromRequest( ($_SERVER['HTTP_HOST'] ? $_SERVER['HTTP_HOST'] : $_SERVER['SERVER_NAME']), $_SERVER['REQUEST_URI']);
 		self::makeDirIfNeeded($file);
-		self::writeCacheDirectoryHtaccess();
+		// self::writeCacheDirectoryHtaccess();
 		$append = "";
 		$appendGzip = "";
 		if(wfConfig::get('addCacheComment', false)){
@@ -220,7 +220,9 @@ class wfCache {
 			}
 			return $msg;
 		}
-		return self::writeCacheDirectoryHtaccess(); //Everything is OK
+		self::removeCacheDirectoryHtaccess();
+		return false;
+		// return self::writeCacheDirectoryHtaccess(); //Everything is OK
 	}
 
 	/**
@@ -241,6 +243,13 @@ class wfCache {
 			return $msg;
 		}
 		return false;
+	}
+
+	public static function removeCacheDirectoryHtaccess() {
+		$cacheDir = WP_CONTENT_DIR . '/wfcache/';
+		if (file_exists($cacheDir . '.htaccess')) {
+			unlink($cacheDir . '.htaccess');
+		}
 	}
 
 	public static function action_publishPost($id){
