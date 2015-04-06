@@ -37,7 +37,7 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 				<option value="redir"<?php if(wfConfig::get('cbl_action') == 'redir'){ echo ' selected'; } ?>>Redirect to the URL below</option>
 			</select>
 			</td></tr>
-		<tr><th>URL to redirect blocked users to:</th><td><input type="text" id="wfRedirURL" size="40" value="<?php if(wfConfig::get('cbl_redirURL')){ echo wp_kses(wfConfig::get('cbl_redirURL'), array()); } ?>" />
+		<tr><th>URL to redirect blocked users to:</th><td><input type="text" id="wfRedirURL" size="40" value="<?php if(wfConfig::get('cbl_redirURL')){ echo esc_attr(wfConfig::get('cbl_redirURL')); } ?>" />
 		<br />
 		<span style="color: #999;">Must start with http:// for example http://yoursite.com/blocked/</span></td></tr>
 		<tr><th>Block countries even if they are logged in:</th><td><input type="checkbox" id="wfLoggedInBlocked" value="1" <?php if(wfConfig::get('cbl_loggedInBlocked')){ echo 'checked'; } ?> /></td></tr>
@@ -46,9 +46,9 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 		<tr><td colspan="2"><h2>Advanced Country Blocking Options</h2></td></tr>
 		<tr><th colspan="2">
 			If user hits the URL 
-			<input type="text" id="wfBypassRedirURL" value="<?php echo wp_kses(wfConfig::get('cbl_bypassRedirURL', ""), array()); ?>" size="20" /> 
+			<input type="text" id="wfBypassRedirURL" value="<?php echo esc_attr(wfConfig::get('cbl_bypassRedirURL'), array()); ?>" size="20" />
 			then redirect that user to 
-			<input type="text" id="wfBypassRedirDest" value="<?php echo wp_kses(wfConfig::get('cbl_bypassRedirDest', ""), array()); ?>" size="20" /> and set a cookie that will bypass all country blocking. 
+			<input type="text" id="wfBypassRedirDest" value="<?php echo esc_attr(wfConfig::get('cbl_bypassRedirDest'), array()); ?>" size="20" /> and set a cookie that will bypass all country blocking.
 			</th></tr>
 		<tr><th colspan="2">
 			If user who is allowed to access the site views the URL 
