@@ -852,6 +852,10 @@ class wfScanEngine {
 		}
 		wordfence::statusEnd($this->statusIDX['dns'], $haveIssues);
 	}
+
+	/**
+	 * @todo move the update login into wfUpdateCheck
+	 */
 	private function scan_oldVersions(){
 		$this->statusIDX['oldVersions'] = wordfence::statusStart("Scanning for old themes, plugins and core files");
 		if(! function_exists( 'get_preferred_from_update_core')){

@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.9
 Tested up to: 4.1.1
-Stable tag: 5.3.8
+Stable tag: 5.3.11
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -164,6 +164,20 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.3.11 =
+* Fix: Dasboard widget no longer appearing for all users. 
+
+= 5.3.10 = 
+* Fix: Removed .htaccess file the previous release created in wfcache directory that caused problems. 
+
+= 5.3.9 =
+* Premium Feature: Password Auditing. Audit the strength of your admin and user-level passwords against our GPU based auditing cluster. Easily alert users to weak passwords or force a password change.
+* Feature: Activity email summary. See options page to enable a weekly, bi-weekly or monthly activity summary.
+* Feature: Activity summary dashboard widget.
+* Fix: Fixed bug on plugin activation where the configuration table was being queried before it was created.
+* Improvement: Added .htaccess to wfcache directory.
+* Improvement: Switched to using wp_remote_post for Wordfence cloud API calls to improved SSL support and a more standards based approach. 
 
 = 5.3.8 =
 * Customers running WP versions older than 3.9 don't support wp_normalize_path(). Added support for older WP versions to fix an error being thrown. 
@@ -1099,3 +1113,4 @@ Wordfence Security to zero (we simply reuse the WordPress DB handle), reduces th
 about 1% of the previous version by removing unneeded status messages and fixes a bug that 
 could cause Wordfence Security to launch multiple concurrent scans that can put high load on your system.
 This is a critical release. Upgrade immediately.
+

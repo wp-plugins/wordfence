@@ -1,181 +1,98 @@
 <?php
 require_once('wordfenceConstants.php');
 require_once('wordfenceClass.php');
+
 class wfAPI {
 	public $lastHTTPStatus = '';
 	public $lastCurlErrorNo = '';
 	private $curlContent = 0;
 	private $APIKey = '';
 	private $wordpressVersion = '';
-	public function __construct($apiKey, $wordpressVersion){
+
+	public function __construct($apiKey, $wordpressVersion) {
 		$this->APIKey = $apiKey;
 		$this->wordpressVersion = $wordpressVersion;
 	}
-	public function getStaticURL($url){ // In the form '/something.bin' without quotes
+
+	public function getStaticURL($url) { // In the form '/something.bin' without quotes
 		return $this->getURL($this->getAPIURL() . $url);
 	}
-	public function call($action, $getParams = array(), $postParams = array()){
-		$json = $this->getURL($this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . self::buildQuery(
-			array_merge(
-				array('action' => $action),
-				$getParams	
+
+	public function call($action, $getParams = array(), $postParams = array(), $forceSSL = false) {
+		$apiURL = $this->getAPIURL();
+		//Sanity check. Developer should call wfAPI::SSLEnabled() to check if SSL is enabled before forcing SSL and return a user friendly msg if it's not.
+		if ($forceSSL && (!preg_match('/^https:/i', $apiURL))) {
+			//User's should never see this message unless we aren't calling SSLEnabled() to check if SSL is enabled before using call() with forceSSL
+			throw new Exception("SSL is not supported by your web server and is required to use this function. Please ask your hosting provider or site admin to install cURL with openSSL to use this feature.");
+		}
+		$json = $this->getURL($apiURL . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&' . self::buildQuery(
+				array_merge(
+					array('action' => $action),
+					$getParams
 				)), $postParams);
-		if(! $json){
+		if (!$json) {
 			throw new Exception("We received an empty data response from the Wordfence scanning servers when calling the '$action' function.");
 		}
 
 		$dat = json_decode($json, true);
-		if(isset($dat['_isPaidKey'])){
+		if (isset($dat['_isPaidKey'])) {
 			wfConfig::set('keyExpDays', $dat['_keyExpDays']);
-			if($dat['_keyExpDays'] > -1){
+			if ($dat['_keyExpDays'] > -1) {
 				wfConfig::set('isPaid', 1);
-			} else if($dat['_keyExpDays'] < 0){
+			} else if ($dat['_keyExpDays'] < 0) {
 				wfConfig::set('isPaid', '');
 			}
 		}
-				
-		if(! is_array($dat)){
+
+		if (!is_array($dat)) {
 			throw new Exception("We received a data structure that is not the expected array when contacting the Wordfence scanning servers and calling the '$action' function.");
 		}
-		if(is_array($dat) && isset($dat['errorMsg'])){
+		if (is_array($dat) && isset($dat['errorMsg'])) {
 			throw new Exception($dat['errorMsg']);
 		}
 		return $dat;
 	}
-	public function curlWrite($h, $d){
-		$this->curlContent .= $d;
-		return strlen($d);
-	}
-	protected function getURL($url, $postParams = array()){
-		if(function_exists('curl_init')){
-			$this->curlDataWritten = 0;
-			$this->curlContent = "";
-			$curl = curl_init($url);
-			if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy($url) ){
-				curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
-				curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
-				if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
-					curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
-				}
-			}
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
-			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]') );
-			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
-			curl_setopt ($curl, CURLOPT_HEADER, 0);
-			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
-			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
-			curl_setopt ($curl, CURLOPT_WRITEFUNCTION, array($this, 'curlWrite'));
-			curl_setopt($curl, CURLOPT_POST, true);
-			curl_setopt($curl, CURLOPT_POSTFIELDS, $postParams);
-			wordfence::status(4, 'info', "CURL fetching URL: " . $url);
-			curl_exec($curl);
 
-			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-			$this->lastCurlErrorNo = curl_errno($curl);
-			if($httpStatus == 200){
-				curl_close($curl);
-				return $this->curlContent;
-			} else {
-				$cerror = curl_error($curl);
-				curl_close($curl);
-				throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$httpStatus] and the curl error number was [" . $this->lastCurlErrorNo . "] " . ($cerror ? (' and the error from CURL was: ' . $cerror) : ''));
-			}
-		} else {
-			wordfence::status(4, 'info', "Fetching URL with file_get: " . $url);
-			$data = $this->fileGet($url, $postParams);
-			if($data === false){
-				$err = error_get_last();
-				if($err){
-					throw new Exception("We received an error response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function. The error was: " . var_export($err, true));
-				} else {
-					throw new Exception("We received an empty response when trying to contact the Wordfence scanning servers using PHP's file_get_contents function.");
-				}
-			}
-			return $data;
+	protected function getURL($url, $postParams = array()) {
+		wordfence::status(4, 'info', "Calling Wordfence API v" . WORDFENCE_API_VERSION . ":" . $url);
+
+		if (!function_exists('wp_remote_post')) {
+			require_once ABSPATH . WPINC . 'http.php';
 		}
 
-	}
-	private function fileGet($url, $postParams){
-		if(is_array($postParams)){
-			$bodyArr = array();
-			foreach($postParams as $key => $val){
-				$bodyArr[] = urlencode($key) . '=' . urlencode($val);
-			}
-			$body = implode('&', $bodyArr);
-		} else {
-			$body = $postParams;
+		$response = wp_remote_post($url, array(
+			'timeout'    => 900,
+			'user-agent' => "Wordfence.com UA " . (defined('WORDFENCE_VERSION') ? WORDFENCE_VERSION : '[Unknown version]'),
+			'body'       => $postParams,
+		));
+
+		$this->lastHTTPStatus = (int) wp_remote_retrieve_response_code($response);
+		if (is_wp_error($response) || 200 != $this->lastHTTPStatus) {
+			throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$this->lastHTTPStatus]");
 		}
-		$opts = array('http' =>
-				array(
-					'method'  => 'POST',
-					'content' => $body,
-					'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
-					'timeout' => 60
-				     )
-			     );
-		$context = stream_context_create($opts);
-		return @file_get_contents($url, false, $context, -1);
+
+		$this->curlContent = wp_remote_retrieve_body($response);
+		return $this->curlContent;
 	}
-	public function binCall($func, $postData){
+
+	public function binCall($func, $postData) {
 		$url = $this->getAPIURL() . '/v' . WORDFENCE_API_VERSION . '/?' . $this->makeAPIQueryString() . '&action=' . $func;
-		if(function_exists('curl_init')){
-			$curl = curl_init($url);
-			if(defined('WP_PROXY_HOST') && defined('WP_PROXY_PORT') && wfUtils::hostNotExcludedFromProxy($url) ){
-				error_log("BINCALL PROXY");
-				curl_setopt($curl, CURLOPT_HTTPPROXYTUNNEL, 0);
-				curl_setopt($curl, CURLOPT_PROXY, WP_PROXY_HOST . ':' . WP_PROXY_PORT);
-				if(defined('WP_PROXY_USERNAME') && defined('WP_PROXY_PASSWORD')){
-					curl_setopt($curl, CURLOPT_PROXYUSERPWD, WP_PROXY_USERNAME . ':' . WP_PROXY_PASSWORD);
-				}
-			}
-			curl_setopt ($curl, CURLOPT_TIMEOUT, 900);
-			//curl_setopt($curl, CURLOPT_VERBOSE, true);
-			curl_setopt ($curl, CURLOPT_USERAGENT, "Wordfence");
-			curl_setopt ($curl, CURLOPT_RETURNTRANSFER, TRUE);
-			curl_setopt ($curl, CURLOPT_SSL_VERIFYPEER, false);
-			curl_setopt ($curl, CURLOPT_SSL_VERIFYHOST, false);
-			curl_setopt($curl, CURLOPT_POST, true);
-			if($postData){                  
-				curl_setopt($curl, CURLOPT_POSTFIELDS, $postData);
-			} else {                        
-				curl_setopt($curl, CURLOPT_POSTFIELDS, array());
-			}                               
-			$data = curl_exec($curl);       
 
-			$httpStatus = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-			if($httpStatus != 200){
-				$cError = curl_error($curl);
-				curl_close($curl);
-				if($cError){
-					throw new Exception("We received an error response when trying to fetch binary data from the Wordfence scanning server. The HTTP status was [$httpStatus] with error: $cError");
-				} else {
-					throw new Exception("We received an error HTTP response when trying to fetch binary data from the Wordfence scanning server: [$httpStatus]");
-				}
-			}
-		} else {
-			$data = $this->fileGet($url, $postData);
-			if($data === false){
-				$err = error_get_last();
-				if($err){
-					throw new Exception("We received an error response when trying to fetch binary data from the Wordfence scanning server using file_get_contents: $err");
-				} else {
-					throw new Exception("We received an error when trying to fetch binary data from the Wordfence scanning server using file_get_contents. There was no message explaining the error.");
-				}
-			}
-			$httpStatus = '200';
-		}
-		if(preg_match('/\{.*errorMsg/', $data)){
+		$data = $this->getURL($url, $postData);
+
+		if (preg_match('/\{.*errorMsg/', $data)) {
 			$jdat = @json_decode($data, true);
-			if(is_array($jdat) && $jdat['errorMsg']){
+			if (is_array($jdat) && $jdat['errorMsg']) {
 				throw new Exception($jdat['errorMsg']);
 			}
 		}
-		return array('code' => $httpStatus, 'data' => $data);
+		return array('code' => $this->lastHTTPStatus, 'data' => $data);
 	}
-	public function makeAPIQueryString(){
+
+	public function makeAPIQueryString() {
 		$siteurl = '';
-		if(function_exists('get_bloginfo')){
-			if(is_multisite()){
+		if (function_exists('get_bloginfo')) {
+			if (is_multisite()) {
 				$siteurl = network_home_url();
 				$siteurl = rtrim($siteurl, '/'); //Because previously we used get_bloginfo and it returns http://example.com without a '/' char.
 			} else {
@@ -183,25 +100,29 @@ class wfAPI {
 			}
 		}
 		return self::buildQuery(array(
-			'v' => $this->wordpressVersion, 
-			's' => $siteurl, 
+			'v' => $this->wordpressVersion,
+			's' => $siteurl,
 			'k' => $this->APIKey
-			));
+		));
 	}
-	private function buildQuery($data){
-		if(version_compare(phpversion(), '5.1.2', '>=')){
+
+	private function buildQuery($data) {
+		if (version_compare(phpversion(), '5.1.2', '>=')) {
 			return http_build_query($data, '', '&'); //arg_separator parameter was only added in PHP 5.1.2. We do this because some PHP.ini's have arg_separator.output set to '&amp;'
 		} else {
 			return http_build_query($data);
 		}
 	}
-	private function getAPIURL(){
-		$ssl_supported = false;
-		if(defined('CURL_VERSION_SSL') && function_exists('curl_version')){
-			$version = curl_version();
-			$ssl_supported = ($version['features'] & CURL_VERSION_SSL);
+
+	private function getAPIURL() {
+		return self::SSLEnabled() ? WORDFENCE_API_URL_SEC : WORDFENCE_API_URL_NONSEC;
+	}
+
+	public static function SSLEnabled() {
+		if (!function_exists('wp_http_supports')) {
+			require_once ABSPATH . WPINC . 'http.php';
 		}
-		return $ssl_supported ? WORDFENCE_API_URL_SEC : WORDFENCE_API_URL_NONSEC;
+		return wp_http_supports(array('ssl'));
 	}
 }
 

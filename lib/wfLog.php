@@ -297,6 +297,9 @@ class wfLog {
 				$wfsn
 				);
 		}
+
+		wfActivityReport::logBlockedIP($IP);
+
 		wfCache::updateBlockedIPs('add');
 		wfConfig::inc('totalIPsBlocked');
 		return true;
