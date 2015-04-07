@@ -3159,7 +3159,7 @@ EOL;
 	}
 
 	public static function addDashboardWidget() {
-		if (wfConfig::get('email_summary_dashboard_widget_enabled')) {
+		if (wfUtils::isAdmin() && wfConfig::get('email_summary_dashboard_widget_enabled')) {
 			wp_enqueue_style('wordfence-activity-report-widget', wfUtils::getBaseURL() . 'css/activity-report-widget.css', '', WORDFENCE_VERSION);
 			$report_date_range = 'week';
 			switch (wfConfig::get('email_summary_interval')) {
