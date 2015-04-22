@@ -36,13 +36,20 @@ class wfUpdateCheck {
 	 */
 	public function checkCoreUpdates() {
 		$this->needs_core_update = false;
+
+		if (!function_exists('wp_version_check')) {
+			require_once(ABSPATH . WPINC . '/update.php');
+		}
 		if (!function_exists('get_preferred_from_update_core')) {
 			require_once(ABSPATH . 'wp-admin/includes/update.php');
 		}
-		$cur = get_preferred_from_update_core();
-		if (isset($cur->response) && $cur->response == 'upgrade') {
+
+		wp_version_check(); // Check for Core updates
+		$update = get_preferred_from_update_core();
+
+		if (isset($update->response) && $update->response == 'upgrade') {
 			$this->needs_core_update = true;
-			$this->core_update_version = $cur->current;
+			$this->core_update_version = $update->current;
 		}
 
 		return $this;
@@ -56,7 +63,13 @@ class wfUpdateCheck {
 	public function checkPluginUpdates() {
 		$this->plugin_updates = array();
 
+		if (!function_exists('wp_update_plugins')) {
+			require_once(ABSPATH . WPINC . '/update.php');
+		}
+
+		wp_update_plugins(); // Check for Plugin updates
 		$update_plugins = get_site_transient('update_plugins');
+
 		if ($update_plugins && !empty($update_plugins->response)) {
 			foreach ($update_plugins->response as $plugin => $vals) {
 				if (!function_exists('get_plugin_data')) {
@@ -80,7 +93,13 @@ class wfUpdateCheck {
 	public function checkThemeUpdates() {
 		$this->theme_updates = array();
 
+		if (!function_exists('wp_update_themes')) {
+			require_once(ABSPATH . WPINC . '/update.php');
+		}
+
+		wp_update_themes();  // Check for Theme updates
 		$update_themes = get_site_transient('update_themes');
+
 		if ($update_themes && (!empty($update_themes->response))) {
 			if (!function_exists('wp_get_themes')) {
 				require_once ABSPATH . '/wp-includes/theme.php';

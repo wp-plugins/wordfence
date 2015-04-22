@@ -67,6 +67,9 @@ class wordfence {
 		//Remove all scheduled scans.
 		self::unscheduleAllScans();
 
+		// Remove cron for email summary
+		wfActivityReport::clearCronJobs();
+
 		wfConfig::clearDiskCache();
 		if(wfConfig::get('deleteTablesOnDeact')){
 			$schema = new wfSchema();
@@ -279,8 +282,11 @@ class wordfence {
 		}
 		wp_clear_scheduled_hook('wordfence_daily_cron');
 		wp_clear_scheduled_hook('wordfence_hourly_cron');
-		wp_schedule_event(time(), 'daily', 'wordfence_daily_cron'); //'daily'
-		wp_schedule_event(time(), 'hourly', 'wordfence_hourly_cron');
+		if (is_main_site()) {
+			wp_schedule_event(time(), 'daily', 'wordfence_daily_cron'); //'daily'
+			wp_schedule_event(time(), 'hourly', 'wordfence_hourly_cron');
+		}
+
 		$db = new wfDB();
 
 		if($db->columnExists('wfHits', 'HTTPHeaders')){ //Upgrade from 3.0.4
@@ -391,7 +397,11 @@ class wordfence {
 			add_action('wp_ajax_wordfence_doScan', 'wordfence::ajax_doScan_callback');
 			add_action('wp_ajax_wordfence_testAjax', 'wordfence::ajax_testAjax_callback');
 
-			add_action('wp_dashboard_setup', 'wordfence::addDashboardWidget');
+			if (is_multisite()) {
+				add_action('wp_network_dashboard_setup', 'wordfence::addDashboardWidget');
+			} else {
+				add_action('wp_dashboard_setup', 'wordfence::addDashboardWidget');
+			}
 		}
 
 
@@ -1264,7 +1274,10 @@ class wordfence {
 		}
 	}
 	private static function scheduleSingleScan($futureTime){
-		wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan');
+		// Removed ability to activate on network site in v5.3.12
+		if (is_main_site()) {
+			wp_schedule_single_event($futureTime, 'wordfence_start_scheduled_scan');
+		}
 	}
 	private static function unscheduleAllScans(){
 		wp_clear_scheduled_hook('wordfence_start_scheduled_scan');
@@ -3159,7 +3172,7 @@ EOL;
 	}
 
 	public static function addDashboardWidget() {
-		if (wfUtils::isAdmin() && wfConfig::get('email_summary_dashboard_widget_enabled')) {
+		if (wfUtils::isAdmin() && (is_network_admin() || !is_multisite()) && wfConfig::get('email_summary_dashboard_widget_enabled')) {
 			wp_enqueue_style('wordfence-activity-report-widget', wfUtils::getBaseURL() . 'css/activity-report-widget.css', '', WORDFENCE_VERSION);
 			$report_date_range = 'week';
 			switch (wfConfig::get('email_summary_interval')) {

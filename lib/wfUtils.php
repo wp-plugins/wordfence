@@ -654,6 +654,13 @@ class wfUtils {
 			return false;
 		}
 	}
+
+	/**
+	 * @return array
+	 */
+	public static function getPrivateAddrs() {
+		return self::$privateAddrs;
+	}
 }
 
 

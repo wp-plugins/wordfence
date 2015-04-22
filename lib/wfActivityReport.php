@@ -31,8 +31,10 @@ class wfActivityReport {
 			return;
 		}
 
-		list(, $end_time) = wfActivityReport::getReportDateRange();
-		wp_schedule_single_event($end_time, 'wordfence_email_activity_report');
+		if (is_main_site()) {
+			list(, $end_time) = wfActivityReport::getReportDateRange();
+			wp_schedule_single_event($end_time, 'wordfence_email_activity_report');
+		}
 	}
 
 	/**
@@ -117,6 +119,40 @@ class wfActivityReport {
 	}
 
 	/**
+	 * @return int
+	 */
+	public static function getReportDateFrom() {
+		$interval = wfConfig::get('email_summary_interval', 'weekly');
+		return self::_getReportDateFrom($interval);
+	}
+
+	/**
+	 * @param string $interval
+	 * @param null   $time
+	 * @return int
+	 */
+	public static function _getReportDateFrom($interval = 'weekly', $time = null) {
+		if ($time === null) {
+			$time = time();
+		}
+
+		// weekly
+		$from = $time - (86400 * 7);
+		switch ($interval) {
+			case 'biweekly':
+				$from = $time - (86400 * 14);
+				break;
+
+			// Send a report at 4pm the first of every month
+			case 'monthly':
+				$from = strtotime('-1 month', $time);
+				break;
+		}
+
+		return $from;
+	}
+
+	/**
 	 * @return array
 	 */
 	public function getFullReport() {
@@ -137,11 +173,11 @@ class wfActivityReport {
 	public function getWidgetReport() {
 		$start_time = microtime(true);
 		return array(
-			'top_ips_blocked'         => $this->getTopIPsBlocked($this->limit),
-			'top_countries_blocked'   => $this->getTopCountriesBlocked($this->limit),
-			'top_failed_logins'       => $this->getTopFailedLogins($this->limit),
-			'updates_needed'          => $this->getUpdatesNeeded(),
-			'microseconds'            => microtime(true) - $start_time,
+			'top_ips_blocked'       => $this->getTopIPsBlocked($this->limit),
+			'top_countries_blocked' => $this->getTopCountriesBlocked($this->limit),
+			'top_failed_logins'     => $this->getTopFailedLogins($this->limit),
+			'updates_needed'        => $this->getUpdatesNeeded(),
+			'microseconds'          => microtime(true) - $start_time,
 		);
 	}
 
@@ -150,8 +186,17 @@ class wfActivityReport {
 	 * @return mixed
 	 */
 	public function getTopIPsBlocked($limit = 10) {
+		$where = $this->getBlockedIPWhitelistWhereClause();
+		if ($where) {
+			$where = 'WHERE NOT (' . $where . ')';
+		}
+
 		$results = $this->db->get_results($this->db->prepare(<<<SQL
-SELECT * FROM {$this->db->prefix}wfBlockedIPLog
+SELECT *,
+SUM(blockCount) as blockCount
+FROM {$this->db->prefix}wfBlockedIPLog
+$where
+GROUP BY IP
 ORDER BY blockCount DESC
 LIMIT %d
 SQL
@@ -164,9 +209,15 @@ SQL
 	 * @return array
 	 */
 	public function getTopCountriesBlocked($limit = 10) {
+		$where = $this->getBlockedIPWhitelistWhereClause();
+		if ($where) {
+			$where = 'WHERE NOT (' . $where . ')';
+		}
+
 		$results = $this->db->get_results($this->db->prepare(<<<SQL
 SELECT *, COUNT(IP) as totalIPs, SUM(blockCount) as totalBlockCount
 FROM {$this->db->base_prefix}wfBlockedIPLog
+$where
 GROUP BY countryCode
 ORDER BY totalBlockCount DESC
 LIMIT %d
@@ -181,7 +232,9 @@ SQL
 	 */
 	public function getTopFailedLogins($limit = 10) {
 		$results = $this->db->get_results($this->db->prepare(<<<SQL
-SELECT *, sum(fail) as fail_count
+SELECT *,
+sum(fail) as fail_count,
+max(userID) as is_valid_user
 FROM {$this->db->base_prefix}wfLogins
 WHERE fail = 1
 GROUP BY username
@@ -190,6 +243,40 @@ LIMIT %d
 SQL
 			, $limit));
 		return $results;
+	}
+
+	/**
+	 * Generate SQL from the whitelist.  Uses the return format from wfLog::getWhitelistedIPs
+	 *
+	 * @see wfLog::getWhitelistedIPs
+	 * @param array $whitelisted_ips
+	 * @return string
+	 */
+	public function getBlockedIPWhitelistWhereClause($whitelisted_ips = null) {
+		if ($whitelisted_ips === null) {
+			$whitelisted_ips = wordfence::getLog()->getWhitelistedIPs();
+		}
+		if (!is_array($whitelisted_ips)) {
+			return false;
+		}
+
+		$where = '';
+		/** @var array|wfUserIPRange|string $ip_range */
+		foreach ($whitelisted_ips as $ip_range) {
+			if (is_array($ip_range) && count($ip_range) == 2) {
+				$where .= $this->db->prepare('IP BETWEEN %s AND %s', $ip_range[0], $ip_range[1]) . ' OR ';
+			} elseif (is_a($ip_range, 'wfUserIPRange')) {
+				$where .= $ip_range->toSQL('IP') . ' OR ';
+			} elseif (is_string($ip_range) || is_numeric($ip_range)) {
+				$where .=  $this->db->prepare('IP = %s', $ip_range) . ' OR ';
+			}
+		}
+		if ($where) {
+			// remove the extra ' OR '
+			$where = substr($where, 0, -4);
+		}
+
+		return $where;
 	}
 
 	/**
@@ -308,8 +395,8 @@ SQL
 	 * @return bool
 	 */
 	public function sendReportViaEmail($email_addresses) {
-		// TODO: setup a title that contains activity range
-		return wp_mail($email_addresses, 'Wordfence activity for ' . date_i18n(get_option('date_format')), $this->toEmailView()->__toString(), 'Content-Type: text/html');
+		$shortSiteURL = preg_replace('/^https?:\/\//i', '', site_url());
+		return wp_mail($email_addresses, 'Wordfence activity for ' . date_i18n(get_option('date_format')) . ' on ' . $shortSiteURL, $this->toEmailView()->__toString(), 'Content-Type: text/html');
 	}
 
 	/**
