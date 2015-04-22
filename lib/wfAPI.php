@@ -67,7 +67,17 @@ class wfAPI {
 		));
 
 		$this->lastHTTPStatus = (int) wp_remote_retrieve_response_code($response);
-		if (is_wp_error($response) || 200 != $this->lastHTTPStatus) {
+
+		if (is_wp_error($response)) {
+			$error_message = $response->get_error_message();
+			throw new Exception("There was an " . ($error_message ? '' : 'unknown ') . "error connecting to the the Wordfence scanning servers" . ($error_message ? ": $error_message" : '.'));
+		}
+
+		if (!empty($response['response']['code'])) {
+			$this->lastHTTPStatus = (int) $response['response']['code'];
+		}
+
+		if (200 != $this->lastHTTPStatus) {
 			throw new Exception("We received an error response when trying to contact the Wordfence scanning servers. The HTTP status code was [$this->lastHTTPStatus]");
 		}
 

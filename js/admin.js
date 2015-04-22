@@ -38,6 +38,7 @@
 			tourClosed: false,
 			welcomeClosed: false,
 			passwdAuditUpdateInt: false,
+			_windowHasFocus: true,
 			init: function() {
 				this.nonce = WordfenceAdminVars.firstNonce;
 				this.debugOn = WordfenceAdminVars.debugOn == '1' ? true : false;
@@ -45,6 +46,15 @@
 				this.welcomeClosed = WordfenceAdminVars.welcomeClosed == '1' ? true : false;
 				var startTicker = false;
 				var self = this;
+
+				$(window).on('blur', function() {
+					self._windowHasFocus = false;
+				}).on('focus', function() {
+					self._windowHasFocus = true;
+				}).focus();
+
+				$(document).focus();
+
 				if (jQuery('#wordfenceMode_scan').length > 0) {
 					this.mode = 'scan';
 					jQuery('#wfALogViewLink').prop('href', WordfenceAdminVars.siteBaseURL + '?_wfsf=viewActivityLog&nonce=' + this.nonce);
@@ -489,7 +499,7 @@
 				}
 			},
 			updateTicker: function(forceUpdate) {
-				if ((!forceUpdate) && this.tickerUpdatePending) {
+				if ((!forceUpdate) && (this.tickerUpdatePending || !this.windowHasFocus())) {
 					return;
 				}
 				this.tickerUpdatePending = true;
@@ -1903,6 +1913,13 @@
 						self.colorbox('400px', "Error Starting Audit", "An unknown error occurred when trying to start your password audit.");
 					}
 				});
+			},
+			windowHasFocus: function() {
+				if (typeof document.hasFocus === 'function') {
+					return document.hasFocus();
+				}
+				// Older versions of Opera
+				return this._windowHasFocus;
 			}
 		};
 		window['WFAD'] = window['wordfenceAdmin'];

@@ -2,8 +2,8 @@
 Contributors: mmaunder 
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
 Requires at least: 3.9
-Tested up to: 4.1.1
-Stable tag: 5.3.11
+Tested up to: 4.2
+Stable tag: 5.3.12
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -164,6 +164,25 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 5.3.12 =
+* Fix: Wordfence no longer can appear on sub-sites on multi-site installs, only on the network admin panel. 
+* Fix: Wordfence dashboard widget only can appear on network admin dashboard in multi-site installs. 
+* Fix: No more multiple scheduled scans on multi-site.  
+* Fix: Fixed mixed-protocol warning if you're using SSL and Wordfence - our static assets are loaded without specifying protocol now. 
+* Fix: Fixed issue where non-existent users were shown in dashboard widget and email summary as valid users. 
+* Fix: Removed /e modifier in preg_replace for Diff_Renderer_Html_Array::formatLines since it is deprecated in PHP 5.5.
+* Fix: Removed ssl_verify => false from wp_remote_post connectivity test since some versions of cURL will throw an error since WordPress uses their own certificate bundle.
+* Fix: Fixed bug with activity report email date range (was one week ahead).
+* Fix: Removed email summary report from cron on deactivation.
+* Fix: Fixed an off-by-one bug in wfDirectoryIterator for maximum total files and max files per directory.
+* Fix: Updated our browser data to fix an issue that caused newer browsers to appear in live traffic with version 0.0.
+* Improvement: Updated the country database used for country blocking to April 2015 version.
+* Improvement: Added an additional check for disabling script execution in the uploads directory that the .htaccess file actually contains our protection code before removing it.
+* Improvement: Paused Live Traffic ajax request when the window/document loses focus to reduce server load.
+* Improvement: Better error handling when making API calls to noc1 to help our support personell help you. 
+* Improvement: Added locked out IP's and IP's restricted through advanced blocking to the blocked IP log for dashboard and email summary. 
+* Improvement: Excluded whitelisted IP's from dashboard and widget email summary. 
 
 = 5.3.11 =
 * Fix: Dasboard widget no longer appearing for all users. 

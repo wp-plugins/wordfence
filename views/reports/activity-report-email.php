@@ -384,7 +384,7 @@ $title = 'Wordfence Activity for the week of ' . date_i18n(get_option('date_form
 							<tr class="<?php echo wfHelperString::cycle('odd', 'even') ?>">
 								<td><?php echo esc_html($row->username) ?></td>
 								<td><?php echo esc_html($row->fail_count) ?></td>
-								<td class="<?php echo sanitize_html_class($row->action) ?>"><?php echo $row->action == 'loginFailValidUsername' ? 'Yes' : 'No' ?></td>
+								<td class="<?php echo sanitize_html_class($row->is_valid_user ? 'loginFailValidUsername' : 'loginFailInvalidUsername') ?>"><?php echo $row->is_valid_user ? 'Yes' : 'No' ?></td>
 							</tr>
 						<?php endforeach ?>
 					</tbody>

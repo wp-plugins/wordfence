@@ -55,7 +55,12 @@ class wfLog {
 			if(! $userID){
 				return;
 			}
-		} //Else userID stays 0 but we do log this even though the user doesn't exist. 
+		}
+		// change the action flag here if the user does not exist.
+		if ($action == 'loginFailValidUsername' && $userID == 0) {
+			$action = 'loginFailInvalidUsername';
+		}
+		//Else userID stays 0 but we do log this even though the user doesn't exist.
 		$this->getDB()->queryWrite("insert into " . $this->loginsTable . " (ctime, fail, action, username, userID, IP, UA) values (%f, %d, '%s', '%s', %s, %s, '%s')", 
 			sprintf('%.6f', microtime(true)),
 			$fail,
@@ -195,6 +200,43 @@ class wfLog {
 		}
 		return false;
 	}
+
+	/**
+	 * Get an array of static IPs, tuple for a numeric IP range, or a wfUserIPRange object to define and test a range
+	 * like [127-128].0.0.[1-40]
+	 *
+	 * @see wfUserIPRange
+	 * @param null $user_whitelisted
+	 * @return array
+	 */
+	public function getWhitelistedIPs($user_whitelisted = null) {
+		$white_listed_ips = array();
+		// Wordfence's IP block which would prevent our scanning server manually kicking off scans that are stuck
+		$white_listed_ips[] = array(1160651777, 1160651808);
+
+		// Private range
+		$private_range = wfUtils::getPrivateAddrs();
+		foreach ($private_range as $ip_range) {
+			$white_listed_ips[] = array($ip_range[1], $ip_range[2]);
+		}
+
+		// These belong to sucuri's scanning servers which will get blocked by Wordfence as a false positive if you try a scan. So we whitelisted them.
+		$white_listed_ips = array_merge($white_listed_ips, array_map(array('wfUtils', 'inet_aton'), array('97.74.127.171', '69.164.203.172', '173.230.128.135', '66.228.34.49', '66.228.40.185', '50.116.36.92', '50.116.36.93', '50.116.3.171', '198.58.96.212', '50.116.63.221', '192.155.92.112', '192.81.128.31', '198.58.106.244', '192.155.95.139', '23.239.9.227', '198.58.112.103', '192.155.94.43', '162.216.16.33', '173.255.233.124', '173.255.233.124', '192.155.90.179', '50.116.41.217', '192.81.129.227', '198.58.111.80')));
+
+		if ($user_whitelisted === null) {
+			$user_whitelisted = wfConfig::get('whitelisted');
+		}
+
+		if ($user_whitelisted) {
+			$user_whitelisted = explode(',', $user_whitelisted);
+			foreach ($user_whitelisted as $whiteIP) {
+				$white_listed_ips[] = new wfUserIPRange($whiteIP);
+			}
+		}
+
+		return $white_listed_ips;
+	}
+
 	public function unblockAllIPs(){
 		$this->getDB()->queryWrite("delete from " . $this->blocksTable);
 		wfCache::updateBlockedIPs('add');
@@ -311,6 +353,9 @@ class wfLog {
 			$reason,
 			$reason
 			);
+
+		wfActivityReport::logBlockedIP($IP);
+
 		wfConfig::inc('totalIPsLocked');
 		return true;
 	}
@@ -560,12 +605,12 @@ class wfLog {
 				$b = $browscap->getBrowser($res['UA']);
 				if($b){
 					$res['browser'] = array(
-						'browser' => $b['Browser'],
-						'version' => $b['Version'],
-						'platform' => $b['Platform'],
-						'isMobile' => $b['isMobileDevice'],
-						'isCrawler' => $b['Crawler']
-						);
+						'browser'   => !empty($b['Browser']) ? $b['Browser'] : "",
+						'version'   => !empty($b['Version']) ? $b['Version'] : "",
+						'platform'  => !empty($b['Platform']) ? $b['Platform'] : "",
+						'isMobile'  => !empty($b['isMobileDevice']) ? $b['isMobileDevice'] : "",
+						'isCrawler' => !empty($b['Crawler']) ? $b['Crawler'] : "",
+					);
 				}
 			}
 
@@ -716,6 +761,7 @@ class wfLog {
 				}
 				if($doBlock){
 					$this->getDB()->queryWrite("update " . $this->ipRangesTable . " set totalBlocked = totalBlocked + 1, lastBlocked = unix_timestamp() where id=%d", $blockRec['id']);
+					wfActivityReport::logBlockedIP($IP);
 					$this->do503(3600, "Advanced blocking in effect.");
 				}
 			}
@@ -920,6 +966,97 @@ class wfLog {
 		return array_reverse($results);
 	}
 
+}
+
+/**
+ * @todo Add IPv6 support
+ *
+ * Class wfUserIPRange
+ */
+class wfUserIPRange {
+
+	/**
+	 * @var string|null
+	 */
+	private $ip_string;
+
+	/**
+	 * @param string|null $ip_string
+	 */
+	public function __construct($ip_string = null) {
+		$this->setIPString($ip_string);
+	}
+
+	/**
+	 * Check if the supplied IP address is within the user supplied range.
+	 *
+	 * @param $ip
+	 * @return bool
+	 */
+	public function isIPInRange($ip) {
+		$ip_string = $this->getIPString();
+		if (preg_match('/\[\d+\-\d+\]/', $ip_string)) {
+			$IPparts = explode('.', $ip);
+			$whiteParts = explode('.', $ip_string);
+			$mismatch = false;
+			for ($i = 0; $i <= 3; $i++) {
+				if (preg_match('/^\[(\d+)\-(\d+)\]$/', $whiteParts[$i], $m)) {
+					if ($IPparts[$i] < $m[1] || $IPparts[$i] > $m[2]) {
+						$mismatch = true;
+					}
+				} else if ($whiteParts[$i] != $IPparts[$i]) {
+					$mismatch = true;
+				}
+			}
+			if ($mismatch === false) {
+				return true; // Is whitelisted because we did not get a mismatch
+			}
+		} else if ($ip_string == $ip) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Return a set of where clauses to use in MySQL.
+	 *
+	 * @param string $column
+	 * @return false|null|string
+	 */
+	public function toSQL($column = 'ip') {
+		/** @var wpdb $wpdb */
+		global $wpdb;
+		$ip_string = $this->getIPString();
+		if (preg_match('/\[\d+\-\d+\]/', $ip_string)) {
+			$sql = '(';
+			$whiteParts = explode('.', $ip_string);
+			for ($i = 0, $j = 24; $i <= 3; $i++, $j -= 8) {
+				if (preg_match('/^\[(\d+)\-(\d+)\]$/', $whiteParts[$i], $m)) {
+					$sql .= $wpdb->prepare("$column >> $j & 0xFF BETWEEN %d AND %d", $m[1], $m[2]);
+				} else {
+					$sql .= $wpdb->prepare("$column >> $j & 0xFF = %d", $whiteParts[$i]);
+				}
+				$sql .= ' AND ';
+			}
+			$sql = substr($sql, 0, -5) . ')';
+			return $sql;
+		}
+		return $wpdb->prepare("($column = %s)", is_numeric($ip_string) ? $ip_string : wfUtils::inet_aton($ip_string));
+	}
+
+	/**
+	 * @return string|null
+	 */
+	public function getIPString() {
+		return $this->ip_string;
+	}
+
+	/**
+	 * @param string|null $ip_string
+	 */
+	public function setIPString($ip_string) {
+		$this->ip_string = $ip_string;
+	}
 }
 
 ?>
