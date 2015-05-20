@@ -21,6 +21,9 @@ class wfScanEngine {
 	public $maxExecTime = false; //If more than $maxExecTime has elapsed since last check, fork a new scan process and continue
 	private $publicScanEnabled = false;
 	private $fileContentsResults = false;
+	/**
+	 * @var bool|wordfenceScanner
+	 */
 	private $scanner = false;
 	private $scanQueue = array();
 	private $hoover = false;
@@ -33,6 +36,17 @@ class wfScanEngine {
 			);
 	private $userPasswdQueue = "";
 	private $passwdHasIssues = false;
+
+	/**
+	 * @var array
+	 */
+	private $databaseResults;
+
+	/**
+	 * @var wordfenceDBScanner
+	 */
+	private $dbScanner;
+
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
 		return array('hasher', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'maxExecTime', 'publicScanEnabled', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
 	}
@@ -53,7 +67,7 @@ class wfScanEngine {
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
 		$this->jobList[] = 'knownFiles_finish';
-		foreach(array('knownFiles', 'fileContents', 'posts', 'comments', 'passwds', 'options', 'dns', 'diskSpace', 'oldVersions') as $scanType){
+		foreach(array('knownFiles', 'fileContents', 'database', 'posts', 'comments', 'passwds', 'options', 'dns', 'diskSpace', 'oldVersions') as $scanType){
 			if(wfConfig::get('scansEnabled_' . $scanType)){
 				if(method_exists($this, 'scan_' . $scanType . '_init')){
 					foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = $scanType . '_' . $op; };
@@ -331,9 +345,40 @@ class wfScanEngine {
 		wordfence::statusEnd($this->statusIDX['infect'], $haveIssues);
 		wordfence::statusEnd($this->statusIDX['GSB'], $haveIssuesGSB);
 	}
+
+	private function scan_database_init() {
+		$this->statusIDX['db_infect'] = wordfence::statusStart('Scanning database for infections and vulnerabilities');
+		$this->dbScanner = new wordfenceDBScanner($this->apiKey, $this->wp_version, ABSPATH);
+		$this->status(2, 'info', "Starting scan of database");
+	}
+
+	private function scan_database_main() {
+		if (!$this->dbScanner) {
+			$this->dbScanner = new wordfenceDBScanner($this->apiKey, $this->wp_version, ABSPATH);
+		}
+		$this->databaseResults = $this->dbScanner->scan($this);
+	}
+
+	private function scan_database_finish() {
+		$this->status(2, 'info', "Done database scan");
+		if ($this->dbScanner->errorMsg) {
+			throw new Exception($this->dbScanner->errorMsg);
+		}
+		$this->dbScanner = null;
+		$haveIssues = false;
+		foreach ($this->databaseResults as $issue) {
+			$this->status(2, 'info', "Adding issue: " . $issue['shortMsg']);
+			$issue_success = $this->addIssue($issue['type'], $issue['severity'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
+			if ($issue_success) {
+				$haveIssues = true;
+			}
+		}
+		$this->databaseResults = null;
+		wordfence::statusEnd($this->statusIDX['db_infect'], $haveIssues);
+	}
 	private function scan_posts_init(){
 		$this->statusIDX['posts'] = wordfence::statusStart('Scanning posts for URL\'s in Google\'s Safe Browsing List');
-		$blogsToScan = $this->getBlogsToScan('posts');
+		$blogsToScan = self::getBlogsToScan('posts');
 		$wfdb = new wfDB();
 		$this->hoover = new wordfenceURLHoover($this->apiKey, $this->wp_version);
 		foreach($blogsToScan as $blog){
@@ -443,7 +488,7 @@ class wfScanEngine {
 		$this->scanData = array();
 		$this->scanQueue = array();
 		$this->hoover = new wordfenceURLHoover($this->apiKey, $this->wp_version);
-		$blogsToScan = $this->getBlogsToScan('comments');
+		$blogsToScan = self::getBlogsToScan('comments');
 		$wfdb = new wfDB();
 		foreach($blogsToScan as $blog){
 			$q1 = $wfdb->querySelect("select comment_ID from " . $blog['table'] . " where comment_approved=1");
@@ -565,7 +610,7 @@ class wfScanEngine {
 		$this->status(2, 'info', "Scanned comment with $cDesc");
 		return false;
 	}
-	public function getBlogsToScan($table){
+	public static function getBlogsToScan($table){
 		$wfdb = new wfDB();
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
@@ -739,7 +784,7 @@ class wfScanEngine {
 		}
 	}
 	private function scan_options(){
-		$blogsToScan = $this->getBlogsToScan('options');
+		$blogsToScan = self::getBlogsToScan('options');
 		$wfdb = new wfDB();
 		foreach($blogsToScan as $blog){
 			$charset = $wfdb->querySingle("select option_value from " . $blog['table'] . " where option_name='blog_charset'");

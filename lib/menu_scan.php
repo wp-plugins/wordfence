@@ -556,6 +556,57 @@
 </div>
 </div>
 </script>
+<script type="text/x-jquery-template" id="issueTmpl_database">
+<div>
+<div class="wfIssue">
+	<h2>${shortMsg}</h2>
+	<p>
+		<table border="0" class="wfIssue" cellspacing="0" cellpadding="0">
+		<tr><th>Option Name:</th><td>${data.option_name}</td></tr>
+		{{if ((typeof data.badURL !== 'undefined') && data.badURL)}}
+		<tr><th>Bad URL:</th><td><strong class="wfWarn">${data.badURL}</strong></td></tr>
+		{{/if}}
+		<tr><th>Issue first detected:</th><td>${timeAgo} ago.</td></tr>
+		<tr><th>Severity:</th><td>{{if severity == '1'}}Critical{{else}}Warning{{/if}}</td></tr>
+		<tr><th>Status</th><td>
+			{{if status == 'new' }}New{{/if}}
+			{{if status == 'ignoreP' }}Permanently ignoring this option{{/if}}
+			{{if status == 'ignoreC' }}Ignoring this option until it changes{{/if}}
+		</td></tr>
+		</table>
+	</p>
+	<p>
+		{{html longMsg}}
+	</p>
+	<div class="wfIssueOptions">
+		<strong>Tools:</strong>
+		{{if data.optionExists}}
+		<a target="_blank" href="${WFAD.makeViewOptionLink(data.option_name, data.site_id)}">View this option.</a>
+		{{/if}}
+		{{if data.canDelete}}
+		<a href="#" onclick="WFAD.deleteDatabaseOption('${id}'); return false;">Delete this option from the database (can't be undone).</a>
+		<br />&nbsp;<input type="checkbox" class="wfdelCheckbox" value="${id}" />&nbsp;Select for bulk delete
+		{{/if}}
+	</div>
+	<div class="wfIssueOptions">
+		{{if status == 'new'}}
+			<strong>Resolve:</strong>
+			<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">I have fixed this issue</a>
+			{{if data.optionExists}}
+				<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreC'); return false;">Ignore until the option changes.</a>
+				<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreP'); return false;">Always ignore this option.</a>
+			{{else}}
+				<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'ignoreC'); return false;">Ignore missing option.</a>
+			{{/if}}
+
+		{{/if}}
+		{{if status == 'ignoreC' || status == 'ignoreP'}}
+			<a href="#" onclick="WFAD.updateIssueStatus('${id}', 'delete'); return false;">Stop ignoring this issue.</a>
+		{{/if}}
+	</div>
+</div>
+</div>
+</script>
 <script type="text/x-jquery-template" id="issueTmpl_pubBadURLs">
 <div>
 <div class="wfIssue">

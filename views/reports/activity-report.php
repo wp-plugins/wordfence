@@ -21,7 +21,7 @@
 		<?php if ($top_ips_blocked): ?>
 			<?php foreach ($top_ips_blocked as $row): ?>
 				<tr class="<?php echo wfHelperString::cycle('odd', 'even') ?>">
-					<td><code><?php echo wfUtils::inet_ntoa($row->IP) ?></code></td>
+					<td><code><?php echo wfUtils::inet_ntop($row->IP) ?></code></td>
 					<td>
 						<?php if ($row->countryCode): ?>
 							<img src="//www.wordfence.com/images/flags/<?php echo esc_attr(strtolower($row->countryCode)) ?>.png" class="wfFlag" height="11" width="16">

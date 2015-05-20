@@ -463,6 +463,14 @@ $w = new wfConfig();
 					           value="1" <?php $w->cb( 'scansEnabled_fileContents' ); ?>/></td>
 				</tr>
 				<tr>
+					<th>Scan database for backdoors, trojans and suspicious code<a
+							href="http://docs.wordfence.com/en/Wordfence_options#Scan_database_for_backdoors.2C_trojans_and_suspicious_code"
+							target="_blank" class="wfhelp"></a></th>
+					<td><input type="checkbox" id="scansEnabled_database" class="wfConfigElem"
+					           name="scansEnabled_database"
+					           value="1" <?php $w->cb( 'scansEnabled_database' ); ?>/></td>
+				</tr>
+				<tr>
 					<th>Scan posts for known dangerous URLs and suspicious content<a
 							href="http://docs.wordfence.com/en/Wordfence_options#Scan_posts_for_known_dangerous_URLs_and_suspicious_content"
 							target="_blank" class="wfhelp"></a></th>

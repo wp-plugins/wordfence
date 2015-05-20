@@ -938,6 +938,27 @@
 					});
 				}
 			},
+			deleteDatabaseOption: function(issueID) {
+				var self = this;
+				this.ajax('wordfence_deleteDatabaseOption', {
+					issueID: issueID
+				}, function(res) {
+					self.doneDeleteDatabaseOption(res);
+				});
+			},
+			doneDeleteDatabaseOption: function(res) {
+				var cb = false;
+				var self = this;
+				if (res.ok) {
+					this.loadIssues(function() {
+						self.colorbox('400px', "Success removing option", "The option " + res.option_name + " was successfully removed.");
+					});
+				} else if (res.cerrorMsg) {
+					this.loadIssues(function() {
+						self.colorbox('400px', 'An error occurred', res.cerrorMsg);
+					});
+				}
+			},
 			restoreFile: function(issueID) {
 				var self = this;
 				this.ajax('wordfence_restoreFile', {
@@ -1240,6 +1261,9 @@
 			makeViewFileLink: function(file) {
 				return WordfenceAdminVars.siteBaseURL + '?_wfsf=view&nonce=' + this.nonce + '&file=' + encodeURIComponent(file);
 			},
+			makeViewOptionLink: function(option, siteID) {
+				return WordfenceAdminVars.siteBaseURL + '?_wfsf=viewOption&nonce=' + this.nonce + '&option=' + encodeURIComponent(option) + '&site_id=' + encodeURIComponent(siteID);
+			},
 			makeTimeAgo: function(t) {
 				var months = Math.floor(t / (86400 * 30));
 				var days = Math.floor(t / 86400);
@@ -1341,13 +1365,16 @@
 
 						function wfm21(str, ipRange, offset, totalStr) {
 							var ips = ipRange.split(/\s*\-\s*/);
-							var ip1num = self.inet_aton(ips[0]);
-							var ip2num = self.inet_aton(ips[1]);
-							var totalIPs = ip2num - ip1num + 1;
-							return "<a href=\"admin.php?page=WordfenceRangeBlocking&wfBlockRange=" + ipRange + "\"" + redStyle + ">" + ipRange + " [<strong>" + totalIPs + "</strong> addresses in this network. Click to block this network]<\/a>";
+							var totalIPs = NaN;
+							if (ips[0].indexOf(':') < 0) {
+								var ip1num = self.inet_aton(ips[0]);
+								var ip2num = self.inet_aton(ips[1]);
+								totalIPs = ip2num - ip1num + 1;
+							}
+							return "<a href=\"admin.php?page=WordfenceRangeBlocking&wfBlockRange=" + ipRange + "\"" + redStyle + ">" + ipRange + " [" + (!isNaN(totalIPs) ? "<strong>" + totalIPs + "</strong> addresses in this network." : "") + "Click to block this network]<\/a>";
 						}
 
-						res.result.rawdata[i] = res.result.rawdata[i].replace(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/, wfm21);
+						res.result.rawdata[i] = res.result.rawdata[i].replace(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-f0-9:.]{3,} - [a-f0-9:.]{3,})/i, wfm21);
 						rawhtml += res.result.rawdata[i] + "<br />";
 					}
 					jQuery('#wfrawhtml').html(rawhtml);
@@ -1360,9 +1387,16 @@
 					this.colorbox('300px', "Please specify a reason", "You forgot to include a reason you're blocking this IP range. We ask you to include this for your own record keeping.");
 					return;
 				}
-				ipRange = ipRange.replace(/ /g, '');
+				ipRange = ipRange.replace(/ /g, '').toLowerCase();
 				if (ipRange) {
-					if (!/^\d+\.\d+\.\d+\.\d+\-\d+\.\d+\.\d+\.\d+$/.test(ipRange)) {
+					var range = ipRange.split('-'),
+						validRange = false;
+					if (range[0].match(':')) {
+						validRange = this.inet_pton(range[0]) !== false && this.inet_pton(range[1]) !== false;
+					} else if (range[0].match('.')) {
+						validRange = this.inet_aton(range[0]) !== false && this.inet_aton(range[1]) !== false;
+					}
+					if (!validRange) {
 						this.colorbox('300px', 'Specify a valid IP range', "Please specify a valid IP address range in the form of \"1.2.3.4 - 1.2.3.5\" without quotes. Make sure the dash between the IP addresses in a normal dash (a minus sign on your keyboard) and not another character that looks like a dash.");
 						return;
 					}
@@ -1845,6 +1879,84 @@
 				}
 				return d;
 			},
+
+			inet_pton: function(a) {
+				//  discuss at: http://phpjs.org/functions/inet_pton/
+				// original by: Theriault
+				//   example 1: inet_pton('::');
+				//   returns 1: '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0'
+				//   example 2: inet_pton('127.0.0.1');
+				//   returns 2: '\x7F\x00\x00\x01'
+
+				var r, m, x, i, j, f = String.fromCharCode;
+				m = a.match(/^(?:\d{1,3}(?:\.|$)){4}/); // IPv4
+				if (m) {
+					m = m[0].split('.');
+					m = f(m[0]) + f(m[1]) + f(m[2]) + f(m[3]);
+					// Return if 4 bytes, otherwise false.
+					return m.length === 4 ? m : false;
+				}
+				r = /^((?:[\da-f]{1,4}(?::|)){0,8})(::)?((?:[\da-f]{1,4}(?::|)){0,8})$/;
+				m = a.match(r); // IPv6
+				if (m) {
+					// Translate each hexadecimal value.
+					for (j = 1; j < 4; j++) {
+						// Indice 2 is :: and if no length, continue.
+						if (j === 2 || m[j].length === 0) {
+							continue;
+						}
+						m[j] = m[j].split(':');
+						for (i = 0; i < m[j].length; i++) {
+							m[j][i] = parseInt(m[j][i], 16);
+							// Would be NaN if it was blank, return false.
+							if (isNaN(m[j][i])) {
+								return false; // Invalid IP.
+							}
+							m[j][i] = f(m[j][i] >> 8) + f(m[j][i] & 0xFF);
+						}
+						m[j] = m[j].join('');
+					}
+					x = m[1].length + m[3].length;
+					if (x === 16) {
+						return m[1] + m[3];
+					} else if (x < 16 && m[2].length > 0) {
+						return m[1] + (new Array(16 - x + 1))
+								.join('\x00') + m[3];
+					}
+				}
+				return false; // Invalid IP.
+			},
+			inet_ntop: function(a) {
+				//  discuss at: http://phpjs.org/functions/inet_ntop/
+				// original by: Theriault
+				//   example 1: inet_ntop('\x7F\x00\x00\x01');
+				//   returns 1: '127.0.0.1'
+				//   example 2: inet_ntop('\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1');
+				//   returns 2: '::1'
+
+				var i = 0,
+					m = '',
+					c = [];
+				a += '';
+				if (a.length === 4) { // IPv4
+					return [
+						a.charCodeAt(0), a.charCodeAt(1), a.charCodeAt(2), a.charCodeAt(3)].join('.');
+				} else if (a.length === 16) { // IPv6
+					for (i = 0; i < 16; i++) {
+						c.push(((a.charCodeAt(i++) << 8) + a.charCodeAt(i))
+							.toString(16));
+					}
+					return c.join(':')
+						.replace(/((^|:)0(?=:|$))+:?/g, function(t) {
+							m = (t.length > m.length) ? t : m;
+							return t;
+						})
+						.replace(m || ' ', '::');
+				} else { // Invalid length
+					return false;
+				}
+			},
+
 			removeCacheExclusion: function(id) {
 				this.ajax('wordfence_removeCacheExclusion', {id: id}, function(res) {
 					window.location.reload(true);

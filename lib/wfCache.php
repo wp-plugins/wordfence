@@ -578,6 +578,11 @@ EOT;
 		self::updateBlockedIPs('add'); //Fail silently if .htaccess is not readable. Will fall back to old blocking via WP
 		wp_schedule_single_event(time() + 300, 'wordfence_update_blocked_IPs');
 	}
+
+	/**
+	 * @param $action
+	 * @return bool|string|void
+	 */
 	public static function updateBlockedIPs($action){ //'add' or 'remove'
 		if(wfConfig::get('cacheType') != 'falcon'){ return; }
 
@@ -635,9 +640,19 @@ EOT;
 
 					if($range){
 						if($browser || $referer){ continue; } //We don't allow combos in falcon
-						$ips = explode('-', $range);
-						$cidrs = wfUtils::rangeToCIDRs($ips[0], $ips[1]);
-						$hIPs = wfUtils::inet_ntoa($ips[0]) . ' - ' . wfUtils::inet_ntoa($ips[1]);
+
+						list($start_range, $end_range) = explode('-', $range);
+						if (preg_match('/[\.:]/', $start_range)) {
+							$start_range = wfUtils::inet_pton($start_range);
+							$end_range = wfUtils::inet_pton($end_range);
+						} else {
+							$start_range = wfUtils::inet_pton(long2ip($start_range));
+							$end_range = wfUtils::inet_pton(long2ip($end_range));
+						}
+
+						$cidrs = wfUtils::rangeToCIDRs($start_range, $end_range);
+
+						$hIPs = wfUtils::inet_ntop($start_range) . ' - ' . wfUtils::inet_ntop($end_range);
 						if(sizeof($cidrs) > 0){
 							$lines[] = '#Start of blocking code for IP range: ' . $hIPs . "\n";
 							foreach($cidrs as $c){

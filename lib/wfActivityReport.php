@@ -339,13 +339,15 @@ SQL
 
 	/**
 	 * @param mixed $ip_address
-	 * @param null  $unixday
+	 * @param int|null $unixday
 	 */
 	public static function logBlockedIP($ip_address, $unixday = null) {
+		/** @var wpdb $wpdb */
 		global $wpdb;
 
-		if (is_string($ip_address) && !is_numeric($ip_address)) {
-			$ip_address = wfUtils::inet_aton($ip_address);
+		$is_bin_ip = !wfUtils::isValidIP($ip_address);
+		if (!$is_bin_ip) {
+			$ip_address = wfUtils::inet_pton($ip_address);
 		}
 
 		$blocked_table = "{$wpdb->base_prefix}wfBlockedIPLog";
@@ -355,7 +357,7 @@ SQL
 			$unixday_insert = absint($unixday);
 		}
 
-		$country = wfUtils::IP2Country(is_numeric($ip_address) ? wfUtils::inet_ntoa($ip_address) : $ip_address);
+		$country = wfUtils::IP2Country($is_bin_ip ? wfUtils::inet_ntop($ip_address) : $ip_address);
 
 		$wpdb->query($wpdb->prepare(<<<SQL
 INSERT INTO $blocked_table (IP, countryCode, blockCount, unixday)
