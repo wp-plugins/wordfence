@@ -60,15 +60,16 @@ abstract class wfDirectoryIterator {
 					return false;
 				}
 			}
-			if ($file_count++ >= $this->directory_limit) {
+			if (++$file_count >= $this->directory_limit) {
 				break;
 			}
-			if ($this->iterations++ >= $this->max_iterations) {
+			if (++$this->iterations >= $this->max_iterations) {
 				closedir($handle);
 				return false;
 			}
 		}
 		closedir($handle);
+		return true;
 	}
 }
 

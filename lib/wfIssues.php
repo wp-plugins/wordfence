@@ -26,14 +26,14 @@ class wfIssues {
 		$ignoreC, /* some piece of data used for md5 for ignoring until something changes */
 		$shortMsg, $longMsg, $templateData
 		){
-		
+
 
 		$ignoreP = md5($ignoreP);
 		$ignoreC = md5($ignoreC);
 		$rec = $this->getDB()->querySingleRec("select status, ignoreP, ignoreC from " . $this->issuesTable . " where (ignoreP='%s' OR ignoreC='%s')", $ignoreP, $ignoreC);
 		if($rec){
 			if($rec['status'] == 'new' && ($rec['ignoreC'] == $ignoreC || $rec['ignoreP'] == $ignoreP)){ 
-				if($type != 'file'){ //Filter out duplicate new issues but not infected files because we want to see all infections even if file contents are identical
+				if($type != 'file' && $type != 'database'){ //Filter out duplicate new issues but not infected files because we want to see all infections even if file contents are identical
 					return false; 
 				}
 			}
@@ -172,7 +172,9 @@ class wfIssues {
 		$rec['data'] = unserialize($rec['data']);
 		return $rec;
 	}
-	public function getIssues(){ 
+	public function getIssues(){
+		/** @var wpdb $wpdb */
+		global $wpdb;
 		$ret = array(
 			'new' => array(),
 			'ignored' => array()
@@ -199,6 +201,10 @@ class wfIssues {
 					} else {
 						$issueList[$i]['data']['fileExists'] = '';
 					}
+				}
+				if ($issueList[$i]['type'] == 'database') {
+					$prefix = $wpdb->get_blog_prefix($issueList[$i]['data']['site_id']);
+					$issueList[$i]['data']['optionExists'] = $wpdb->get_var($wpdb->prepare("SELECT count(*) FROM {$prefix}options WHERE option_name = %s", $issueList[$i]['data']['option_name'])) > 0;
 				}
 				$issueList[$i]['issueIDX'] = $i;
 			}

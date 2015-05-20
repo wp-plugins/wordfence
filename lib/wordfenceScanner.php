@@ -10,9 +10,9 @@ class wordfenceScanner {
 	private $apiKey = false;
 	private $wordpressVersion = '';
 	private $totalFilesScanned = 0;
-	private $startTime = false;
-	private $lastStatusTime = false;
-	private $patterns = "";
+	protected $startTime = false;
+	protected $lastStatusTime = false;
+	protected $patterns = "";
 	private $api = false;
 	public function __sleep(){
 		return array('path', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover', 'totalFilesScanned', 'startTime', 'lastStatusTime', 'patterns');
@@ -35,7 +35,12 @@ class wordfenceScanner {
 		$this->urlHoover = new wordfenceURLHoover($this->apiKey, $this->wordpressVersion);
 		$this->setupSigs();
 	}
-	private function setupSigs(){
+
+	/**
+	 * @todo add caching to this.
+	 * @throws Exception
+	 */
+	protected function setupSigs() {
 		$this->api = new wfAPI($this->apiKey, $this->wordpressVersion);
 		$sigData = $this->api->call('get_patterns', array(), array());
 		//For testing, comment out above two, include server sig file and get local sigs
@@ -116,11 +121,11 @@ class wordfenceScanner {
 				} else {
 					$fsize = $fsize . "B";
 				}
-			       if(function_exists('memory_get_usage')){
-				       wordfence::status(4, 'info', "Scanning contents: $file (Size:$fsize Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
-			       } else {
-				       wordfence::status(4, 'info', "Scanning contents: $file (Size: $fsize)");
-			       }
+				if (function_exists('memory_get_usage')) {
+					wordfence::status(4, 'info', "Scanning contents: $file (Size:$fsize Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+				} else {
+					wordfence::status(4, 'info', "Scanning contents: $file (Size: $fsize)");
+				}
 
 				$stime = microtime(true);
 				$fh = @fopen($this->path . $file, 'r');
@@ -301,13 +306,15 @@ class wordfenceScanner {
 
 		return $this->results;
 	}
-	private function writeScanningStatus(){
+
+	protected function writeScanningStatus() {
 		wordfence::status(2, 'info', "Scanned contents of " . $this->totalFilesScanned . " additional files at " . sprintf('%.2f', ($this->totalFilesScanned / (microtime(true) - $this->startTime))) . " per second");
 	}
-	private function addResult($result){
-		for($i = 0; $i < sizeof($this->results); $i++){
-			if($this->results[$i]['type'] == 'file' && $this->results[$i]['data']['file'] == $result['data']['file']){
-				if($this->results[$i]['severity'] > $result['severity']){
+
+	protected function addResult($result) {
+		for ($i = 0; $i < sizeof($this->results); $i++) {
+			if ($this->results[$i]['type'] == 'file' && $this->results[$i]['data']['file'] == $result['data']['file']) {
+				if ($this->results[$i]['severity'] > $result['severity']) {
 					$this->results[$i] = $result; //Overwrite with more severe results
 				}
 				return;
@@ -327,6 +334,48 @@ class wordfenceScanner {
 			return true;
 		}
 		return false;
+	}
+}
+
+class wordfenceDBScanner extends wordfenceScanner {
+
+	// protected $patterns = '/QGV4dHJhY3QoJF9SRVFVRVNUKTs=/i';
+
+	public function scan($forkObj) {
+		/** @var wpdb */
+		global $wpdb;
+		if (!$this->startTime) {
+			$this->startTime = microtime(true);
+		}
+		if (!$this->lastStatusTime) {
+			$this->lastStatusTime = microtime(true);
+		}
+		$db = new wfDB();
+
+		$blogsToScan = wfScanEngine::getBlogsToScan('options');
+		foreach ($blogsToScan as $blog) {
+			// Check the options table for known shells
+			$results = $db->querySelect("SELECT * FROM {$blog['table']} WHERE option_value REGEXP %s", trim(rtrim($this->patterns['dbSigPattern'], 'imsxeADSUXJu'), '/'));
+
+			foreach ($results as $row) {
+				preg_match($this->patterns['dbSigPattern'], $row['option_value'], $matches);
+				$this->addResult(array(
+					'type'     => 'database',
+					'severity' => 1,
+					'ignoreP'  => "{$db->prefix()}option.{$row['option_name']}",
+					'ignoreC'  => md5($row['option_value']),
+					'shortMsg' => "This option may contain malicious executable code: {$row['option_name']}",
+					'longMsg'  => "This option appears to be inserted by a hacker to perform malicious activity. If you know about this option you can choose to ignore it to exclude it from future scans. The text we found in this file that matches a known malicious file is: <strong style=\"color: #F00;\">\"{$matches[1]}\"</strong>.",
+					'data'     => array(
+						'option_name' => $row['option_name'],
+						'site_id'     => $blog['blog_id'],
+						'canDelete'   => true,
+					),
+				));
+			}
+		}
+
+		return $this->results;
 	}
 }
 

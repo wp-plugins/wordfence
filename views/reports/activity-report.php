@@ -3,7 +3,7 @@
  * @var wfActivityReportView $this
  */
 ?>
-<a href="http://www.wordfence.com/"><img src="http://www.wordfence.com/wp-content/themes/parallelus-salutation/wfCustomHome/images/wordfenceLogo.png" alt=""/></a>
+<a href="//www.wordfence.com/"><img src="//www.wordfence.com/wp-content/themes/parallelus-salutation/wfCustomHome/images/wordfenceLogo.png" alt=""/></a>
 
 <h2>Top <?php echo (int) $limit; ?> IP's Blocked</h2>
 
@@ -21,10 +21,10 @@
 		<?php if ($top_ips_blocked): ?>
 			<?php foreach ($top_ips_blocked as $row): ?>
 				<tr class="<?php echo wfHelperString::cycle('odd', 'even') ?>">
-					<td><code><?php echo wfUtils::inet_ntoa($row->IP) ?></code></td>
+					<td><code><?php echo wfUtils::inet_ntop($row->IP) ?></code></td>
 					<td>
 						<?php if ($row->countryCode): ?>
-							<img src="http://www.wordfence.com/images/flags/<?php echo esc_attr(strtolower($row->countryCode)) ?>.png" class="wfFlag" height="11" width="16">
+							<img src="//www.wordfence.com/images/flags/<?php echo esc_attr(strtolower($row->countryCode)) ?>.png" class="wfFlag" height="11" width="16">
 							&nbsp;
 							<?php echo esc_html($row->countryCode) ?>
 						<?php else: ?>
@@ -45,7 +45,7 @@
 </table>
 
 <p>
-	<a class="button button-primary" href="<?php echo admin_url('admin.php?page=WordfenceBlockedIPs') ?>">Update Blocked IPs</a>
+	<a class="button button-primary" href="<?php echo network_admin_url('admin.php?page=WordfenceBlockedIPs') ?>">Update Blocked IPs</a>
 </p>
 
 <?php wfHelperString::cycle(); ?>
@@ -66,7 +66,7 @@
 				<tr class="<?php echo wfHelperString::cycle('odd', 'even') ?>">
 					<td>
 						<?php if ($row->countryCode): ?>
-							<img src="http://www.wordfence.com/images/flags/<?php echo strtolower($row->countryCode) ?>.png" class="wfFlag" height="11" width="16">
+							<img src="//www.wordfence.com/images/flags/<?php echo strtolower($row->countryCode) ?>.png" class="wfFlag" height="11" width="16">
 							&nbsp;
 							<?php echo esc_html($row->countryCode) ?>
 						<?php else: ?>
@@ -88,7 +88,7 @@
 </table>
 
 <p>
-	<a class="button button-primary" href="<?php echo admin_url('admin.php?page=WordfenceCountryBlocking') ?>">Update Blocked Countries</a>
+	<a class="button button-primary" href="<?php echo network_admin_url('admin.php?page=WordfenceCountryBlocking') ?>">Update Blocked Countries</a>
 </p>
 
 <?php wfHelperString::cycle(); ?>
@@ -109,7 +109,7 @@
 				<tr class="<?php echo wfHelperString::cycle('odd', 'even') ?>">
 					<td><?php echo esc_html($row->username) ?></td>
 					<td><?php echo esc_html($row->fail_count) ?></td>
-					<td class="<?php echo sanitize_html_class($row->action) ?>"><?php echo $row->action == 'loginFailValidUsername' ? 'Yes' : 'No' ?></td>
+					<td class="<?php echo sanitize_html_class($row->is_valid_user ? 'loginFailValidUsername' : 'loginFailInvalidUsername') ?>"><?php echo $row->is_valid_user ? 'Yes' : 'No' ?></td>
 				</tr>
 			<?php endforeach ?>
 		<?php else: ?>
@@ -123,7 +123,7 @@
 </table>
 
 <p>
-	<a class="button button-primary" href="<?php echo admin_url('admin.php?page=WordfenceSecOpt#wfMarkerLoginSecurity') ?>">Update Login Security Options</a>
+	<a class="button button-primary" href="<?php echo network_admin_url('admin.php?page=WordfenceSecOpt#wfMarkerLoginSecurity') ?>">Update Login Security Options</a>
 </p>
 
 <?php wfHelperString::cycle(); ?>
@@ -186,7 +186,7 @@
 <?php endif ?>
 
 <?php if ($updates_needed['core'] || $updates_needed['plugins'] || $updates_needed['themes']): ?>
-	<p><a class="button button-primary" href="<?php echo esc_attr(admin_url('update-core.php')) ?>">Update Now</a></p>
+	<p><a class="button button-primary" href="<?php echo esc_attr(network_admin_url('update-core.php')) ?>">Update Now</a></p>
 <?php else: ?>
 	<p>No updates are available at this time.</p>
 <?php endif ?>

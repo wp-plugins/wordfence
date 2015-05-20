@@ -12,7 +12,7 @@ class wfCrawl {
 	public static function verifyCrawlerPTR($hostPattern, $IP){
 		global $wpdb; $table = $wpdb->base_prefix . 'wfCrawlers';
 		$db = new wfDB();
-		$IPn = wfUtils::inet_aton($IP);
+		$IPn = wfUtils::inet_pton($IP);
 		$status = $db->querySingle("select status from $table where IP=%s and patternSig=UNHEX(MD5('%s')) and lastUpdate > unix_timestamp() - %d", $IPn, $hostPattern, WORDFENCE_CRAWLER_VERIFY_CACHE_TIME);
 		if($status){
 			if($status == 'verified'){
@@ -27,7 +27,7 @@ class wfCrawl {
 			return false; 
 		}
 		if(preg_match($hostPattern, $host)){
-			$resultIPs = gethostbynamel($host);
+			$resultIPs = wfUtils::resolveDomainName($host);
 			$addrsMatch = false;
 			foreach($resultIPs as $resultIP){
 				if($resultIP == $IP){
@@ -89,5 +89,14 @@ class wfCrawl {
 '@^Google$@'
 	);
 
+
+	/**
+	 * Has correct user agent and PTR record points to .googlebot.com domain.
+	 *
+	 * @return bool
+	 */
+	public static function isVerifiedGoogleCrawler() {
+		return self::isGoogleCrawler() && self::verifyCrawlerPTR(wordfence::getLog()->getGooglePattern(), wfUtils::getIP());
+	}
 }
 ?>
