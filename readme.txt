@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching, IPv6, IP version 6
 Requires at least: 3.9
 Tested up to: 4.2.2
-Stable tag: 5.3.12
+Stable tag: 6.0.2
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -171,6 +171,10 @@ fully compatible with both IPv4 and IPv6 whether you run both or only one addres
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 6.0.2 =
+* Fix: Fixed an issue with the schema not updating when customers migrate to IPv6 schema to store IP's. 
+* Improvement: Added additional safety checks during the schema update. 
 
 = 6.0.1 =
 * Feature: IPv6 fully supported. This includes whois, range blocking, IPv6 city lookup in live traffic, country blocking and all other security functions. See www.wordfence.com/blog/ for more info.

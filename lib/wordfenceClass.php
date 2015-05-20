@@ -246,6 +246,9 @@ class wordfence {
 	public static function runInstall(){
 		if(self::$runInstallCalled){ return; }
 		self::$runInstallCalled = true;
+		if (function_exists('ignore_user_abort')) {
+			ignore_user_abort(true);
+		}
 		$previous_version = get_option('wordfence_version', '0.0.0');
 		update_option('wordfence_version', WORDFENCE_VERSION); //In case we have a fatal error we don't want to keep running install.
 		//EVERYTHING HERE MUST BE IDEMPOTENT
@@ -309,6 +312,7 @@ class wordfence {
 		}
 		//End upgrade from 1.5.6
 
+		/** @var wpdb $wpdb */
 		global $wpdb;
 		$prefix = $wpdb->base_prefix;
 		$db->queryWriteIgnoreError("alter table $prefix"."wfConfig modify column val longblob");
@@ -337,27 +341,37 @@ class wordfence {
 			wfCache::removeCacheDirectoryHtaccess();
 		}
 
-		// IPv6 schema changes for 6.0.0
-		if (version_compare($previous_version, '6.0.0') === -1) {
-			$tables_with_ips = array(
-				'wfCrawlers',
-				'wfBadLeechers',
-				'wfBlockedIPLog',
-				'wfBlocks',
-				'wfHits',
-				'wfLeechers',
-				'wfLockedOut',
-				'wfLocs',
-				'wfLogins',
-				'wfReverseCache',
-				'wfScanners',
-				'wfThrottleLog',
-				'wfVulnScanners',
-			);
-			
-			foreach ($tables_with_ips as $ip_table) {
- 				$db->queryWriteIgnoreError("ALTER TABLE {$prefix}{$ip_table} MODIFY IP BINARY(16)");
-				$db->queryWriteIgnoreError("UPDATE {$prefix}{$ip_table} SET IP = CONCAT(LPAD(CHAR(0xff, 0xff), 12, CHAR(0)), LPAD(
+		// IPv6 schema changes for 6.0.1
+		$tables_with_ips = array(
+			'wfCrawlers',
+			'wfBadLeechers',
+			'wfBlockedIPLog',
+			'wfBlocks',
+			'wfHits',
+			'wfLeechers',
+			'wfLockedOut',
+			'wfLocs',
+			'wfLogins',
+			'wfReverseCache',
+			'wfScanners',
+			'wfThrottleLog',
+			'wfVulnScanners',
+		);
+
+		foreach ($tables_with_ips as $ip_table) {
+			$result = $wpdb->get_row("SHOW FIELDS FROM {$prefix}{$ip_table} where field = 'IP'");
+			if (!$result || strtolower($result->Type) == 'binary(16)') {
+				continue;
+			}
+
+			$db->queryWriteIgnoreError("ALTER TABLE {$prefix}{$ip_table} MODIFY IP BINARY(16)");
+
+			// Just to be sure we don't corrupt the data if the alter fails.
+			$result = $wpdb->get_row("SHOW FIELDS FROM {$prefix}{$ip_table} where field = 'IP'");
+			if (!$result || strtolower($result->Type) != 'binary(16)') {
+				continue;
+			}
+			$db->queryWriteIgnoreError("UPDATE {$prefix}{$ip_table} SET IP = CONCAT(LPAD(CHAR(0xff, 0xff), 12, CHAR(0)), LPAD(
 	CHAR(
 		CAST(IP as UNSIGNED) >> 24 & 0xFF,
 		CAST(IP as UNSIGNED) >> 16 & 0xFF,
@@ -367,7 +381,6 @@ class wordfence {
 	4,
 	CHAR(0)
 ))");
-			}
 		}
 
 		//Must be the final line
