@@ -144,17 +144,17 @@ table.wfSummaryParent { font-family: sans-serif; font-size: 14px; color: #000; z
 table.wfSummaryParent td { vertical-align: top; padding: 0; margin: 0; }
 table.wfSummaryParent table.wfSummaryChild th { font-weight: bold; text-align: right; font-family: Georgia, serif; color: #000; padding: 5px 10px 5px 0; border-top: 1px solid #CCC; }
 table.wfSummaryParent table.wfSummaryChild td { font-weight: normal; text-align: left; padding: 5px 0 5px 0; border-top: 1px solid #CCC; }
-table.wfSummaryParent table.wfSC1 td { width: 300px; padding: 0px 25px 10px 0; }
+table.wfSummaryParent table.wfSC1 td { width: 300px; padding: 0 25px 10px 0; }
 table.wfSummaryParent table.wfSC2 th { width: 80px; }
 table.wfSummaryParent table.wfSC2 td { width: 100px; }
 table.wfSummaryParent table.wfSC3 th { width: 80px; }
 table.wfSummaryParent table.wfSC3 td { width: 250px; }
-table.wfSummaryParent th.wfHead { font-size: 22px; font-family: Georgia, serif; font-style: italic; color: #555; font-weight: bold; text-align: left; padding: 20px 0 20px 0px; -webkit-font-smoothing: antialiased; }
+table.wfSummaryParent th.wfHead { font-size: 22px; font-family: Georgia, serif; font-style: italic; color: #555; font-weight: bold; text-align: left; padding: 20px 0 20px 0; -webkit-font-smoothing: antialiased; }
 
-div.wfIssue table.wfIssue td { padding: 2px; margin: 0; border-width: 0px; text-align: left; }
+div.wfIssue table.wfIssue td { padding: 2px; margin: 0; border-width: 0; text-align: left; }
 div.wfIssue table.wfIssue th { padding: 2px; margin: 0; font-weight: bold;  text-align: left; color: #777; }
-div.wfIssue h2 { margin: 0px 0 5px 0; padding: 0; }
-div.wfIssue table.wfIssueLinks td { border-width: 0px; text-align: left; padding-right: 10px; }
+div.wfIssue h2 { margin: 0 0 5px 0; padding: 0; }
+div.wfIssue table.wfIssueLinks td { border-width: 0; text-align: left; padding-right: 10px; }
 .wfIssueOptions {
 	border-top: 1px solid #CCC;
 	padding: 10px;
@@ -210,7 +210,7 @@ table th.wfSubheading { font-weight: bold; padding-top: 10px; }
 	padding: 0 0 0 18px;
 	margin: 0;
 	right: 10px;
-	top: 0px;
+	top: 0;
 	background-repeat: no-repeat;
 	font-weight: normal;
 }
@@ -338,7 +338,7 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 .wfFalcon {
 	width: 63px;
 	height: 63px;
-	border-width: 0px;
+	border-width: 0;
 	background-color: transparent;
 	background-image: url(../images/wordfenceFalcon.png);
 	background-position: 0 0;
@@ -350,7 +350,7 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 .wfFalconImage {
 	width: 63px;
 	height: 63px;
-	border-width: 0px;
+	border-width: 0;
 	background-color: transparent;
 	background-image: url(../images/wordfenceFalcon.png);
 	background-position: 0 0;
@@ -360,13 +360,13 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
 .wfSmallFalcon {
 	width: 33px;
 	height: 16px;
-	border-width: 0px;
+	border-width: 0;
 	background-color: transparent;
 	background-image: url(../images/wordfenceFalconSmall.png);
 	background-position: 0 0;
 	background-repeat: no-repeat;
-	margin: 0px;
-	padding: 0px;
+	margin: 0;
+	padding: 0;
 	display: inline;
 	float: right;
 }
@@ -394,7 +394,7 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
     font-size: 14px !important ; color: white !important ; font-family: Trebuchet, Arial, sans-serif !important ; font-weight: bold !important ;
     -moz-box-sizing: border-box !important ; -webkit-box-sizing: border-box !important ; box-sizing: border-box !important ;
     border-radius: 19px !important ;
-    box-shadow: 0px 9.5px 0px rgba(0,0,0,0.08) inset !important ;
+    box-shadow: 0 9.5px 0 rgba(0,0,0,0.08) inset !important ;
 }
 .wfOnOffSwitch-inner:before {
     content: "ON" !important ;
@@ -410,7 +410,7 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
     border-radius: 0 19px 19px 0 !important ;
 }
 .wfOnOffSwitch-switch {
-    width: 19px !important ; margin: 0px !important ;
+    width: 19px !important ; margin: 0 !important ;
     background: #FFFFFF !important ;
     border: 2px solid #999999 !important ; border-radius: 19px !important ;
     position: absolute !important ; top: 0 !important ; bottom: 0 !important ; right: 46px !important ;
@@ -426,7 +426,7 @@ input.wfStartScanButton { width: 160px; text-align: left;  padding-left: 20px; }
     margin-left: 0 !important ;
 }
 .wfOnOffSwitch-checkbox:checked + .wfOnOffSwitch-label .wfOnOffSwitch-switch {
-    right: 0px !important ;
+    right: 0 !important ;
 }
 #wordfenceConfigWarning {
 	clear: left;
@@ -460,4 +460,14 @@ table.wf-table tbody tr:nth-child(2n) td {
 }
 table.wf-table tbody tr:hover td {
 	background-color: #fffbd8;
+}
+
+table.block-ranges-table {
+	border-collapse: collapse;
+	margin: 10px 0 0;
+}
+table.block-ranges-table tr td {
+	border: 1px solid #CCC;
+	border-width: 1px 0;
+	padding: 10px 0 12px 0;
 }

@@ -1,9 +1,9 @@
 === Wordfence Security ===
 Contributors: mmaunder 
-Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching
+Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching, IPv6, IP version 6
 Requires at least: 3.9
-Tested up to: 4.1.1
-Stable tag: 5.3.11
+Tested up to: 4.2.2
+Stable tag: 6.0.1
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -29,6 +29,7 @@ Wordfence Security is now Multi-Site compatible and includes Cellphone Sign-in w
 Wordfence Security:
 
 * Includes Falcon Engine, the fastest WordPress caching engine available today. Falcon is faster because it reduces your web server disk and database activity to a minimum.
+* Fully IPv6 compatible including all whois lookup, location, blocking and security functions.
 * Includes support for other major plugins and themes like WooCommerce.
 * Real-time blocking of known attackers. If another site using Wordfence is attacked and blocks the attacker, your site is automatically protected.
 * Sign-in using your password and your cellphone to vastly improve login security. This is called Two Factor Authentication and is used by banks, government agencies and military world-wide for highest security authentication. 
@@ -90,7 +91,8 @@ To install Wordfence Security on WordPress Multi-Site installations:
 
 * Wordfence Security is the only security plugin that is fully integrated with it's own high speed caching engine to avoid security and caching conflicts. 
 * Wordfence Security actually verifies your website source code integrity against the official WordPress repository and shows you the changes. We are the only plugin to do this.
-* Wordfence Security provides two-factor authentication (Cellphone Sign-in) for paid members. We're the only plugin to offer this.
+* Wordfence Security provides two-factor authentication (Cellphone Sign-in) for paid members. We're the first plugin to offer this.
+* Wordfence Security fully supports IPv6 including giving you the ability to look up the location of IPv6 addresses, block IPv6 ranges, detect IPv6 country and do a whois lookup on IPv6 addresses and more.
 * Wordfence Security includes protection against DDoS attacks by giving you a performance boost up to 50X. 
 * Wordfence Security scans check all your files, comments and posts for URL's in Google's Safe Browsing list. We are the only plugin to offer this very important security enhancement.
 * Wordfence Security scans do not consume large amounts of your precious bandwidth because all security scans happen on your web server which makes them very fast.
@@ -154,6 +156,11 @@ version of timthumb (which the creator of Wordfence Security wrote and donated t
 caused the problem. However we do scan for old version of timthumb for good measure to make sure they don't 
 cause a security hole on your site. 
 
+= Does Wordfence Security support IPv6? =
+
+Most definitely! As of Wordfence version 6.0.1 we fully support IPv6 with all security functions including country blocking, range blocking,
+city lookup, whois lookup and all other security functions. If you are not running IPv6 Wordfence will work great on your site too. We are
+fully compatible with both IPv4 and IPv6 whether you run both or only one addressing scheme. 
 
 == Screenshots ==
 
@@ -164,6 +171,33 @@ cause a security hole on your site.
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 6.0.1 =
+* Feature: IPv6 fully supported. This includes whois, range blocking, IPv6 city lookup in live traffic, country blocking and all other security functions. See www.wordfence.com/blog/ for more info.
+* Feature: New scanning routine examines the wp_options table for executable code based on a new infection we are seeing that is well hidden.
+* Improvement: Prevent Googlebot from being blocked if user has configured a banned URL and Google tries to crawl it. 
+* Improvement: Improved detection for additional Google crawlers especially if an IP PTR resolves to a .googlebot.com domain. 
+* Fix: Fixed bug with https:// URLs not allowed in country blocking.
+* Fix: Fixed typos.
+
+= 5.3.12 =
+* Fix: Wordfence no longer can appear on sub-sites on multi-site installs, only on the network admin panel. 
+* Fix: Wordfence dashboard widget only can appear on network admin dashboard in multi-site installs. 
+* Fix: No more multiple scheduled scans on multi-site.  
+* Fix: Fixed mixed-protocol warning if you're using SSL and Wordfence - our static assets are loaded without specifying protocol now. 
+* Fix: Fixed issue where non-existent users were shown in dashboard widget and email summary as valid users. 
+* Fix: Removed /e modifier in preg_replace for Diff_Renderer_Html_Array::formatLines since it is deprecated in PHP 5.5.
+* Fix: Removed ssl_verify => false from wp_remote_post connectivity test since some versions of cURL will throw an error since WordPress uses their own certificate bundle.
+* Fix: Fixed bug with activity report email date range (was one week ahead).
+* Fix: Removed email summary report from cron on deactivation.
+* Fix: Fixed an off-by-one bug in wfDirectoryIterator for maximum total files and max files per directory.
+* Fix: Updated our browser data to fix an issue that caused newer browsers to appear in live traffic with version 0.0.
+* Improvement: Updated the country database used for country blocking to April 2015 version.
+* Improvement: Added an additional check for disabling script execution in the uploads directory that the .htaccess file actually contains our protection code before removing it.
+* Improvement: Paused Live Traffic ajax request when the window/document loses focus to reduce server load.
+* Improvement: Better error handling when making API calls to noc1 to help our support personell help you. 
+* Improvement: Added locked out IP's and IP's restricted through advanced blocking to the blocked IP log for dashboard and email summary. 
+* Improvement: Excluded whitelisted IP's from dashboard and widget email summary. 
 
 = 5.3.11 =
 * Fix: Dasboard widget no longer appearing for all users. 

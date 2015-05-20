@@ -26,6 +26,15 @@ class wordfenceHash {
 	private $only = false;
 	private $totalForks = 0;
 
+	/**
+	 * @param string $striplen
+	 * @param string $path
+	 * @param array $only
+	 * @param array $themes
+	 * @param array $plugins
+	 * @param wfScanEngine $engine
+	 * @throws Exception
+	 */
 	public function __construct($striplen, $path, $only, $themes, $plugins, $engine){
 		$this->striplen = $striplen;
 		$this->path = $path;

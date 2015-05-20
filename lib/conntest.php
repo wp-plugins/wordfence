@@ -23,7 +23,8 @@ function doWPostTest($protocol){
 	$result = wp_remote_post($cronURL, array(
 		'timeout' => 10, //Must be less than max execution time or more than 2 HTTP children will be occupied by scan
 		'blocking' => true, //Non-blocking seems to block anyway, so we use blocking
-		'sslverify' => false,
+		// This causes cURL to throw errors in some versions since WordPress uses its own certificate bundle ('CA certificate set, but certificate verification is disabled')
+		// 'sslverify' => false,
 		'headers' => array()
 		));
 	if( (! is_wp_error($result)) && $result['response']['code'] == 200 && strpos($result['body'], "scanptestok") !== false){
