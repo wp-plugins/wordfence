@@ -80,20 +80,6 @@ class wfUtils {
 	}
 
 	/**
-	 * Return dot or colon notation of IPv4 or IPv6 address.
-	 *
-	 * @param string $ip
-	 * @return string|bool
-	 */
-	public static function inet_ntop($ip) {
-		// trim this to the IPv4 equiv if it's in the mapped range
-		if (strlen($ip) == 16 && substr($ip, 0, 12) == pack("H*", '00000000000000000000ffff')) {
-			$ip = substr($ip, 12, 4);
-		}
-		return inet_ntop($ip);
-	}
-
-	/**
 	 * Return dot notation of IPv4 address.
 	 *
 	 * @param int $ip
@@ -105,18 +91,6 @@ class wfUtils {
 	}
 
 	/**
-	 * Return the packed binary string of an IPv4 or IPv6 address.
-	 *
-	 * @param string $ip
-	 * @return string
-	 */
-	public static function inet_pton($ip) {
-		// convert the 4 char IPv4 to IPv6 mapped version.
-		$pton = str_pad(inet_pton($ip), 16, pack("H*", '00000000000000000000ffff00000000'), STR_PAD_LEFT);
-		return $pton;
-	}
-
-	/**
 	 * Return string representation of 32 bit int of the IP address.
 	 *
 	 * @param string $ip
@@ -125,6 +99,135 @@ class wfUtils {
 	public static function inet_aton($ip) {
 		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
+	}
+
+	/**
+	 * Return dot or colon notation of IPv4 or IPv6 address.
+	 *
+	 * @param string $ip
+	 * @return string|bool
+	 */
+	public static function inet_ntop($ip) {
+		// trim this to the IPv4 equiv if it's in the mapped range
+		if (strlen($ip) == 16 && substr($ip, 0, 12) == "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff") {
+			$ip = substr($ip, 12, 4);
+		}
+		return self::hasIPv6Support() ? inet_ntop($ip) : self::_inet_ntop($ip);
+	}
+
+	/**
+	 * Return the packed binary string of an IPv4 or IPv6 address.
+	 *
+	 * @param string $ip
+	 * @return string
+	 */
+	public static function inet_pton($ip) {
+		// convert the 4 char IPv4 to IPv6 mapped version.
+		$pton = str_pad(self::hasIPv6Support() ? inet_pton($ip) : self::_inet_pton($ip), 16,
+			"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00", STR_PAD_LEFT);
+		return $pton;
+	}
+
+	/**
+	 * Added compatibility for hosts that do not have inet_pton.
+	 *
+	 * @param $ip
+	 * @return bool|string
+	 */
+	public static function _inet_pton($ip) {
+		// IPv4
+		if (preg_match('/^(?:\d{1,3}(?:\.|$)){4}/', $ip)) {
+			$octets = explode('.', $ip);
+			$bin = chr($octets[0]) . chr($octets[1]) . chr($octets[2]) . chr($octets[3]);
+			return $bin;
+		}
+
+		// IPv6
+		if (preg_match('/^((?:[\da-f]{1,4}(?::|)){0,8})(::)?((?:[\da-f]{1,4}(?::|)){0,8})$/i', $ip)) {
+			if ($ip === '::') {
+				return "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+			}
+			$colon_count = substr_count($ip, ':');
+			$dbl_colon_pos = strpos($ip, '::');
+			if ($dbl_colon_pos !== false) {
+				$ip = str_replace('::', str_repeat(':0000',
+						(($dbl_colon_pos === 0 || $dbl_colon_pos === strlen($ip) - 2) ? 9 : 8) - $colon_count) . ':', $ip);
+				$ip = trim($ip, ':');
+			}
+
+			$ip_groups = explode(':', $ip);
+			$ipv6_bin = '';
+			foreach ($ip_groups as $ip_group) {
+				$ipv6_bin .= pack('H*', str_pad($ip_group, 4, '0', STR_PAD_LEFT));
+			}
+
+			return strlen($ipv6_bin) === 16 ? $ipv6_bin : false;
+		}
+
+		// IPv4 mapped IPv6
+		if (preg_match('/^((?:0{1,4}(?::|)){0,5})(::)?ffff:((?:\d{1,3}(?:\.|$)){4})$/i', $ip, $matches)) {
+			$octets = explode('.', $matches[3]);
+			return "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff" . chr($octets[0]) . chr($octets[1]) . chr($octets[2]) . chr($octets[3]);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Added compatibility for hosts that do not have inet_ntop.
+	 *
+	 * @param $ip
+	 * @return bool|string
+	 */
+	public static function _inet_ntop($ip) {
+		// IPv4
+		if (strlen($ip) === 4) {
+			return ord($ip[0]) . '.' . ord($ip[1]) . '.' . ord($ip[2]) . '.' . ord($ip[3]);
+		}
+
+		// IPv6
+		if (strlen($ip) === 16) {
+
+			// IPv4 mapped IPv6
+			if (substr($ip, 0, 12) == "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff") {
+				return "::ffff:" . ord($ip[12]) . '.' . ord($ip[13]) . '.' . ord($ip[14]) . '.' . ord($ip[15]);
+			}
+
+			$hex = bin2hex($ip);
+			$groups = str_split($hex, 4);
+			$collapse = false;
+			$done_collapse = false;
+			foreach ($groups as $index => $group) {
+				if ($group == '0000' && !$done_collapse) {
+					if (!$collapse) {
+						$groups[$index] = ':';
+					} else {
+						$groups[$index] = '';
+					}
+					$collapse = true;
+				} else if ($collapse) {
+					$done_collapse = true;
+					$collapse = false;
+				}
+				$groups[$index] = ltrim($groups[$index], '0');
+			}
+			$ip = join(':', array_filter($groups));
+			$ip = str_replace(':::', '::', $ip);
+			return $ip == ':' ? '::' : $ip;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Verify PHP was compiled with IPv6 support.
+	 *
+	 * Some hosts appear to not have inet_ntop, and others appear to have inet_ntop but are unable to process IPv6 addresses.
+	 *
+	 * @return bool
+	 */
+	public static function hasIPv6Support() {
+		return defined('AF_INET6');
 	}
 
 	public static function hasLoginCookie(){
@@ -803,6 +906,18 @@ class wfUtils {
 		$hex = bin2hex(self::inet_pton($ip));
 		$ip = substr(preg_replace("/([a-f0-9]{4})/i", "$1:", $hex), 0, -1);
 		return $ip;
+	}
+}
+
+// GeoIP lib uses these as well
+if (!function_exists('inet_ntop')) {
+	function inet_ntop($ip) {
+		return wfUtils::_inet_ntop($ip);
+	}
+}
+if (!function_exists('inet_pton')) {
+	function inet_pton($ip) {
+		return wfUtils::_inet_pton($ip);
 	}
 }
 
