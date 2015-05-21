@@ -32,6 +32,7 @@
 <?php if(wfConfig::get('scansEnabled_themes')){ ?><tr><td style="padding-right: 20px;">Scan Themes:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_plugins')){ ?><tr><td style="padding-right: 20px;">Scan Plugins:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_fileContents')){ ?><tr><td style="padding-right: 20px;">Scan Other Files:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
+<?php if(wfConfig::get('scansEnabled_database')){ ?><tr><td style="padding-right: 20px;">Scan Database:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_posts')){ ?><tr><td style="padding-right: 20px;">Scan Posts:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_comments')){ ?><tr><td style="padding-right: 20px;">Scan Comments:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_oldVersions')){ ?><tr><td style="padding-right: 20px;">Scan for Old Software:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>

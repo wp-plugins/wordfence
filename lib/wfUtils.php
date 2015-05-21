@@ -65,27 +65,171 @@ class wfUtils {
 			return "$m1 $t1";
 		}
 	}
-	public static function formatBytes($bytes, $precision = 2) { 
-		$units = array('B', 'KB', 'MB', 'GB', 'TB'); 
+	public static function formatBytes($bytes, $precision = 2) {
+		$units = array('B', 'KB', 'MB', 'GB', 'TB');
 
-		$bytes = max($bytes, 0); 
-		$pow = floor(($bytes ? log($bytes) : 0) / log(1024)); 
-		$pow = min($pow, count($units) - 1); 
+		$bytes = max($bytes, 0);
+		$pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+		$pow = min($pow, count($units) - 1);
 
 		// Uncomment one of the following alternatives
 		$bytes /= pow(1024, $pow);
 		// $bytes /= (1 << (10 * $pow)); 
 
-		return round($bytes, $precision) . ' ' . $units[$pow]; 
-	} 
-	public static function inet_ntoa($ip){
+		return round($bytes, $precision) . ' ' . $units[$pow];
+	}
+
+	/**
+	 * Return dot notation of IPv4 address.
+	 *
+	 * @param int $ip
+	 * @return string|bool
+	 */
+	public static function inet_ntoa($ip) {
 		$long = 4294967295 - ($ip - 1);
 		return long2ip(-$long);
 	}
-	public static function inet_aton($ip){
+
+	/**
+	 * Return string representation of 32 bit int of the IP address.
+	 *
+	 * @param string $ip
+	 * @return string
+	 */
+	public static function inet_aton($ip) {
 		$ip = preg_replace('/(?<=^|\.)0+([1-9])/', '$1', $ip);
 		return sprintf("%u", ip2long($ip));
 	}
+
+	/**
+	 * Return dot or colon notation of IPv4 or IPv6 address.
+	 *
+	 * @param string $ip
+	 * @return string|bool
+	 */
+	public static function inet_ntop($ip) {
+		// trim this to the IPv4 equiv if it's in the mapped range
+		if (strlen($ip) == 16 && substr($ip, 0, 12) == "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff") {
+			$ip = substr($ip, 12, 4);
+		}
+		return self::hasIPv6Support() ? inet_ntop($ip) : self::_inet_ntop($ip);
+	}
+
+	/**
+	 * Return the packed binary string of an IPv4 or IPv6 address.
+	 *
+	 * @param string $ip
+	 * @return string
+	 */
+	public static function inet_pton($ip) {
+		// convert the 4 char IPv4 to IPv6 mapped version.
+		$pton = str_pad(self::hasIPv6Support() ? inet_pton($ip) : self::_inet_pton($ip), 16,
+			"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00", STR_PAD_LEFT);
+		return $pton;
+	}
+
+	/**
+	 * Added compatibility for hosts that do not have inet_pton.
+	 *
+	 * @param $ip
+	 * @return bool|string
+	 */
+	public static function _inet_pton($ip) {
+		// IPv4
+		if (preg_match('/^(?:\d{1,3}(?:\.|$)){4}/', $ip)) {
+			$octets = explode('.', $ip);
+			$bin = chr($octets[0]) . chr($octets[1]) . chr($octets[2]) . chr($octets[3]);
+			return $bin;
+		}
+
+		// IPv6
+		if (preg_match('/^((?:[\da-f]{1,4}(?::|)){0,8})(::)?((?:[\da-f]{1,4}(?::|)){0,8})$/i', $ip)) {
+			if ($ip === '::') {
+				return "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+			}
+			$colon_count = substr_count($ip, ':');
+			$dbl_colon_pos = strpos($ip, '::');
+			if ($dbl_colon_pos !== false) {
+				$ip = str_replace('::', str_repeat(':0000',
+						(($dbl_colon_pos === 0 || $dbl_colon_pos === strlen($ip) - 2) ? 9 : 8) - $colon_count) . ':', $ip);
+				$ip = trim($ip, ':');
+			}
+
+			$ip_groups = explode(':', $ip);
+			$ipv6_bin = '';
+			foreach ($ip_groups as $ip_group) {
+				$ipv6_bin .= pack('H*', str_pad($ip_group, 4, '0', STR_PAD_LEFT));
+			}
+
+			return strlen($ipv6_bin) === 16 ? $ipv6_bin : false;
+		}
+
+		// IPv4 mapped IPv6
+		if (preg_match('/^((?:0{1,4}(?::|)){0,5})(::)?ffff:((?:\d{1,3}(?:\.|$)){4})$/i', $ip, $matches)) {
+			$octets = explode('.', $matches[3]);
+			return "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff" . chr($octets[0]) . chr($octets[1]) . chr($octets[2]) . chr($octets[3]);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Added compatibility for hosts that do not have inet_ntop.
+	 *
+	 * @param $ip
+	 * @return bool|string
+	 */
+	public static function _inet_ntop($ip) {
+		// IPv4
+		if (strlen($ip) === 4) {
+			return ord($ip[0]) . '.' . ord($ip[1]) . '.' . ord($ip[2]) . '.' . ord($ip[3]);
+		}
+
+		// IPv6
+		if (strlen($ip) === 16) {
+
+			// IPv4 mapped IPv6
+			if (substr($ip, 0, 12) == "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff") {
+				return "::ffff:" . ord($ip[12]) . '.' . ord($ip[13]) . '.' . ord($ip[14]) . '.' . ord($ip[15]);
+			}
+
+			$hex = bin2hex($ip);
+			$groups = str_split($hex, 4);
+			$collapse = false;
+			$done_collapse = false;
+			foreach ($groups as $index => $group) {
+				if ($group == '0000' && !$done_collapse) {
+					if (!$collapse) {
+						$groups[$index] = ':';
+					} else {
+						$groups[$index] = '';
+					}
+					$collapse = true;
+				} else if ($collapse) {
+					$done_collapse = true;
+					$collapse = false;
+				}
+				$groups[$index] = ltrim($groups[$index], '0');
+			}
+			$ip = join(':', array_filter($groups));
+			$ip = str_replace(':::', '::', $ip);
+			return $ip == ':' ? '::' : $ip;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Verify PHP was compiled with IPv6 support.
+	 *
+	 * Some hosts appear to not have inet_ntop, and others appear to have inet_ntop but are unable to process IPv6 addresses.
+	 *
+	 * @return bool
+	 */
+	public static function hasIPv6Support() {
+		return defined('AF_INET6');
+	}
+
 	public static function hasLoginCookie(){
 		if(isset($_COOKIE)){
 			if(is_array($_COOKIE)){
@@ -117,25 +261,45 @@ class wfUtils {
 	public static function makeRandomIP(){
 		return rand(11,230) . '.' . rand(0,255) . '.' . rand(0,255) . '.' . rand(0,255);
 	}
-	public static function isPrivateAddress($addr){
-		$num = self::inet_aton($addr);
-		foreach(self::$privateAddrs as $a){
-			if($num >= $a[1] && $num <= $a[2]){
-				return true;
+
+	/**
+	 * @param string $addr Should be in dot or colon notation (127.0.0.1 or ::1)
+	 * @return bool
+	 */
+	public static function isPrivateAddress($addr) {
+		// Run this through the preset list for IPv4 addresses.
+		if (filter_var($addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+			$num = self::inet_aton($addr);
+			foreach (self::$privateAddrs as $a) {
+				if ($num >= $a[1] && $num <= $a[2]) {
+					return true;
+				}
 			}
 		}
-		return false;
+
+		return filter_var($addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6) !== false
+			&& filter_var($addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
 	}
-	private static function getCleanIP($arr){ //Expects an array of items. The items are either IP's or IP's separated by comma, space or tab. Or an array of IP's.
-						//  We then examine all IP's looking for a public IP and storing private IP's in an array. If we find no public IPs we return the first private addr we found.
-		$privates = array(); //Store private addrs until end as last resort. 
-		for($i = 0; $i < count($arr); $i++){ 
+
+	/**
+	 * Expects an array of items. The items are either IP's or IP's separated by comma, space or tab. Or an array of IP's.
+	 * We then examine all IP's looking for a public IP and storing private IP's in an array. If we find no public IPs we return the first private addr we found.
+	 *
+	 * @param array $arr
+	 * @return bool|mixed
+	 */
+	private static function getCleanIP($arr){
+		$privates = array(); //Store private addrs until end as last resort.
+		for($i = 0; $i < count($arr); $i++){
 			$item = $arr[$i];
-			if(is_array($item)){ 
+			if(is_array($item)){
 				foreach($item as $j){
-					$j = preg_replace('/:\d+$/', '', $j); //Strip off port
-					if(self::isValidIP($j)){
-						if(self::isPrivateAddress($j)){
+					// try verifying the IP is valid before stripping the port off
+					if (!self::isValidIP($j)) {
+						$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+					}
+					if (self::isValidIP($j)) {
+						if (self::isPrivateAddress($j)) {
 							$privates[] = $j;
 						} else {
 							return $j;
@@ -146,10 +310,12 @@ class wfUtils {
 			}
 			$skipToNext = false;
 			foreach(array(',', ' ', "\t") as $char){
-				if(strpos($item, $char) !== false){ 
+				if(strpos($item, $char) !== false){
 					$sp = explode($char, $item);
 					foreach($sp as $j){
-						$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+						if (!self::isValidIP($j)) {
+							$j = preg_replace('/:\d+$/', '', $j); //Strip off port
+						}
 						if(self::isValidIP($j)){
 							if(self::isPrivateAddress($j)){
 								$privates[] = $j;
@@ -164,7 +330,9 @@ class wfUtils {
 			}
 			if($skipToNext){ continue; } //Skip to next item because this one had a comma, space or tab so was delimited and we didn't find anything.
 
-			$item = preg_replace('/:\d+$/', '', $item); //Strip off port
+			if (!self::isValidIP($item)) {
+				$item = preg_replace('/:\d+$/', '', $item); //Strip off port
+			}
 			if(self::isValidIP($item)){
 				if(self::isPrivateAddress($item)){
 					$privates[] = $item;
@@ -198,25 +366,16 @@ class wfUtils {
 				$IP = self::getCleanIP(array($_SERVER[$howGet], $_SERVER['REMOTE_ADDR']));
 			}
 		} else {
-			$IPs = array($_SERVER['REMOTE_ADDR']);
+			// if no REMOTE_ADDR, it's probably running from the command line
+			$IPs = array(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1');
 			if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){ $IPs[] = $_SERVER['HTTP_X_FORWARDED_FOR']; }
 			if(isset($_SERVER['HTTP_X_REAL_IP'])){ $IPs[] = $_SERVER['HTTP_X_REAL_IP']; }
-			$IP = self::getCleanIP($IPs); 
+			$IP = self::getCleanIP($IPs);
 		}
 		return $IP; //Returns a valid IP or false. 
 	}
 	public static function isValidIP($IP){
-		if(preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/', $IP, $m)){
-			if(
-				$m[1] >= 0 && $m[1] <= 255 &&
-				$m[2] >= 0 && $m[2] <= 255 &&
-				$m[3] >= 0 && $m[3] <= 255 &&
-				$m[4] >= 0 && $m[4] <= 255
-			){
-				return true;
-			}
-		}
-		return false;
+		return filter_var($IP, FILTER_VALIDATE_IP) !== false;
 	}
 	public static function getRequestedURL(){
 		if(isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST']){
@@ -262,14 +421,14 @@ class wfUtils {
 		return $db->querySingle("select AES_DECRYPT(UNHEX('%s'), '%s') as val", $str, $key);
 	}
 	public static function lcmem(){
-		$trace=debug_backtrace(); 
-		$caller=array_shift($trace); 
+		$trace=debug_backtrace();
+		$caller=array_shift($trace);
 		$mem = memory_get_usage(true);
 		error_log("$mem at " . $caller['file'] . " line " . $caller['line']);
 	}
 	public static function logCaller(){
-		$trace=debug_backtrace(); 
-		$caller=array_shift($trace); 
+		$trace=debug_backtrace();
+		$caller=array_shift($trace);
 		$c2 = array_shift($trace);
 		error_log("Caller for " . $caller['file'] . " line " . $caller['line'] . " is " . $c2['file'] . ' line ' . $c2['line']);
 	}
@@ -282,8 +441,8 @@ class wfUtils {
 		}
 	}
 	public static function isAdminPageMU(){
-		if(preg_match('/^[\/a-zA-Z0-9\-\_\s\+\~\!\^\.]*\/wp-admin\/network\//', $_SERVER['REQUEST_URI'])){ 
-			return true; 
+		if(preg_match('/^[\/a-zA-Z0-9\-\_\s\+\~\!\^\.]*\/wp-admin\/network\//', $_SERVER['REQUEST_URI'])){
+			return true;
 		}
 		return false;
 	}
@@ -357,7 +516,7 @@ class wfUtils {
 		return self::$isWindows == 'yes' ? true : false;
 	}
 	public static function getScanLock(){
-		//Windows does not support non-blocking flock, so we use time. 
+		//Windows does not support non-blocking flock, so we use time.
 		$scanRunning = wfConfig::get('wf_scanRunning');
 		if($scanRunning && time() - $scanRunning < WORDFENCE_MAX_SCAN_TIME){
 			return false;
@@ -377,7 +536,7 @@ class wfUtils {
 		}
 	}
 	public static function getIPGeo($IP){ //Works with int or dotted
-		
+
 		$locs = self::getIPsGeo(array($IP));
 		if(isset($locs[$IP])){
 			return $locs[$IP];
@@ -387,53 +546,57 @@ class wfUtils {
 	}
 	public static function getIPsGeo($IPs){ //works with int or dotted. Outputs same format it receives.
 		$IPs = array_unique($IPs);
-		$isInt = false;
-		if(strpos($IPs[0], '.') === false){
-			$isInt = true;
-		}
 		$toResolve = array();
 		$db = new wfDB();
 		global $wpdb;
 		$locsTable = $wpdb->base_prefix . 'wfLocs';
 		$IPLocs = array();
 		foreach($IPs as $IP){
-			$row = $db->querySingleRec("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", ($isInt ? $IP : self::inet_aton($IP)) );
+			$isBinaryIP = !self::isValidIP($IP);
+			if ($isBinaryIP) {
+				$ip_printable = wfUtils::inet_ntop($IP);
+				$ip_bin = $IP;
+			} else {
+				$ip_printable = $IP;
+				$ip_bin = wfUtils::inet_pton($IP);
+			}
+
+			$row = $db->querySingleRec("select IP, ctime, failed, city, region, countryName, countryCode, lat, lon, unix_timestamp() - ctime as age from " . $locsTable . " where IP=%s", $ip_bin);
 			if($row){
 				if($row['age'] > WORDFENCE_MAX_IPLOC_AGE){
 					$db->queryWrite("delete from " . $locsTable . " where IP=%s", $row['IP']);
 				} else {
 					if($row['failed'] == 1){
-						$IPLocs[$IP] = false;
+						$IPLocs[$ip_printable] = false;
 					} else {
-						if(! $isInt){
-							$row['IP'] = self::inet_ntoa($row['IP']);
-						}
-						$IPLocs[$IP] = $row;
+						$row['IP'] = self::inet_ntop($row['IP']);
+						$IPLocs[$ip_printable] = $row;
 					}
 				}
 			}
-			if(! isset($IPLocs[$IP])){
-				$toResolve[] = $IP;
+			if(! isset($IPLocs[$ip_printable])){
+				$toResolve[] = $ip_printable;
 			}
 		}
 		if(sizeof($toResolve) > 0){
-			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion()); 
+			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 			try {
 				$freshIPs = $api->call('resolve_ips', array(), array(
 					'ips' => implode(',', $toResolve)
 					));
 				if(is_array($freshIPs)){
 					foreach($freshIPs as $IP => $value){
+						$IP_bin = wfUtils::inet_pton($IP);
 						if($value == 'failed'){
-							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", ($isInt ? $IP : self::inet_aton($IP)) );
+							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed) values (%s, unix_timestamp(), 1)", $IP_bin);
 							$IPLocs[$IP] = false;
 						} else if(is_array($value)){
 							for($i = 0; $i <= 5; $i++){
 								//Prevent warnings in debug mode about uninitialized values
 								if(! isset($value[$i])){ $value[$i] = ''; }
 							}
-							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)", 
-								($isInt ? $IP : self::inet_aton($IP)),
+							$db->queryWrite("insert IGNORE into " . $locsTable . " (IP, ctime, failed, city, region, countryName, countryCode, lat, lon) values (%s, unix_timestamp(), 0, '%s', '%s', '%s', '%s', %s, %s)",
+								$IP_bin,
 								$value[3], //city
 								$value[2], //region
 								$value[1], //countryName
@@ -460,25 +623,39 @@ class wfUtils {
 		}
 		return $IPLocs;
 	}
-	public static function reverseLookup($IP){
+
+	public static function reverseLookup($IP) {
 		$db = new wfDB();
 		global $wpdb;
 		$reverseTable = $wpdb->base_prefix . 'wfReverseCache';
-		$IPn = wfUtils::inet_aton($IP);
+		$IPn = wfUtils::inet_pton($IP);
 		$host = $db->querySingle("select host from " . $reverseTable . " where IP=%s and unix_timestamp() - lastUpdate < %d", $IPn, WORDFENCE_REVERSE_LOOKUP_CACHE_TIME);
-		if(! $host){
-			$ptr = implode(".", array_reverse(explode(".",$IP))) . ".in-addr.arpa";
-			if (function_exists('dns_get_record')) {
-				$host = @dns_get_record($ptr, DNS_PTR);
+		if (!$host) {
+			// This function works for IPv4 or IPv6
+			if (function_exists('gethostbyaddr')) {
+				$host = gethostbyaddr($IP);
 			}
-			if($host == null){
+			if (!$host) {
+				$ptr = false;
+				if (filter_var($IP, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+					$ptr = implode(".", array_reverse(explode(".", $IP))) . ".in-addr.arpa";
+				} else if (filter_var($IP, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+					$ptr = implode(".", array_reverse(str_split(bin2hex($IPn)))) . ".ip6.arpa";
+				}
+
+				if ($ptr && function_exists('dns_get_record')) {
+					$host = @dns_get_record($ptr, DNS_PTR);
+					if ($host) {
+						$host = $host[0]['target'];
+					}
+				}
+			}
+			if (!$host) {
 				$host = 'NONE';
-			} else {
-				$host = $host[0]['target'];
 			}
 			$db->queryWrite("insert into " . $reverseTable . " (IP, host, lastUpdate) values (%s, '%s', unix_timestamp()) ON DUPLICATE KEY UPDATE host='%s', lastUpdate=unix_timestamp()", $IPn, $host, $host);
 		}
-		if($host == 'NONE'){
+		if ($host == 'NONE') {
 			return '';
 		} else {
 			return $host;
@@ -502,7 +679,7 @@ class wfUtils {
 		$fh = @fopen($file, 'r');
 		wfUtils::errorsOn();
 		if(! $fh){ return false; }
-		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1; 
+		$offset = WORDFENCE_MAX_FILE_SIZE_TO_PROCESS + 1;
 		$tooBig = false;
 		try {
 			if(@fseek($fh, $offset, SEEK_SET) === 0){
@@ -517,7 +694,7 @@ class wfUtils {
 	public static function fileOver2Gigs($file){ //Surround calls to this func with try/catch because fseek may throw error.
 		$fh = @fopen($file, 'r');
 		if(! $fh){ return false; }
-		$offset = 2147483647; 
+		$offset = 2147483647;
 		$tooBig = false;
 		//My throw an error so surround calls to this func with try/catch
 		if(@fseek($fh, $offset, SEEK_SET) === 0){
@@ -542,11 +719,15 @@ class wfUtils {
 		return $URL;
 	}
 	public static function IP2Country($IP){
-		if(! (function_exists('geoip_open') && function_exists('geoip_country_code_by_addr'))){
+		if(! (function_exists('geoip_open') && function_exists('geoip_country_code_by_addr') && function_exists('geoip_country_code_by_addr_v6'))){
 			require_once('wfGeoIP.php');
 		}
 		$gi = geoip_open(dirname(__FILE__) . "/GeoIP.dat",GEOIP_STANDARD);
-		$country = geoip_country_code_by_addr($gi, $IP);
+		if (filter_var($IP, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+			$country = geoip_country_code_by_addr_v6($gi, $IP);
+		} else {
+			$country = geoip_country_code_by_addr($gi, $IP);
+		}
 		geoip_close($gi);
 		return $country ? $country : '';
 	}
@@ -594,7 +775,35 @@ class wfUtils {
 	public static function isRefererBlocked($refPattern){
 		return fnmatch($refPattern, $_SERVER['HTTP_REFERER'], FNM_CASEFOLD);
 	}
+
+	/**
+	 * @param $startIP
+	 * @param $endIP
+	 * @return array
+	 */
 	public static function rangeToCIDRs($startIP, $endIP){
+		$start_ip_printable = wfUtils::inet_ntop($startIP);
+		if (filter_var($start_ip_printable, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+			return self::rangeToCIDRsIPv4(current(unpack('N', substr($startIP, 12, 4))), current(unpack('N', substr($endIP, 12, 4))));
+		}
+		$startIPBin = str_pad(wfHelperBin::bin2str($startIP), 128, '0', STR_PAD_LEFT);
+		$endIPBin = str_pad(wfHelperBin::bin2str($endIP), 128, '0', STR_PAD_LEFT);
+		$IPIncBin = $startIPBin;
+		$CIDRs = array();
+		while (strcmp($IPIncBin, $endIPBin) <= 0) {
+			$longNetwork = 128;
+			$IPNetBin = $IPIncBin;
+			while (($IPIncBin[$longNetwork - 1] == '0') && (strcmp(substr_replace($IPNetBin, '1', $longNetwork - 1, 1), $endIPBin) <= 0)) {
+				$IPNetBin[$longNetwork - 1] = '1';
+				$longNetwork--;
+			}
+			$CIDRs[] = self::inet_ntop(str_pad(wfHelperBin::str2bin($IPIncBin), 16, "\x00", STR_PAD_LEFT)) . ($longNetwork < 128 ? '/' . $longNetwork : '');
+			$IPIncBin = str_pad(wfHelperBin::bin2str(wfHelperBin::addbin2bin(chr(1), wfHelperBin::str2bin($IPNetBin))), 128, '0', STR_PAD_LEFT);
+		}
+		return $CIDRs;
+	}
+
+	public static function rangeToCIDRsIPv4($startIP, $endIP){
 		$startIPBin = sprintf('%032b', $startIP);
 		$endIPBin = sprintf('%032b', $endIP);
 		$IPIncBin = $startIPBin;
@@ -611,6 +820,7 @@ class wfUtils {
 		}
 		return $CIDRs;
 	}
+
 	public static function setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly){
 		if(version_compare(PHP_VERSION, '5.2.0') >= 0){
 			@setcookie($name, $value, $expire, $path, $domain, $secure, $httpOnly);
@@ -653,6 +863,61 @@ class wfUtils {
 		} else {
 			return false;
 		}
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getPrivateAddrs() {
+		return self::$privateAddrs;
+	}
+
+	/**
+	 * @param string $host
+	 * @return array
+	 */
+	public static function resolveDomainName($host) {
+		// Fallback if this function is not available
+		if (!function_exists('dns_get_record')) {
+			return gethostbynamel($host);
+		}
+
+		$ips = array_merge((array) dns_get_record($host, DNS_AAAA), (array) dns_get_record($host, DNS_A));
+		$return = array();
+
+		foreach ($ips as $record) {
+			if ($record['type'] === 'A') {
+				$return[] = $record['ip'];
+			}
+			if ($record['type'] === 'AAAA') {
+				$return[] = $record['ipv6'];
+			}
+		}
+		return $return;
+	}
+
+	/**
+	 * Expand a compressed printable representation of an IPv6 address.
+	 *
+	 * @param string $ip
+	 * @return string
+	 */
+	public static function expandIPv6Address($ip) {
+		$hex = bin2hex(self::inet_pton($ip));
+		$ip = substr(preg_replace("/([a-f0-9]{4})/i", "$1:", $hex), 0, -1);
+		return $ip;
+	}
+}
+
+// GeoIP lib uses these as well
+if (!function_exists('inet_ntop')) {
+	function inet_ntop($ip) {
+		return wfUtils::_inet_ntop($ip);
+	}
+}
+if (!function_exists('inet_pton')) {
+	function inet_pton($ip) {
+		return wfUtils::_inet_pton($ip);
 	}
 }
 

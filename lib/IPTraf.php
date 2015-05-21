@@ -21,7 +21,7 @@
 <tr><th>User:</th><td><a href="<?php echo $v['user']['editLink']; ?>" target="_blank"><?php echo $v['user']['avatar'] . ' ' . $v['user']['display_name']; ?></a></td></tr>
 <?php } ?>
 <?php if($v['loc']){ ?>
-<tr><th>Location:</th><td><img src="http://www.wordfence.com/images/flags/<?php echo strtolower($v['loc']['countryCode']); ?>.png" width="16" height="11" alt="<?php echo $v['loc']['countryName']; ?>" title="<?php echo $v['loc']['countryName']; ?>" class="wfFlag" />
+<tr><th>Location:</th><td><img src="//www.wordfence.com/images/flags/<?php echo strtolower($v['loc']['countryCode']); ?>.png" width="16" height="11" alt="<?php echo $v['loc']['countryName']; ?>" title="<?php echo $v['loc']['countryName']; ?>" class="wfFlag" />
 	<?php if($v['loc']['city']){ echo $v['loc']['city'] . ', '; } ?>
 	<?php echo $v['loc']['countryName']; ?>
 	</td></tr>
