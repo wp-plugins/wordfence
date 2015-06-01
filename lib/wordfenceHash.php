@@ -215,10 +215,10 @@ class wordfenceHash {
 			wordfence::status(4, 'info', "Skipping file larger than max size: $realFile");
 			return;
 		}
-		if(function_exists('memory_get_usage')){
-                       wordfence::status(4, 'info', "Scanning: $realFile (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
+		if (function_exists('memory_get_usage')) {
+			wordfence::status(4, 'info', "Scanning: $realFile (Mem:" . sprintf('%.1f', memory_get_usage(true) / (1024 * 1024)) . "M)");
 		} else {
-                       wordfence::status(4, 'info', "Scanning: $realFile");
+			wordfence::status(4, 'info', "Scanning: $realFile");
 		}
 		$wfHash = self::wfHash($realFile); 
 		if($wfHash){

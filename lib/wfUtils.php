@@ -358,16 +358,19 @@ class wfUtils {
 		//For debugging. 
 		//return '54.232.205.132';
 		//return self::makeRandomIP();
+
+		// if no REMOTE_ADDR, it's probably running from the command line
+		$connection_ip = array_key_exists('REMOTE_ADDR', $_SERVER) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+
 		$howGet = wfConfig::get('howGetIPs', false);
 		if($howGet){
 			if($howGet == 'REMOTE_ADDR'){
-				$IP = self::getCleanIP(array($_SERVER['REMOTE_ADDR']));
+				$IP = self::getCleanIP(array($connection_ip));
 			} else {
-				$IP = self::getCleanIP(array($_SERVER[$howGet], $_SERVER['REMOTE_ADDR']));
+				$IP = self::getCleanIP(array($_SERVER[$howGet], $connection_ip));
 			}
 		} else {
-			// if no REMOTE_ADDR, it's probably running from the command line
-			$IPs = array(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1');
+			$IPs = array($connection_ip);
 			if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){ $IPs[] = $_SERVER['HTTP_X_FORWARDED_FOR']; }
 			if(isset($_SERVER['HTTP_X_REAL_IP'])){ $IPs[] = $_SERVER['HTTP_X_REAL_IP']; }
 			$IP = self::getCleanIP($IPs);

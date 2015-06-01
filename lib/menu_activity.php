@@ -189,7 +189,7 @@
 &nbsp;&nbsp;&mdash;&nbsp;&nbsp;
 [<a href="admin.php?page=WordfenceWhois&whoisval=${IP}">Run WHOIS on ${IP}</a>]
 &nbsp;&nbsp;&mdash;&nbsp;&nbsp;
-[<a href="#">See recent traffic</a>] 
+[<a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">See recent traffic</a>]
 <tr><td></td></tr>
 </table>
 </div>

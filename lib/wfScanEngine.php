@@ -48,7 +48,7 @@ class wfScanEngine {
 	private $dbScanner;
 
 	public function __sleep(){ //Same order here as above for properties that are included in serialization
-		return array('hasher', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'maxExecTime', 'publicScanEnabled', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues');
+		return array('hasher', 'jobList', 'i', 'wp_version', 'apiKey', 'startTime', 'maxExecTime', 'publicScanEnabled', 'fileContentsResults', 'scanner', 'scanQueue', 'hoover', 'scanData', 'statusIDX', 'userPasswdQueue', 'passwdHasIssues', 'databaseResults', 'dbScanner');
 	}
 	public function __construct(){
 		$this->startTime = time();
@@ -67,7 +67,7 @@ class wfScanEngine {
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
 		$this->jobList[] = 'knownFiles_finish';
-		foreach(array('knownFiles', 'fileContents', 'database', 'posts', 'comments', 'passwds', 'options', 'dns', 'diskSpace', 'oldVersions') as $scanType){
+		foreach(array('knownFiles', 'fileContents', 'database', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
 			if(wfConfig::get('scansEnabled_' . $scanType)){
 				if(method_exists($this, 'scan_' . $scanType . '_init')){
 					foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = $scanType . '_' . $op; };
@@ -280,24 +280,24 @@ class wfScanEngine {
 		$this->status(2, 'info', "Found " . sizeof($knownFilesPlugins) . " plugins");
 		$this->i->updateSummaryItem('totalPlugins', sizeof($knownFilesPlugins));
 
-		if(! function_exists( 'get_themes')){
+		if (!function_exists('wp_get_themes')) {
 			require_once ABSPATH . '/wp-includes/theme.php';
 		}
 		$this->status(2, 'info', "Getting theme list from WordPress");
-		$themeData = get_themes();
-		$knownFilesThemes = array();
-		foreach($themeData as $themeName => $themeVal){
-			if(preg_match('/\/([^\/]+)$/', $themeVal['Stylesheet Dir'], $matches)){
+		$themes = wp_get_themes();
+		foreach ($themes as $themeName => $themeVal) {
+			if (preg_match('/\/([^\/]+)$/', $themeVal['Stylesheet Dir'], $matches)) {
 				$shortDir = $matches[1]; //e.g. evo4cms
 				$fullDir = substr($themeVal['Stylesheet Dir'], strlen(ABSPATH)); //e.g. wp-content/themes/evo4cms
 				$knownFilesThemes[$themeName] = array(
-					'Name' => $themeVal['Name'],
-					'Version' => $themeVal['Version'],
+					'Name'     => $themeVal['Name'],
+					'Version'  => $themeVal['Version'],
 					'ShortDir' => $shortDir,
-					'FullDir' => $fullDir
-					);
+					'FullDir'  => $fullDir
+				);
 			}
 		}
+
 		$this->status(2, 'info', "Found " . sizeof($knownFilesThemes) . " themes");
 		$this->i->updateSummaryItem('totalThemes', sizeof($knownFilesThemes));
 
@@ -374,6 +374,22 @@ class wfScanEngine {
 			}
 		}
 		$this->databaseResults = null;
+
+		$blogsToScan = self::getBlogsToScan('options');
+		$wfdb = new wfDB();
+		foreach ($blogsToScan as $blog) {
+			$charset = $wfdb->querySingle("SELECT option_value FROM " . $blog['table'] . " WHERE option_name='blog_charset'");
+			if (strtolower($charset) == 'utf-7') {
+				$this->addIssue('database', 1, $blog['blog_id'] . 'blog_charset', $blog['blog_id'] . 'blog_charset', "An option was found in your site that indicates it may have been hacked.", "The 'blog_charset' option in your database is set to '" . $charset . "' which indicates your site may have been hacked. If hackers can gain access to your database via phpMyAdmin for example, they will change this value in order to inject malicious code into other parts of your site or allow XSS attacks. The 'badi' hack does this.", array(
+					'isMultisite' => $blog['isMultisite'],
+					'domain'      => $blog['domain'],
+					'path'        => $blog['path'],
+					'blog_id'     => $blog['blog_id']
+				));
+				$haveIssues = true;
+			}
+		}
+
 		wordfence::statusEnd($this->statusIDX['db_infect'], $haveIssues);
 	}
 	private function scan_posts_init(){
@@ -428,7 +444,7 @@ class wfScanEngine {
 	private function scan_posts_finish(){
 		$this->status(2, 'info', "Examining URLs found in posts we scanned for dangerous websites");
 		$hooverResults = $this->hoover->getBaddies();
-		$this->status(2, 'info', "Done examining URls");
+		$this->status(2, 'info', "Done examining URLs");
 		if($this->hoover->errorMsg){
 			wordfence::statusEndErr();
 			throw new Exception($this->hoover->errorMsg);
@@ -783,21 +799,6 @@ class wfScanEngine {
 			wordfence::statusEnd($this->statusIDX['diskSpace'], false);
 		}
 	}
-	private function scan_options(){
-		$blogsToScan = self::getBlogsToScan('options');
-		$wfdb = new wfDB();
-		foreach($blogsToScan as $blog){
-			$charset = $wfdb->querySingle("select option_value from " . $blog['table'] . " where option_name='blog_charset'");
-			if(strtolower($charset) == 'utf-7'){
-				$this->addIssue('badOption', 1, $blog['blog_id'] . 'blog_charset', $blog['blog_id'] . 'blog_charset', "An option was found in your site that indicates it may have been hacked.", "The 'blog_charset' option in your database is set to '" . $charset . "' which indicates your site may have been hacked. If hackers can gain access to your database via phpMyAdmin for example, they will change this value in order to inject malicious code into other parts of your site or allow XSS attacks. The 'badi' hack does this.", array(
-					'isMultisite' => $blog['isMultisite'],
-					'domain' => $blog['domain'],
-					'path' => $blog['path'],
-					'blog_id' => $blog['blog_id']
-					));
-			}
-		}
-	}
 	private function scan_dns(){
 		if(! function_exists('dns_get_record')){
 			$this->status(1, 'info', "Skipping DNS scan because this system does not support dns_get_record()");
@@ -899,65 +900,46 @@ class wfScanEngine {
 	}
 
 	/**
-	 * @todo move the update login into wfUpdateCheck
+	 *
 	 */
 	private function scan_oldVersions(){
 		$this->statusIDX['oldVersions'] = wordfence::statusStart("Scanning for old themes, plugins and core files");
-		if(! function_exists( 'get_preferred_from_update_core')){
-			require_once(ABSPATH . 'wp-admin/includes/update.php');
-		}
-		$cur = get_preferred_from_update_core();
 		$haveIssues = false;
-		if(isset( $cur->response ) && $cur->response == 'upgrade'){
-			if($this->addIssue('wfUpgrade', 1, 'wfUpgrade' . $cur->current, 'wfUpgrade' . $cur->current, "Your WordPress version is out of date", "WordPress version " . $cur->current . " is now available. Please upgrade immediately to get the latest security updates from WordPress.", array(
+
+		$update_check = new wfUpdateCheck();
+		$update_check->checkAllUpdates();
+
+		// WordPress core updates needed
+		if ($update_check->needsCoreUpdate()) {
+			if ($this->addIssue('wfUpgrade', 1, 'wfUpgrade' . $update_check->getCoreUpdateVersion(), 'wfUpgrade' . $update_check->getCoreUpdateVersion(), "Your WordPress version is out of date", "WordPress version " . $update_check->getCoreUpdateVersion() . " is now available. Please upgrade immediately to get the latest security updates from WordPress.", array(
 				'currentVersion' => $this->wp_version,
-				'newVersion' => $cur->current
-				))){
+				'newVersion'     => $update_check->getCoreUpdateVersion(),
+			))
+			) {
 				$haveIssues = true;
 			}
 		}
-		$update_plugins = get_site_transient( 'update_plugins' );
-		if(isset($update_plugins) && (! empty($update_plugins->response))){
-			if(isset($update_plugins) && $update_plugins->response){
-				foreach($update_plugins->response as $plugin => $vals){
-					if(! function_exists( 'get_plugin_data')){
-						require_once ABSPATH . '/wp-admin/includes/plugin.php';
-					}
-					$pluginFile = wfUtils::getPluginBaseDir() . $plugin;
-					$data = get_plugin_data($pluginFile);
-					$data['newVersion'] = $vals->new_version;
-					$key = 'wfPluginUpgrade' . ' ' . $plugin . ' ' . $data['newVersion'] . ' ' . $data['Version'];
-					if($this->addIssue('wfPluginUpgrade', 1, $key, $key, "The Plugin \"" . $data['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $data['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $data)){
-						$haveIssues = true;
-					}
-				}
-			}
-		}
-		$update_themes = get_site_transient( 'update_themes' );
-		if(isset($update_themes) && (! empty($update_themes->response))){
-			if(! function_exists( 'get_themes')){
-				require_once ABSPATH . '/wp-includes/theme.php';
-			}
-			$themes = get_themes();
-			foreach($update_themes->response as $theme => $vals){
-				foreach($themes as $name => $themeData){
-					if(strtolower($name) == $theme){
-						$tData = array(
-							'newVersion' => $vals['new_version'],
-							'package' => $vals['package'],
-							'URL' => $vals['url'],
-							'name' => $themeData['Name'],
-							'version' => $themeData['Version']
-							);
-						$key = 'wfThemeUpgrade' . ' ' . $theme . ' ' . $tData['version'] . ' ' . $tData['newVersion'];
-						if($this->addIssue('wfThemeUpgrade', 1, $key, $key, "The Theme \"" . $themeData['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $themeData['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $tData)){
-							$haveIssues = true;
-						}
-					}
-				}
 
+		// Plugin updates needed
+		if (count($update_check->getPluginUpdates()) > 0) {
+			foreach ($update_check->getPluginUpdates() as $plugin) {
+				$key = 'wfPluginUpgrade' . ' ' . $plugin['pluginFile'] . ' ' . $plugin['newVersion'] . ' ' . $plugin['Version'];
+				if ($this->addIssue('wfPluginUpgrade', 1, $key, $key, "The Plugin \"" . $plugin['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $plugin['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $plugin)) {
+					$haveIssues = true;
+				}
 			}
 		}
+
+		// Theme updates needed
+		if (count($update_check->getThemeUpdates()) > 0) {
+			foreach ($update_check->getThemeUpdates() as $theme) {
+				$key = 'wfThemeUpgrade' . ' ' . $theme['Name'] . ' ' . $theme['version'] . ' ' . $theme['newVersion'];
+				if ($this->addIssue('wfThemeUpgrade', 1, $key, $key, "The Theme \"" . $theme['Name'] . "\" needs an upgrade.", "You need to upgrade \"" . $theme['Name'] . "\" to the newest version to ensure you have any security fixes the developer has released.", $theme)) {
+					$haveIssues = true;
+				}
+			}
+		}
+
 		wordfence::statusEnd($this->statusIDX['oldVersions'], $haveIssues);
 	}
 	public function status($level, $type, $msg){
