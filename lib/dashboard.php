@@ -36,7 +36,6 @@
 <?php if(wfConfig::get('scansEnabled_posts')){ ?><tr><td style="padding-right: 20px;">Scan Posts:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_comments')){ ?><tr><td style="padding-right: 20px;">Scan Comments:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_oldVersions')){ ?><tr><td style="padding-right: 20px;">Scan for Old Software:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
-<?php if(wfConfig::get('scansEnabled_options')){ ?><tr><td style="padding-right: 20px;">Scan Options Table:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_highSense')){ ?><tr><td style="padding-right: 20px;">High sensitivity scans enabled:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('scansEnabled_scanImages')){ ?><tr><td style="padding-right: 20px;">Scan image files for executable code:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>
 <?php if(wfConfig::get('other_scanOutside')){ ?><tr><td style="padding-right: 20px;">Scan files outside WordPress install:</td><td style="color: #0F0;">&#10004;</td></tr> <?php } ?>

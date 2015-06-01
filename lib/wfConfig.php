@@ -70,6 +70,7 @@ class wfConfig {
 				"debugOn" => false,
 				'email_summary_enabled' => true,
 				'email_summary_dashboard_widget_enabled' => true,
+				'ssl_verify' => true,
 			),
 			"otherParams" => array(
 				'securityLevel' => '0',
@@ -158,6 +159,7 @@ class wfConfig {
 				"debugOn" => false,
 				'email_summary_enabled' => true,
 				'email_summary_dashboard_widget_enabled' => true,
+				'ssl_verify' => true,
 			),
 			"otherParams" => array(
 				'securityLevel' => '1',
@@ -246,6 +248,7 @@ class wfConfig {
 				"debugOn" => false,
 				'email_summary_enabled' => true,
 				'email_summary_dashboard_widget_enabled' => true,
+				'ssl_verify' => true,
 			),
 			"otherParams" => array(
 				'securityLevel' => '2',
@@ -334,6 +337,7 @@ class wfConfig {
 				"debugOn" => false,
 				'email_summary_enabled' => true,
 				'email_summary_dashboard_widget_enabled' => true,
+				'ssl_verify' => true,
 			),
 			"otherParams" => array(
 				'securityLevel' => '3',
@@ -422,6 +426,7 @@ class wfConfig {
 				"debugOn" => false,
 				'email_summary_enabled' => true,
 				'email_summary_dashboard_widget_enabled' => true,
+				'ssl_verify' => true,
 			),
 			"otherParams" => array(
 				'securityLevel' => '4',

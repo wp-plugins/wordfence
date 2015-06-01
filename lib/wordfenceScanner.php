@@ -7,13 +7,13 @@ class wordfenceScanner {
 	protected $path = '';
 	protected $results = array(); 
 	public $errorMsg = false;
-	private $apiKey = false;
-	private $wordpressVersion = '';
-	private $totalFilesScanned = 0;
+	protected $apiKey = false;
+	protected $wordpressVersion = '';
+	protected $totalFilesScanned = 0;
 	protected $startTime = false;
 	protected $lastStatusTime = false;
 	protected $patterns = "";
-	private $api = false;
+	protected $api = false;
 	public function __sleep(){
 		return array('path', 'results', 'errorMsg', 'apiKey', 'wordpressVersion', 'urlHoover', 'totalFilesScanned', 'startTime', 'lastStatusTime', 'patterns');
 	}
@@ -63,7 +63,7 @@ class wordfenceScanner {
 		if(wfConfig::get('scan_exclude', false)){
 			$exParts = explode(',', wfConfig::get('scan_exclude'));
 			foreach($exParts as &$exPart){
-				$exPart = preg_quote($exPart);
+				$exPart = preg_quote($exPart, '/');
 				$exPart = preg_replace('/\\\\\*/', '.*', $exPart);
 			}
 			$excludePattern = '/^(?:' . implode('|', $exParts) . ')$/i';
