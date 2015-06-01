@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching, IPv6, IP version 6
 Requires at least: 3.9
 Tested up to: 4.2.2
-Stable tag: 6.0.3
+Stable tag: 6.0.5
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -172,8 +172,30 @@ fully compatible with both IPv4 and IPv6 whether you run both or only one addres
 
 == Changelog ==
 
+= 6.0.5 =
+* Fix: Removed anonymous function to ensure PHP 5.2 compatability.
+
+= 6.0.4 =
+* Improvement: Added option to disable SSL verification for hosts that have outdated versions cURL.
+* Improvement: Added default of 127.0.0.1 when $_SERVER['REMOTE_ADDR'] is not set. Helps if you're running WordPress cron from Linux cron.
+* Improvement: Added compatability with Godaddy's MU (must use) limit login plugin and our two factor. Change makes sure you can see the message from Wordfence to enter your cellphone code.
+* Improvement: Added direction: ltr; to admin pages.
+* Improvement: Added focus/blur events to scan activity log ajax to improve server performance.
+* Improvement: Merged wp_option charset and database vulnerability scans to improve performance and make UI more intuitive.
+* Improvement: Opened 'See recent traffic' in a new window from the Live Traffic page.
+* Improvement: Updated browser pcap cache file for compatibility with detecting newer Firefox browsers.
+* Fix: Fixed bug in directories excluded from scans (escaped directory separator).
+* Fix: Updated known files and outdated plugins/themes to use wp_get_themes.
+* Fix: Fixed bug with wfScanEngine where scans forked between scan_database_main and scan_database_finish would not display results of database scan.
+* Fix: Added return false; to wfScan::error_handler to allow default error handler to process error.
+* Fix: Fixed notice with wfUserIPRange::isValidIPv4Range.
+* Fix: Fixed bug with 'Allow HTTPS pages to be cached' setting being unset after saving options.
+* Fix: Fixed a couple of typos and spelling.
+* Fix: Fixed errors upon plugin activation where wfConfig was queried before it was created.
+* Fix: Fixed issue with notices from serializing wordfenceDBScanner and private properties belonging to parent class.
+
 = 6.0.3 =
-* Fix: Fix for hosts that don't have IPv6 compiled into PHP (which is rare) we now manually define certain functions. 
+* Fix: Fix for hosts that don't have IPv6 compiled into PHP (which is rare) we not manually define certain functions. 
 
 = 6.0.2 =
 * Fix: Fixed an issue with the schema not updating when customers migrate to IPv6 schema to store IP's. 

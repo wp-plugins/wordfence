@@ -1171,12 +1171,15 @@ class wfUserIPRange {
 	 */
 	public function isValidIPv4Range() {
 		$ip_string = $this->getIPString();
-		preg_match('(\d)', $ip_string, $matches);
-		foreach ($matches as $match) {
-			if ($match[1] > 255 || $match[1] < 0) {
-				return false;
+		if (preg_match_all('/(\d+)/', $ip_string, $matches) > 0) {
+			foreach ($matches[1] as $match) {
+				$group = (int) $match;
+				if ($group > 255 || $group < 0) {
+					return false;
+				}
 			}
 		}
+
 		$group_regex = '([0-9]{1,3}|\[[0-9]{1,3}\-[0-9]{1,3}\])';
 		return preg_match('/^' . str_repeat("$group_regex.", 3) . $group_regex . '$/i', $ip_string) > 0;
 	}

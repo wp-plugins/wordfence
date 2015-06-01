@@ -23,6 +23,10 @@ require_once 'wfHelperBin.php';
 class wordfence {
 	public static $printStatus = false;
 	public static $wordfence_wp_version = false;
+	/**
+	 * @var WP_Error
+	 */
+	public static $authError;
 	private static $passwordCodePattern = '/\s+(wf[a-z0-9]+)$/i';
 	protected static $lastURLError = false;
 	protected static $curlContent = "";
@@ -256,14 +260,14 @@ class wordfence {
 		//Remove old legacy cron job if exists
 		wp_clear_scheduled_hook('wordfence_scheduled_scan');
 
+		$schema = new wfSchema();
+		$schema->createAll(); //if not exists
+		wfConfig::setDefaults(); //If not set
+
 		$restOfSite = wfConfig::get('cbl_restOfSiteBlocked', 'notset');
 		if($restOfSite == 'notset'){
 			wfConfig::set('cbl_restOfSiteBlocked', '1');
 		}
-
-		$schema = new wfSchema();
-		$schema->createAll(); //if not exists
-		wfConfig::setDefaults(); //If not set
 
 		//Install new schedule. If schedule config is blank it will install the default 'auto' schedule.
 		wordfence::scheduleScans();
@@ -498,6 +502,13 @@ class wordfence {
 		add_filter('get_the_generator_comment', 'wordfence::genFilter', 99, 2);
 		add_filter('get_the_generator_export', 'wordfence::genFilter', 99, 2);
 		add_filter('registration_errors', 'wordfence::registrationFilter', 99, 3);
+
+		// Change GoDaddy's limit login mu-plugin since it can interfere with the two factor auth message.
+		if (defined('GD_SYSTEM_PLUGIN_DIR') && file_exists(GD_SYSTEM_PLUGIN_DIR . 'limit-login-attempts/limit-login-attempts.php')
+			&& defined('LIMIT_LOGIN_DIRECT_ADDR')) {
+			add_action('login_errors', array('wordfence', 'fixGDLimitLoginsErrors'), 11);
+		}
+
 		if(is_admin()){
 			add_action('admin_init', 'wordfence::admin_init');
 			if(is_multisite()){
@@ -875,12 +886,14 @@ class wordfence {
 										$t[2] = $codeResult['code'];
 										$t[4] = time() + 1800; //30 minutes until code expires
 										wfConfig::set_ser('twoFactorUsers', $twoFactorUsers); //save the code the user needs to enter and return an error.
-										return new WP_Error( 'twofactor_required', __( '<strong>CODE EXPIRED. CHECK YOUR PHONE:</strong> The code you entered has expired. Codes are only valid for 30 minutes for security reasons. We have sent you a new code. Please sign in using your username and your password followed by a space and the new code we sent you.'));
+										self::$authError = new WP_Error('twofactor_required', __('<strong>CODE EXPIRED. CHECK YOUR PHONE:</strong> The code you entered has expired. Codes are only valid for 30 minutes for security reasons. We have sent you a new code. Please sign in using your username and your password followed by a space and the new code we sent you.'));
+										return self::$authError;
 									} else {
 										break; //No new code was received. Let them sign in with the expired code.
 									}
 								} else { //Bad code, so cancel the login and return an error to user.
-									return new WP_Error( 'twofactor_required', __( '<strong>INVALID CODE</strong>: You need to enter your password followed by a space and the code we sent to your phone. The code should start with \'wf\' and should be four characters. e.g. wfAB12. In this case you would enter your password as: \'mypassword wfAB12\' without quotes.'));
+									self::$authError = new WP_Error( 'twofactor_required', __( '<strong>INVALID CODE</strong>: You need to enter your password followed by a space and the code we sent to your phone. The code should start with \'wf\' and should be four characters. e.g. wfAB12. In this case you would enter your password as: \'mypassword wfAB12\' without quotes.'));
+									return self::$authError;
 								}
 							} //No user matches and has TF activated so let user sign in.
 						}
@@ -897,7 +910,8 @@ class wordfence {
 									$t[2] = $codeResult['code'];
 									$t[4] = time() + 1800; //30 minutes until code expires
 									wfConfig::set_ser('twoFactorUsers', $twoFactorUsers); //save the code the user needs to enter and return an error.
-									return new WP_Error( 'twofactor_required', __( '<strong>CHECK YOUR PHONE</strong>: A code has been sent to your phone and will arrive within 30 seconds. Please sign in again and add a space and the code to the end of your password.' ) );
+									self::$authError = new WP_Error( 'twofactor_required', __( '<strong>CHECK YOUR PHONE</strong>: A code has been sent to your phone and will arrive within 30 seconds. Please sign in again and add a space and the code to the end of your password.' ) );
+									return self::$authError;
 								} else { //oops, our API returned an error.
 									break; //Let them sign in without two factor because the API is broken and we don't want to lock users out of their own systems.
 								}
@@ -3266,6 +3280,14 @@ EOL;
 				array('wfActivityReport', 'outputDashboardWidget')
 			);
 		}
+	}
+
+	public static function fixGDLimitLoginsErrors($content) {
+		if (self::$authError) {
+			$content = str_replace(__('<strong>ERROR</strong>: Incorrect username or password.', 'limit-login-attempts') . "<br />\n", '', $content);
+			$content .= '<br />' . self::$authError->get_error_message();
+		}
+		return $content;
 	}
 }
 ?>

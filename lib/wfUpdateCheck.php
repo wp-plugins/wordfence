@@ -77,6 +77,7 @@ class wfUpdateCheck {
 				}
 				$pluginFile = wfUtils::getPluginBaseDir() . $plugin;
 				$data = get_plugin_data($pluginFile);
+				$data['pluginFile'] = $pluginFile;
 				$data['newVersion'] = $vals->new_version;
 				$this->plugin_updates[] = $data;
 			}
@@ -112,6 +113,7 @@ class wfUpdateCheck {
 							'newVersion' => $vals['new_version'],
 							'package'    => $vals['package'],
 							'URL'        => $vals['url'],
+							'Name'       => $themeData['Name'],
 							'name'       => $themeData['Name'],
 							'version'    => $themeData['Version']
 						);
