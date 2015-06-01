@@ -506,13 +506,7 @@ class wordfence {
 		// Change GoDaddy's limit login mu-plugin since it can interfere with the two factor auth message.
 		if (defined('GD_SYSTEM_PLUGIN_DIR') && file_exists(GD_SYSTEM_PLUGIN_DIR . 'limit-login-attempts/limit-login-attempts.php')
 			&& defined('LIMIT_LOGIN_DIRECT_ADDR')) {
-			add_action('login_errors', function($content) {
-				if (self::$authError) {
-					$content = str_replace(__('<strong>ERROR</strong>: Incorrect username or password.', 'limit-login-attempts') . "<br />\n", '', $content);
-					$content .= '<br />' . self::$authError->get_error_message();
-				}
-				return $content;
-			}, 11);
+			add_action('login_errors', array('wordfence', 'fixGDLimitLoginsErrors'), 11);
 		}
 
 		if(is_admin()){
@@ -3286,6 +3280,14 @@ EOL;
 				array('wfActivityReport', 'outputDashboardWidget')
 			);
 		}
+	}
+
+	public static function fixGDLimitLoginsErrors($content) {
+		if (self::$authError) {
+			$content = str_replace(__('<strong>ERROR</strong>: Incorrect username or password.', 'limit-login-attempts') . "<br />\n", '', $content);
+			$content .= '<br />' . self::$authError->get_error_message();
+		}
+		return $content;
 	}
 }
 ?>
