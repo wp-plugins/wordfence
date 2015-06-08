@@ -6,7 +6,7 @@
 			<div class="wfPaidOnlyNotice">
 				<strong>Scan Scheduling is only available to Premium Members at this time</strong><br /><br />
 				Scan Scheduling is a premium feature because it places additional load on our scanning servers. If you would like to
-				activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options
+				activate this feature, simply <a href="https://www.wordfence.com/gnl1scanSched1/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options
 				page.
 			</div>
 <?php } ?>
@@ -92,7 +92,7 @@ if(wfConfig::get('isPaid')){
 } else {
 ?>
 	If you would like access to this premium feature, please 
-	<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our Premium version</a>.
+	<a href="https://www.wordfence.com/gnl1scanSched2/wordfence-signup/" target="_blank">upgrade to our Premium version</a>.
 </p>
 <?php
 }

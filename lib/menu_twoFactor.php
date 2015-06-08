@@ -6,7 +6,7 @@
 			<div class="wfPaidOnlyNotice">
 				<strong>Cellphone Sign-in is only available to Premium Members at this time</strong><br /><br />
 				Cellphone Sign-in is a premium feature because we are charged per SMS we send when a user signs in. If you would like to
-				activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page.
+				activate this feature, simply <a href="https://www.wordfence.com/gnl1twoFac1/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page.
 				<br /><br />
 				Wordfence's Cellphone Sign-in uses a technique called "Two Factor Authentication" which is used by banks, government agencies and military world-wide as one of the most secure forms of remote system authentication. It's now available from Wordfence for your WordPress website. We recommend you enable Cellphone Sign-in for all Administrator level accounts. You can <a href="http://docs.wordfence.com/en/Cellphone_sign-in" target="_blank">learn more about Cellphone Sign-in on our documentation website</a>.
 			</div>
@@ -78,7 +78,7 @@ if(wfConfig::get('isPaid')){
 } else {
 ?>
 	If you would like access to this premium feature, please 
-	<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
+	<a href="https://www.wordfence.com/gnl1twoFac2/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
 <?php
 }
 ?>

@@ -117,6 +117,7 @@ class wfScan {
 			}
 			self::status($level, 'error', "$errstr ($errno) File: $errfile Line: $errline");
 		}
+		return false;
 	}
 	public static function shutdown(){
 		self::logPeakMemory();

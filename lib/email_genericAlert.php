@@ -16,7 +16,7 @@ As a Premium member you also get access to our priority support system located a
 priority support tickets using our ticketing system. 
 
 Click here to sign-up for the Premium version of Wordfence now.
-https://www.wordfence.com/wordfence-signup/
+https://www.wordfence.com/zz1/wordfence-signup/
 
 <?php } ?>
 

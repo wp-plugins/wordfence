@@ -38,7 +38,7 @@ $w = new wfConfig();
 						The currently active API Key is a Premium Key. <span style="font-weight: bold; color: #0A0;">Premium scanning enabled!</span>
 					<?php } else { ?>
 					The currently active API Key is a <span style="color: #F00; font-weight: bold;">Free Key</span>. <a
-							href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click Here to Upgrade to
+							href="https://www.wordfence.com/gnl1optAPIKey1/wordfence-signup/" target="_blank">Click Here to Upgrade to
 							Wordfence Premium now.</a>
 						<?php } ?>
 				</td>
@@ -48,7 +48,7 @@ $w = new wfConfig();
 					<?php if ( wfConfig::get( 'isPaid' ) ) { ?>
 						<table border="0">
 							<tr>
-								<td><a href="https://www.wordfence.com/manage-wordfence-api-keys/"
+								<td><a href="https://www.wordfence.com/gnl1optMngKys/manage-wordfence-api-keys/"
 								       target="_blank"><input type="button" value="Renew your premium license"/></a>
 								</td>
 								<td>&nbsp;</td>
@@ -411,7 +411,7 @@ $w = new wfConfig();
 						<th style="color: #F00;">Scan public facing site for vulnerabilities?<a
 								href="http://docs.wordfence.com/en/Wordfence_options#Scan_public_facing_site"
 								target="_blank" class="wfhelp"></a>(<a
-								href="https://www.wordfence.com/wordfence-signup/" target="_blank">Paid members only</a>)
+								href="https://www.wordfence.com/gnl1optPdOnly1/wordfence-signup/" target="_blank">Paid members only</a>)
 						</th>
 						<td><input type="checkbox" id="scansEnabled_public" class="wfConfigElem"
 						           name="scansEnabled_public" value="1" DISABLED /></td>
@@ -498,12 +498,6 @@ $w = new wfConfig();
 							target="_blank" class="wfhelp"></a></th>
 					<td><input type="checkbox" id="scansEnabled_passwds" class="wfConfigElem"
 					           name="scansEnabled_passwds" value="1" <?php $w->cb( 'scansEnabled_passwds' ); ?>/></td>
-				</tr>
-				<tr>
-					<th>Scan options table<a href="http://docs.wordfence.com/en/Wordfence_options#Scan_options_table"
-					                         target="_blank" class="wfhelp"></a></th>
-					<td><input type="checkbox" id="scansEnabled_options" class="wfConfigElem"
-					           name="scansEnabled_options" value="1" <?php $w->cb( 'scansEnabled_options' ); ?>/></td>
 				</tr>
 				<tr>
 					<th>Monitor disk space<a href="http://docs.wordfence.com/en/Wordfence_options#Monitor_disk_space"
@@ -960,7 +954,11 @@ $w = new wfConfig();
 							href="http://docs.wordfence.com/en/Wordfence_options#Add_a_debugging_comment_to_HTML_source_of_cached_pages"
 							target="_blank" class="wfhelp"></a></th>
 					<td><input type="checkbox" id="addCacheComment" class="wfConfigElem" name="addCacheComment"
-					           value="1" <?php $w->cb( 'addCacheComment' ); ?> /></td>
+					           value="1" <?php $w->cb( 'addCacheComment' ); ?> />
+						<?php if ($w->get('allowHTTPSCaching')): ?>
+							<input type="hidden" name="allowHTTPSCaching" value="1"/>
+						<?php endif ?>
+					</td>
 				</tr>
 				<tr>
 					<th><label for="disableCodeExecutionUploads">Disable Code Execution for Uploads directory</label><a
@@ -969,6 +967,17 @@ $w = new wfConfig();
 					<td><input type="checkbox" id="disableCodeExecutionUploads" class="wfConfigElem"
 					           name="disableCodeExecutionUploads"
 					           value="1" <?php $w->cb( 'disableCodeExecutionUploads' ); ?> /></td>
+				</tr>
+				<tr>
+					<th><label for="ssl_verify">Enable SSL Verification</label><a
+							href="http://docs.wordfence.com/en/Wordfence_options#Enable_SSL_Verification"
+							target="_blank" class="wfhelp"></a>
+					</th>
+					<td style="vertical-align: top;"><input type="checkbox" id="ssl_verify" class="wfConfigElem"
+					           name="ssl_verify"
+					           value="1" <?php $w->cb( 'ssl_verify' ); ?> />
+						(Disable this if you are <strong><em>consistently</em></strong> unable to connect to the Wordfence servers.)
+					</td>
 				</tr>
 				<tr>
 					<th colspan="2"><a
@@ -1065,7 +1074,7 @@ $w = new wfConfig();
 		<p>
 			If you use the free edition of Wordfence, you don't need to worry about entering an API key in the "API Key"
 			field above. One is automatically created for you. If you choose to <a
-				href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to Wordfence Premium
+				href="https://www.wordfence.com/gnl1optUpg1/wordfence-signup/" target="_blank">upgrade to Wordfence Premium
 				edition</a>, you will receive an API key. You will need to copy and paste that key into the "API Key"
 			field above and hit "Save" to activate your key.
 		</p>

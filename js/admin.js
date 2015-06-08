@@ -345,7 +345,7 @@
 				}, parseInt(WordfenceAdminVars.actUpdateInterval));
 			},
 			updateActivityLog: function() {
-				if (this.activityLogUpdatePending) {
+				if (this.activityLogUpdatePending || !this.windowHasFocus()) {
 					return;
 				}
 				this.activityLogUpdatePending = true;
@@ -971,7 +971,7 @@
 				var self = this;
 				if (res.ok) {
 					this.loadIssues(function() {
-						self.colorbox("400px", "File restored OK", "The file " + res.file + " was restored succesfully.");
+						self.colorbox("400px", "File restored OK", "The file " + res.file + " was restored successfully.");
 					});
 				} else if (res.cerrorMsg) {
 					this.loadIssues(function() {
@@ -1684,7 +1684,7 @@
 				}
 			},
 			invalidCountryURLMsg: function(URL) {
-				this.colorbox('400px', "Invalid URL", "URL's that you provide for bypassing country blocking must start with '/' or 'http://' without quotes. The URL that is invalid is: " + URL);
+				this.colorbox('400px', "Invalid URL", "URL's that you provide for bypassing country blocking must start with '/' or 'http://' without quotes. The URL that is invalid is: " + this.htmlEscape(URL));
 				return;
 			},
 			confirmSaveCountryBlocking: function() {
@@ -2032,6 +2032,15 @@
 				}
 				// Older versions of Opera
 				return this._windowHasFocus;
+			},
+
+			htmlEscape: function(html) {
+				return String(html)
+					.replace(/&/g, '&amp;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;');
 			}
 		};
 		window['WFAD'] = window['wordfenceAdmin'];

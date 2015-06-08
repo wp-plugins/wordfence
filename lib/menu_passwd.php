@@ -12,7 +12,7 @@
 			We securely simulate a high-performance password cracking attack on your password database and will alert you to weak passwords.
 			We then provide a way to change weak passwords or alert members that they need to improve their password strength.
 			To activate this feature, simply
-			<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page. You can
+			<a href="https://www.wordfence.com/gnl1pwAuditUp1/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page. You can
 			<a href="http://docs.wordfence.com/en/Wordfence_Password_Auditing" target="_blank">learn more about Password Auditing on our Documentation Website</a>.
 		</div>
 	<?php } ?>
@@ -177,7 +177,7 @@
 		} else {
 		?>
 		If you would like access to this premium feature, please
-		<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
+		<a href="https://www.wordfence.com/gnl1pwAuditUp2/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
 	</p>
 	<?php
 	}
