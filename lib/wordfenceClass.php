@@ -328,8 +328,12 @@ class wordfence {
 		$db->queryWriteIgnoreError("alter table $prefix"."wfLockedOut modify column blockedTime bigint signed NOT NULL");
 		$db->queryWriteIgnoreError("drop table if exists $prefix"."wfFileQueue");
 		$db->queryWriteIgnoreError("drop table if exists $prefix"."wfFileChanges");
-		//Adding primary key to this table because some backup apps use primary key during backup.
-		$db->queryWriteIgnoreError("alter table {$prefix}wfStatus add id bigint UNSIGNED NOT NULL auto_increment PRIMARY KEY");
+
+		$result = $wpdb->get_row("SHOW FIELDS FROM {$prefix}wfStatus where field = 'id'");
+		if (!$result || strtolower($result->Key) != 'pri') {
+			//Adding primary key to this table because some backup apps use primary key during backup.
+			$db->queryWriteIgnoreError("alter table {$prefix}wfStatus add id bigint UNSIGNED NOT NULL auto_increment PRIMARY KEY");
+		}
 
 		$optScanEnabled = $db->querySingle("select val from $prefix"."wfConfig where name='scansEnabled_options'");
 		if($optScanEnabled != '0' && $optScanEnabled != '1'){
@@ -385,6 +389,15 @@ class wordfence {
 	4,
 	CHAR(0)
 ))");
+		}
+
+		// Fix the data in the country column.
+		// TODO: add version check so this doesn't run on every update.
+		$ip_results = $wpdb->get_results("SELECT * FROM `{$prefix}wfBlockedIPLog` GROUP BY IP");
+		if ($ip_results) {
+			foreach ($ip_results as $ip_row) {
+				$wpdb->query($wpdb->prepare("UPDATE `{$prefix}wfBlockedIPLog` SET countryCode = %s WHERE IP = %s", wfUtils::IP2Country(wfUtils::inet_ntop($ip_row->IP)), $ip_row->IP));
+			}
 		}
 
 		//Must be the final line
@@ -504,8 +517,7 @@ class wordfence {
 		add_filter('registration_errors', 'wordfence::registrationFilter', 99, 3);
 
 		// Change GoDaddy's limit login mu-plugin since it can interfere with the two factor auth message.
-		if (defined('GD_SYSTEM_PLUGIN_DIR') && file_exists(GD_SYSTEM_PLUGIN_DIR . 'limit-login-attempts/limit-login-attempts.php')
-			&& defined('LIMIT_LOGIN_DIRECT_ADDR')) {
+		if (self::hasGDLimitLoginsMUPlugin()) {
 			add_action('login_errors', array('wordfence', 'fixGDLimitLoginsErrors'), 11);
 		}
 
@@ -584,7 +596,7 @@ class wordfence {
 		$isCrawler = false;
 		if($UA){
 			$b = $browscap->getBrowser($UA);
-			if($b['Crawler']){
+			if(!empty($b['Crawler'])){
 				$isCrawler = true;
 			}
 		}
@@ -878,18 +890,25 @@ class wordfence {
 									//Do nothing and allow user to sign in. Their passwd has already been modified to be the passwd without the code.
 								} else if($_POST['wordfence_authFactor'] == $t[2]){
 									$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-									$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $t[1]) );
-									if(isset($codeResult['notPaid']) && $codeResult['notPaid']){
-										break; //Let them sign in without two factor
-									}
-									if(isset($codeResult['ok']) && $codeResult['ok']){
-										$t[2] = $codeResult['code'];
-										$t[4] = time() + 1800; //30 minutes until code expires
-										wfConfig::set_ser('twoFactorUsers', $twoFactorUsers); //save the code the user needs to enter and return an error.
-										self::$authError = new WP_Error('twofactor_required', __('<strong>CODE EXPIRED. CHECK YOUR PHONE:</strong> The code you entered has expired. Codes are only valid for 30 minutes for security reasons. We have sent you a new code. Please sign in using your username and your password followed by a space and the new code we sent you.'));
-										return self::$authError;
-									} else {
-										break; //No new code was received. Let them sign in with the expired code.
+									try {
+										$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $t[1]) );
+
+										if(isset($codeResult['notPaid']) && $codeResult['notPaid']){
+											break; //Let them sign in without two factor
+										}
+										if(isset($codeResult['ok']) && $codeResult['ok']){
+											$t[2] = $codeResult['code'];
+											$t[4] = time() + 1800; //30 minutes until code expires
+											wfConfig::set_ser('twoFactorUsers', $twoFactorUsers); //save the code the user needs to enter and return an error.
+											self::$authError = new WP_Error('twofactor_required', __('<strong>CODE EXPIRED. CHECK YOUR PHONE:</strong> The code you entered has expired. Codes are only valid for 30 minutes for security reasons. We have sent you a new code. Please sign in using your username and your password followed by a space and the new code we sent you.'));
+											return self::$authError;
+										} else {
+											break; //No new code was received. Let them sign in with the expired code.
+										}
+
+									} catch (Exception $e) {
+										// Couldn't connect to noc1, let them sign in since the password was correct.
+										break;
 									}
 								} else { //Bad code, so cancel the login and return an error to user.
 									self::$authError = new WP_Error( 'twofactor_required', __( '<strong>INVALID CODE</strong>: You need to enter your password followed by a space and the code we sent to your phone. The code should start with \'wf\' and should be four characters. e.g. wfAB12. In this case you would enter your password as: \'mypassword wfAB12\' without quotes.'));
@@ -901,15 +920,35 @@ class wordfence {
 						foreach($twoFactorUsers as &$t){
 							if($t[0] == $userDat->ID && $t[3] == 'activated'){ //Yup, enabled, so lets send the code
 								$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
-								$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $t[1]) );
-								if(isset($codeResult['notPaid']) && $codeResult['notPaid']){
-									break; //Let them sign in without two factor if their API key has expired or they're not paid and for some reason they have this set up.
+								try {
+									$codeResult = $api->call('twoFactor_verification', array(), array('phone' => $t[1]) );
+									if(isset($codeResult['notPaid']) && $codeResult['notPaid']){
+										break; //Let them sign in without two factor if their API key has expired or they're not paid and for some reason they have this set up.
+									}
+								} catch (Exception $e) {
+									// Couldn't connect to noc1, let them sign in since the password was correct.
+									break;
 								}
-
 								if(isset($codeResult['ok']) && $codeResult['ok']){
 									$t[2] = $codeResult['code'];
 									$t[4] = time() + 1800; //30 minutes until code expires
 									wfConfig::set_ser('twoFactorUsers', $twoFactorUsers); //save the code the user needs to enter and return an error.
+
+									if (self::hasGDLimitLoginsMUPlugin() && function_exists('limit_login_get_address')) {
+										$retries = get_option('limit_login_retries', array());
+										$ip = limit_login_get_address();
+
+										if (!is_array($retries)) {
+											$retries = array();
+										}
+										if (isset($retries[$ip]) && is_int($retries[$ip])) {
+											$retries[$ip]--;
+										} else {
+											$retries[$ip] = 0;
+										}
+										update_option('limit_login_retries', $retries);
+									}
+
 									self::$authError = new WP_Error( 'twofactor_required', __( '<strong>CHECK YOUR PHONE</strong>: A code has been sent to your phone and will arrive within 30 seconds. Please sign in again and add a space and the code to the end of your password.' ) );
 									return self::$authError;
 								} else { //oops, our API returned an error.
@@ -3282,6 +3321,18 @@ EOL;
 		}
 	}
 
+	/**
+	 * @return bool
+	 */
+	public static function hasGDLimitLoginsMUPlugin() {
+		return defined('GD_SYSTEM_PLUGIN_DIR') && file_exists(GD_SYSTEM_PLUGIN_DIR . 'limit-login-attempts/limit-login-attempts.php')
+			&& defined('LIMIT_LOGIN_DIRECT_ADDR');
+	}
+
+	/**
+	 * @param string $content
+	 * @return string
+	 */
 	public static function fixGDLimitLoginsErrors($content) {
 		if (self::$authError) {
 			$content = str_replace(__('<strong>ERROR</strong>: Incorrect username or password.', 'limit-login-attempts') . "<br />\n", '', $content);

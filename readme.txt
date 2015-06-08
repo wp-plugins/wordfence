@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching, IPv6, IP version 6
 Requires at least: 3.9
 Tested up to: 4.2.2
-Stable tag: 6.0.5
+Stable tag: 6.0.6
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -171,6 +171,17 @@ fully compatible with both IPv4 and IPv6 whether you run both or only one addres
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 6.0.6 =
+* Improvement: Handled uncaught exception when noc1 is not available in 2FA.
+* Improvement: Fixed issue with limit-logins mu-plugin on GoDaddy counting first login attempt in 2FA against total allowed login attempts.
+* Fix: Fixed bug with IPs not resolving to countries when printable IP passed to logBlockedIP.
+* Fix: Fixed issue with free users country blocking redirects working after downgrade.
+* Fix: Encoded URL field in country blocking options.
+* Fix: Added a check to verify field has not already been altered prior to calling ALTER in runInstall.
+* Fix: Fixed issue with scan_options method being called after method has been removed.
+* Fix: Fixed bug in scan when dns_get_record fails and error condition was not handled.
+* Fix: Fixed PHP notice when 'Crawler' not included in browser pcap result.
 
 = 6.0.5 =
 * Fix: Removed anonymous function to ensure PHP 5.2 compatability.

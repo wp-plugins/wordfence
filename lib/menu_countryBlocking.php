@@ -12,7 +12,7 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 		<div class="wfPaidOnlyNotice">
 			<strong>Country Blocking is only available to Premium Members at this time</strong><br /><br />
 			Country Blocking is a premium feature because we have licensed a very accurate commercial geolocation database to provide this feature. If you would like to
-			activate this feature, simply <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page. You can <a href="http://docs.wordfence.com/en/Country_blocking" target="_blank">learn more about Country Blocking on our documentation website</a>.
+			activate this feature, simply <a href="https://www.wordfence.com/gnl1countryBlock1/wordfence-signup/" target="_blank">click here and get a premium Wordfence API Key</a>, and then copy and paste it into your options page. You can <a href="http://docs.wordfence.com/en/Country_blocking" target="_blank">learn more about Country Blocking on our documentation website</a>.
 		</div>
 <?php } ?>
 		<?php if(wfConfig::get('cacheType') == 'falcon'){ ?>
@@ -52,7 +52,7 @@ WFAD.countryMap = <?php echo json_encode($wfBulkCountries); ?>;
 			</th></tr>
 		<tr><th colspan="2">
 			If user who is allowed to access the site views the URL 
-			<input type="text" id="wfBypassViewURL" value="<?php echo wp_kses(wfConfig::get('cbl_bypassViewURL', ""), array()); ?>" size="20" /> 
+			<input type="text" id="wfBypassViewURL" value="<?php echo esc_attr(wfConfig::get('cbl_bypassViewURL', ""), array()); ?>" size="20" />
 			then set a cookie that will bypass country blocking in future in case that user hits the site from a blocked country. 
 			</th></tr>
 
@@ -113,7 +113,7 @@ if(wfConfig::get('isPaid')){
 } else {
 ?>
 	If you would like access to this premium feature, please 
-	<a href="https://www.wordfence.com/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
+	<a href="https://www.wordfence.com/gnl1countryBlock2/wordfence-signup/" target="_blank">upgrade to our premium version</a>.
 </p>
 <?php
 }

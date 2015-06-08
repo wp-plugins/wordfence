@@ -345,9 +345,11 @@ SQL
 		/** @var wpdb $wpdb */
 		global $wpdb;
 
-		$is_bin_ip = !wfUtils::isValidIP($ip_address);
-		if (!$is_bin_ip) {
-			$ip_address = wfUtils::inet_pton($ip_address);
+		if (wfUtils::isValidIP($ip_address)) {
+			$ip_bin = wfUtils::inet_pton($ip_address);
+		} else {
+			$ip_bin = $ip_address;
+			$ip_address = wfUtils::inet_ntop($ip_bin);
 		}
 
 		$blocked_table = "{$wpdb->base_prefix}wfBlockedIPLog";
@@ -357,14 +359,14 @@ SQL
 			$unixday_insert = absint($unixday);
 		}
 
-		$country = wfUtils::IP2Country($is_bin_ip ? wfUtils::inet_ntop($ip_address) : $ip_address);
+		$country = wfUtils::IP2Country($ip_address);
 
 		$wpdb->query($wpdb->prepare(<<<SQL
 INSERT INTO $blocked_table (IP, countryCode, blockCount, unixday)
 VALUES (%s, %s, 1, $unixday_insert)
 ON DUPLICATE KEY UPDATE blockCount = blockCount + 1
 SQL
-			, $ip_address, $country));
+			, $ip_bin, $country));
 	}
 
 	/**

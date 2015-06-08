@@ -1684,7 +1684,7 @@
 				}
 			},
 			invalidCountryURLMsg: function(URL) {
-				this.colorbox('400px', "Invalid URL", "URL's that you provide for bypassing country blocking must start with '/' or 'http://' without quotes. The URL that is invalid is: " + URL);
+				this.colorbox('400px', "Invalid URL", "URL's that you provide for bypassing country blocking must start with '/' or 'http://' without quotes. The URL that is invalid is: " + this.htmlEscape(URL));
 				return;
 			},
 			confirmSaveCountryBlocking: function() {
@@ -2032,6 +2032,15 @@
 				}
 				// Older versions of Opera
 				return this._windowHasFocus;
+			},
+
+			htmlEscape: function(html) {
+				return String(html)
+					.replace(/&/g, '&amp;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;');
 			}
 		};
 		window['WFAD'] = window['wordfenceAdmin'];

@@ -67,11 +67,13 @@ class wfScanEngine {
 		$this->jobList[] = 'knownFiles_init';
 		$this->jobList[] = 'knownFiles_main';
 		$this->jobList[] = 'knownFiles_finish';
-		foreach(array('knownFiles', 'fileContents', 'database', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType){
-			if(wfConfig::get('scansEnabled_' . $scanType)){
-				if(method_exists($this, 'scan_' . $scanType . '_init')){
-					foreach(array('init', 'main', 'finish') as $op){ $this->jobList[] = $scanType . '_' . $op; };
-				} else {
+		foreach (array('knownFiles', 'fileContents', 'database', 'posts', 'comments', 'passwds', 'dns', 'diskSpace', 'oldVersions') as $scanType) {
+			if (wfConfig::get('scansEnabled_' . $scanType)) {
+				if (method_exists($this, 'scan_' . $scanType . '_init')) {
+					foreach (array('init', 'main', 'finish') as $op) {
+						$this->jobList[] = $scanType . '_' . $op;
+					};
+				} else if (method_exists($this, 'scan_' . $scanType)) {
 					$this->jobList[] = $scanType;
 				}
 			}
@@ -123,7 +125,10 @@ class wfScanEngine {
 		while(sizeof($this->jobList) > 0){
 			self::checkForKill();
 			$jobName = $this->jobList[0];
-			call_user_func(array($this, 'scan_' . $jobName));
+			$callback = array($this, 'scan_' . $jobName);
+			if (is_callable($callback)) {
+				call_user_func($callback);
+			}
 			array_shift($this->jobList); //only shift once we're done because we may pause halfway through a job and need to pick up where we left off
 			self::checkForKill();
 			if($this->forkRequested){
@@ -811,16 +816,19 @@ class wfScanEngine {
 			$host = strtolower($matches[1]);
 			$this->status(2, 'info', "Starting DNS scan for $host");
 
-			$cnameArrRec = dns_get_record($host, DNS_CNAME);
+			$cnameArrRec = @dns_get_record($host, DNS_CNAME);
 			$cnameArr = array(); 
 			$cnamesWeMustTrack = array();
-			foreach($cnameArrRec as $elem){ 
-				$this->status(2, 'info', "Scanning CNAME DNS record for " . $elem['host']);
-				if($elem['host'] == $host){ 
-					$cnameArr[] = $elem; 
-					$cnamesWeMustTrack[] = $elem['target'];
-				} 
+			if ($cnameArrRec) {
+				foreach($cnameArrRec as $elem){
+					$this->status(2, 'info', "Scanning CNAME DNS record for " . $elem['host']);
+					if($elem['host'] == $host){
+						$cnameArr[] = $elem;
+						$cnamesWeMustTrack[] = $elem['target'];
+					}
+				}
 			}
+
 			function wfAnonFunc1($a){ return $a['host'] . ' points to ' . $a['target']; }
 			$cnameArr = array_map('wfAnonFunc1', $cnameArr);
 			sort($cnameArr, SORT_STRING);
