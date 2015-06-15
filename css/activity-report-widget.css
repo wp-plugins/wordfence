@@ -1,3 +1,6 @@
+#wordfence_activity_report_widget .wf-logo img {
+	max-width: 100%;
+}
 #wordfence_activity_report_widget .inside h1,
 #wordfence_activity_report_widget .inside h2,
 #wordfence_activity_report_widget .inside h3,

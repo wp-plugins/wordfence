@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching, IPv6, IP version 6
 Requires at least: 3.9
 Tested up to: 4.2.2
-Stable tag: 6.0.6
+Stable tag: 6.0.7
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -11,9 +11,9 @@ Wordfence Security is a free enterprise class security and performance plugin th
 
 Wordfence starts by checking if your site is already infected. We do a deep server-side scan of your source code comparing it to the Official WordPress repository for core, themes and plugins. Then Wordfence secures your site and makes it up to 50 times faster. 
 
-Wordfence Security is 100% free. We also offer a Premium API key that gives you access to our premium support ticketing system at [support.wordfence.com](http://support.wordfence.com/) along with two factor authentication via SMS, country blocking and the ability to schedule scans for specific times.
+Wordfence Security is 100% free and open source. We also offer a Premium API key that gives you Premium Support, Country Blocking, Scheduled Scans, Password Auditing and we even check if your website IP address is being used to Spamvertize. [Click here to sign-up for Wordfence Premium now](http://www.wordfence.com/?utm_source=repo&utm_medium=web&utm_campaign=pluginDescCTA) or simply install Wordfence free and start protecting your website.
 
-You can find our official documentation at [docs.wordfence.com](http://docs.wordfence.com/) and our Frequently Asked Questions on our support portal at [support.wordfence.com](https://support.wordfence.com/solution/categories/1000023037/folders/1000035543). We are also active in our community support forums on [wordpress.org](https://wordpress.org/support/plugin/wordfence) if you are one of our free users.
+You can find our official documentation at [docs.wordfence.com](http://docs.wordfence.com/?utm_source=repo&utm_medium=web&utm_campaign=pluginDesc) and our Frequently Asked Questions on our support portal at [support.wordfence.com](https://support.wordfence.com/solution/categories/1000023037/folders/1000035543?utm_source=repo&utm_medium=web&utm_campaign=pluginDesc). We are also active in our community support forums on [wordpress.org](https://wordpress.org/support/plugin/wordfence) if you are one of our free users. Our Premium Support Ticket System is at [support.wordfence.com](https://support.wordfence.com/?utm_source=repo&utm_medium=web&utm_campaign=pluginDesc).
 
 This is a brief introductory video for Wordfence:
 
@@ -85,7 +85,7 @@ To install Wordfence Security on WordPress Multi-Site installations:
 
 == Frequently Asked Questions ==
 
-[Visit our support website which contains a FAQ and knowledgebase which is more comprehensive and updated frequently.](http://support.wordfence.com/)
+[Visit our support website which contains a FAQ and knowledgebase which is more comprehensive and updated frequently.](http://support.wordfence.com/?utm_source=repo&utm_medium=web&utm_campaign=pluginDesc)
 
 = What does Wordfence Security do that other WordPress security plugins don't do? =
 
@@ -119,7 +119,7 @@ that we can blog any security threat as soon as it emerges in the wild.
 = What if I need support? =
 
 All our paid customers receive priority support. Excellent customer service is a key part
-of being a Wordfence Security member. As free or Premium member can visit [support.wordfence.com](http://support.wordfence.com/) and where you will find out knowledgebase. If you're a Premium member you can also open a support ticket.
+of being a Wordfence Security member. As free or Premium member can visit [support.wordfence.com](http://support.wordfence.com/?utm_source=repo&utm_medium=web&utm_campaign=pluginDesc) and where you will find out knowledgebase. If you're a Premium member you can also open a support ticket.
 
 = Can I disable certain security features of Wordfence Security? =
 
@@ -171,6 +171,16 @@ fully compatible with both IPv4 and IPv6 whether you run both or only one addres
 5. If you're technically minded, this is the under-the-hood view of Wordfence Security options where you can fine-tune your security settings.
 
 == Changelog ==
+
+= 6.0.7 =
+* Fix: Fixed bug with Top 5 Logins displaying all failed logins opposed to timeframe set by email frequency. 
+* Fix: Fixed bug with /?author=N scan protection not working for authors with no published posts.
+* Improvement: Fixed Wordfence logo width in dashboard widget on smaller screens.
+* Improvement: Added country names to flag icons in widget dashboard. 
+* Improvement: Updated issues email to use WordPress' charset instead of ISO-8859-1. 
+* Improvement: Added check to see if premium API key is set to auto-renew and send email reminder prior to renewal. 
+* Improvement: Updated to API version 2.17.
+* Improvement: Changed auto-renew reminder email to go out 10 days before renewal, 12 days before expiration. 
 
 = 6.0.6 =
 * Improvement: Handled uncaught exception when noc1 is not available in 2FA.

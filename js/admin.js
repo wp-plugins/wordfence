@@ -55,6 +55,25 @@
 
 				$(document).focus();
 
+				// (docs|support).wordfence.com GA links
+				$(document).on('click', 'a', function() {
+					if (this.href && this.href.indexOf('utm_source') > -1) {
+						return;
+					}
+					var utm = '';
+					if (this.host == 'docs.wordfence.com') {
+						utm = 'utm_source=plugin&utm_medium=pluginUI&utm_campaign=docsIcon';
+					}
+					if (utm) {
+						utm = (this.search ? '&' : '?') + utm;
+						this.href = this.protocol + '//' + this.host + this.pathname + this.search + utm + this.hash;
+					}
+
+					if (this.href == 'http://support.wordfence.com/') {
+						this.href = 'https://support.wordfence.com/support/home?utm_source=plugin&utm_medium=pluginUI&utm_campaign=supportLink';
+					}
+				});
+
 				if (jQuery('#wordfenceMode_scan').length > 0) {
 					this.mode = 'scan';
 					jQuery('#wfALogViewLink').prop('href', WordfenceAdminVars.siteBaseURL + '?_wfsf=viewActivityLog&nonce=' + this.nonce);

@@ -150,29 +150,39 @@ class wordfence {
 		if(isset($keyData['_isPaidKey']) && $keyData['_isPaidKey']){
 			$keyExpDays = $keyData['_keyExpDays'];
 			$keyIsExpired = $keyData['_expired'];
-			if($keyExpDays > 15){
-				wfConfig::set('keyExp15Sent', '');
-				wfConfig::set('keyExp7Sent', '');
-				wfConfig::set('keyExp2Sent', '');
-				wfConfig::set('keyExp1Sent', '');
-				wfConfig::set('keyExpFinalSent', '');
-			} else if($keyExpDays <= 15 && $keyExpDays > 0){
-				if($keyExpDays <= 15 && $keyExpDays >= 11 && (! wfConfig::get('keyExp15Sent'))){
-					wfConfig::set('keyExp15Sent', 1);
-					self::keyAlert("Your Premium Wordfence API Key expires in less than 2 weeks.");
-				} else if($keyExpDays <= 7 && $keyExpDays >= 4 && (! wfConfig::get('keyExp7Sent'))){
-					wfConfig::set('keyExp7Sent', 1);
-					self::keyAlert("Your Premium Wordfence API Key expires in less than a week.");
-				} else if($keyExpDays == 2 && (! wfConfig::get('keyExp2Sent'))){
-					wfConfig::set('keyExp2Sent', 1);
-					self::keyAlert("Your Premium Wordfence API Key expires in 2 days.");
-				} else if($keyExpDays == 1 && (! wfConfig::get('keyExp1Sent'))){
-					wfConfig::set('keyExp1Sent', 1);
-					self::keyAlert("Your Premium Wordfence API Key expires in 1 day.");
+			if (!empty($keyData['_autoRenew'])) {
+				if ($keyExpDays > 12) {
+					wfConfig::set('keyAutoRenew10Sent', '');
+				} else if ($keyExpDays <= 12 && $keyExpDays > 0 && !wfConfig::get('keyAutoRenew10Sent')) {
+					wfConfig::set('keyAutoRenew10Sent', 1);
+					$email = "Your Premium Wordfence API Key is set to auto-renew in 10 days.";
+					self::alert($email, "$email To update your API key settings please visit http://www.wordfence.com/zz9/dashboard", false);
 				}
-			} else if($keyIsExpired && (! wfConfig::get('keyExpFinalSent')) ){
-				wfConfig::set('keyExpFinalSent', 1);
-				self::keyAlert("Your Wordfence Premium API Key has Expired!");
+			} else {
+				if($keyExpDays > 15){
+					wfConfig::set('keyExp15Sent', '');
+					wfConfig::set('keyExp7Sent', '');
+					wfConfig::set('keyExp2Sent', '');
+					wfConfig::set('keyExp1Sent', '');
+					wfConfig::set('keyExpFinalSent', '');
+				} else if($keyExpDays <= 15 && $keyExpDays > 0){
+					if($keyExpDays <= 15 && $keyExpDays >= 11 && (! wfConfig::get('keyExp15Sent'))){
+						wfConfig::set('keyExp15Sent', 1);
+						self::keyAlert("Your Premium Wordfence API Key expires in less than 2 weeks.");
+					} else if($keyExpDays <= 7 && $keyExpDays >= 4 && (! wfConfig::get('keyExp7Sent'))){
+						wfConfig::set('keyExp7Sent', 1);
+						self::keyAlert("Your Premium Wordfence API Key expires in less than a week.");
+					} else if($keyExpDays == 2 && (! wfConfig::get('keyExp2Sent'))){
+						wfConfig::set('keyExp2Sent', 1);
+						self::keyAlert("Your Premium Wordfence API Key expires in 2 days.");
+					} else if($keyExpDays == 1 && (! wfConfig::get('keyExp1Sent'))){
+						wfConfig::set('keyExp1Sent', 1);
+						self::keyAlert("Your Premium Wordfence API Key expires in 1 day.");
+					}
+				} else if($keyIsExpired && (! wfConfig::get('keyExpFinalSent')) ){
+					wfConfig::set('keyExpFinalSent', 1);
+					self::keyAlert("Your Wordfence Premium API Key has Expired!");
+				}
 			}
 		}
 
@@ -559,9 +569,6 @@ class wordfence {
 		define('WFDONOTCACHE', true); //Don't cache jetpack mobile theme pages.
 	}
 	public static function wpRedirectFilter($URL, $status){
-		if(isset($_GET['author']) && preg_match('/\/author\/.+/i', $URL) && wfConfig::get('loginSec_disableAuthorScan') ){ //author query variable is present and we're about to redirect to a URL that starts with http://blah/author/...
-			return home_url(); //Send the user to the home URL (as opposed to site_url() which is not the home page on some sites)
-		}
 		return $URL;
 	}
 	public static function ajax_testAjax_callback(){
@@ -1140,7 +1147,7 @@ class wordfence {
 	}
 	public static function ajax_addTwoFactor_callback(){
 		if(! wfConfig::get('isPaid')){
-			return array('errorMsg' => 'Cellphone Sign-in is only available to paid members. <a href="https://www.wordfence.com/wordfence-signup/" target="_blank">Click here to upgrade now.</a>');
+			return array('errorMsg' => 'Cellphone Sign-in is only available to paid members. <a href="https://www.wordfence.com/gnl1twoFac3/wordfence-signup/" target="_blank">Click here to upgrade now.</a>');
 		}
 		$username = sanitize_text_field($_POST['username']);
 		$phone = sanitize_text_field($_POST['phone']);
@@ -2594,6 +2601,11 @@ class wordfence {
 		wfScanEngine::startScan();
 	}
 	public static function templateRedir(){
+		// prevent /?author=N scans from disclosing usernames.
+		if (wfConfig::get('loginSec_disableAuthorScan') && is_author() && !empty($_GET['author']) && is_numeric($_GET['author'])) {
+			wp_redirect(home_url());
+		}
+
 		$wfFunc = get_query_var('_wfsf');
 
 		//Logging
