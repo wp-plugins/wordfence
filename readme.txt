@@ -173,8 +173,8 @@ fully compatible with both IPv4 and IPv6 whether you run both or only one addres
 == Changelog ==
 
 = 6.0.7 =
-* Fix: Fixed bug with Top 5 Logins displaying all failed logins opposed to timeframe set by email frequency. 
-* Fix: Fixed bug with /?author=N scan protection not working for authors with no published posts.
+* Fix: Fixed bug with Top Five Logins displaying all failed logins opposed to timeframe set by email frequency. 
+* Fix: Fixed bug with author=N scan protection not working for authors with no published posts.
 * Improvement: Fixed Wordfence logo width in dashboard widget on smaller screens.
 * Improvement: Added country names to flag icons in widget dashboard. 
 * Improvement: Updated issues email to use WordPress' charset instead of ISO-8859-1. 
