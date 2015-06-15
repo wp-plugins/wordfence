@@ -129,33 +129,7 @@ class wfIssues {
 			'level' => $level
 			));
 		
-		require_once ABSPATH . WPINC . '/class-phpmailer.php';
-		require_once ABSPATH . WPINC . '/class-smtp.php';
-		$mail = new PHPMailer;
-		
-		// Get the site domain and get rid of www.
-		$from_email = 'wordpress@' . preg_replace('/^(https?:\/\/(www.)?)(.+?)(\/)?$/', '$3', site_url());
-		
-		$mail->From = apply_filters( 'wp_mail_from', $from_email );
-		$mail->FromName = apply_filters( 'wp_mail_from_name', 'Wordfence' );
-		
-		foreach ($emails as $email) {
-			try {
-				$mail->addAddress($email);
-			} catch (phpmailerException $e) {
-				
-			}
-		}
-		
-		$mail->Subject = $subject;
-		$mail->msgHTML($content);
-		
-		try {
-			$mail->send();
-		} catch (phpmailerException $e) {
-			// use wp_mail if there's a problem (which uses PHPMailer anyways :P)
-			wp_mail(implode(',', $emails), $subject, strip_tags($content));
-		}
+		wp_mail(implode(',', $emails), $subject, $content, 'Content-type: text/html');
 	}
 	public function deleteIssue($id){ 
 		$this->getDB()->queryWrite("delete from " . $this->issuesTable . " where id=%d", $id);
