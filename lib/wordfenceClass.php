@@ -2021,7 +2021,7 @@ class wordfence {
 	}
 	public static function ajax_blockIP_callback(){
 		$IP = trim($_POST['IP']);
-		$perm = $_POST['perm'] == '1' ? true : false;
+		$perm = (isset($_POST['perm']) && $_POST['perm'] == '1') ? true : false;
 		if (!wfUtils::isValidIP($IP)) {
 			return array('err' => 1, 'errorMsg' => "Please enter a valid IP address to block.");
 		}
@@ -2250,6 +2250,17 @@ class wordfence {
 		$localFile = realpath($localFile);
 		if(strpos($localFile, ABSPATH) !== 0){
 			return array('errorMsg' => "An invalid file was requested for deletion.");
+		}
+		if ($localFile === ABSPATH . 'wp-config.php' && file_exists(ABSPATH . 'wp-config.php') && empty($_POST['forceDelete'])) {
+			return array(
+				'errorMsg' => "You must first download a backup copy of your <code>wp-config.php</code> prior to deleting the infected file.
+				The <code>wp-config.php</code> file contains your database credentials which you will need to restore normal site operations.
+				Your site will <b>NOT</b> function once the <code>wp-config.php</code> has been deleted.
+				<p>
+					<a class='button' href='/?_wfsf=download&nonce=" . wp_create_nonce('wp-ajax') . "&file=". rawurlencode($file) ."' target='_blank' onclick=\"jQuery('#wp-config-force-delete').show();\">Download a backup copy</a>
+					<a style='display:none' id='wp-config-force-delete' class='button' href='#' target='_blank' onclick='WFAD.deleteFile($issueID, true); return false;'>Delete wp-config.php</a>
+				</p>",
+			);
 		}
 		if(@unlink($localFile)){
 			$wfIssues->updateIssue($issueID, 'delete');
@@ -2613,7 +2624,7 @@ class wordfence {
 		//End logging
 
 
-		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'viewOption' || $wfFunc == 'sysinfo' || $wfFunc == 'cronview' || $wfFunc == 'dbview' || $wfFunc == 'conntest' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime')){
+		if(! ($wfFunc == 'diff' || $wfFunc == 'view' || $wfFunc == 'viewOption' || $wfFunc == 'sysinfo' || $wfFunc == 'cronview' || $wfFunc == 'dbview' || $wfFunc == 'conntest' || $wfFunc == 'unknownFiles' || $wfFunc == 'IPTraf' || $wfFunc == 'viewActivityLog' || $wfFunc == 'testmem' || $wfFunc == 'testtime' || $wfFunc == 'download')){
 			return;
 		}
 		if(! wfUtils::isAdmin()){
@@ -2649,6 +2660,8 @@ class wordfence {
 			self::wfFunc_testmem();
 		} else if($wfFunc == 'testtime'){
 			self::wfFunc_testtime();
+		} else if($wfFunc == 'download'){
+			self::wfFunc_download();
 		}
 		exit(0);
 	}
@@ -2797,7 +2810,7 @@ EOL;
 	}
 
 	public static function wfFunc_view(){
-		$localFile = ABSPATH . '/' . preg_replace('/^(?:\.\.|[\/]+)/', '', sanitize_text_field($_GET['file']));
+		$localFile = ABSPATH . preg_replace('/^(?:\.\.|[\/]+)/', '', sanitize_text_field($_GET['file']));
 		if(strpos($localFile, '..') !== false){
 			echo "Invalid file requested. (Relative paths not allowed)";
 			exit();
@@ -2863,6 +2876,29 @@ EOL;
 		require 'diffResult.php';
 		exit(0);
 	}
+
+	public static function wfFunc_download() {
+		$localFile = ABSPATH . preg_replace('/^(?:\.\.|[\/]+)/', '', sanitize_text_field($_GET['file']));
+		if (strpos($localFile, '..') !== false) {
+			echo "Invalid file requested. (Relative paths not allowed)";
+			exit();
+		}
+		if (preg_match('/[\'\"<>\!\{\}\(\)\&\@\%\$\*\+\[\]\?]+/', $localFile)) {
+			echo "File contains illegal characters.";
+			exit();
+		}
+		if (!file_exists($localFile)) {
+			exit('File does not exist.');
+		}
+
+		$filename = basename($localFile);
+		header('Content-Type: application/octet-stream');
+		header('Content-Disposition: attachment; filename="' . $filename . '"');
+		header('Content-Length: ' . filesize($localFile));
+		readfile($localFile);
+		exit;
+	}
+
 	public static function initAction(){
 		global $wp;
 		if (!is_object($wp)) return; //Suggested fix for compatability with "Portable phpmyadmin"
@@ -2884,7 +2920,19 @@ EOL;
 	}
 	public static function admin_init(){
 		if(! wfUtils::isAdmin()){ return; }
-		foreach(array('activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'startPasswdAudit', 'deletePasswdAudit', 'weakPasswordsFix', 'passwdLoadResults', 'killPasswdAudit', 'passwdLoadJobs', 'exportSettings', 'importSettings', 'bulkOperation', 'deleteFile', 'deleteDatabaseOption', 'removeExclusion', 'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues', 'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP', 'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess', 'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache', 'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed', 'welcomeClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel', 'loadTwoFactor', 'loadAvgSitePerf', 'sendTestEmail', 'addCacheExclusion', 'removeCacheExclusion', 'loadCacheExclusions', 'email_summary_email_address_debug') as $func){
+		foreach(array(
+			'activate', 'scan', 'updateAlertEmail', 'sendActivityLog', 'restoreFile', 'startPasswdAudit',
+			'deletePasswdAudit', 'weakPasswordsFix', 'passwdLoadResults', 'killPasswdAudit', 'passwdLoadJobs',
+			'exportSettings', 'importSettings', 'bulkOperation', 'deleteFile', 'deleteDatabaseOption', 'removeExclusion',
+			'activityLogUpdate', 'ticker', 'loadIssues', 'updateIssueStatus', 'deleteIssue', 'updateAllIssues',
+			'reverseLookup', 'unlockOutIP', 'loadBlockRanges', 'unblockRange', 'blockIPUARange', 'whois', 'unblockIP',
+			'blockIP', 'permBlockIP', 'loadStaticPanel', 'saveConfig', 'downloadHtaccess', 'checkFalconHtaccess',
+			'updateConfig', 'saveCacheConfig', 'removeFromCache', 'autoUpdateChoice', 'saveCacheOptions', 'clearPageCache',
+			'getCacheStats', 'clearAllBlocked', 'killScan', 'saveCountryBlocking', 'saveScanSchedule', 'tourClosed',
+			'welcomeClosed', 'startTourAgain', 'downgradeLicense', 'addTwoFactor', 'twoFacActivate', 'twoFacDel',
+			'loadTwoFactor', 'loadAvgSitePerf', 'sendTestEmail', 'addCacheExclusion', 'removeCacheExclusion',
+			'loadCacheExclusions', 'email_summary_email_address_debug', 'unblockNetwork', 'permanentlyBlockAllIPs',
+		) as $func){
 			add_action('wp_ajax_wordfence_' . $func, 'wordfence::ajaxReceiver');
 		}
 
@@ -3351,6 +3399,39 @@ EOL;
 			$content .= '<br />' . self::$authError->get_error_message();
 		}
 		return $content;
+	}
+
+	/**
+	 * Permanently blocks all temporarily locked out IPs.
+	 */
+	public static function ajax_permanentlyBlockAllIPs_callback() {
+		/** @var wpdb $wpdb */
+		global $wpdb;
+		$IPs = array();
+		$type = !empty($_REQUEST['type']) ? $_REQUEST['type'] : null;
+		$reason = !empty($_REQUEST['reason']) ? $_REQUEST['reason'] : 'Manual block by administrator';
+		switch ($type) {
+			case 'throttled':
+				$IPs = $wpdb->get_col('SELECT DISTINCT IP FROM ' . $wpdb->base_prefix . 'wfThrottleLog');
+				break;
+			case 'lockedOut':
+				$lockoutSecs = wfConfig::get('loginSec_lockoutMins') * 60;
+				$IPs = $wpdb->get_col($wpdb->prepare('SELECT DISTINCT IP FROM ' . $wpdb->base_prefix . 'wfLockedOut
+				WHERE blockedTime + %d > UNIX_TIMESTAMP()', $lockoutSecs));
+				break;
+			case 'blocked':
+				$blockedTime = wfConfig::get('blockedTime');
+				$IPs = $wpdb->get_col($wpdb->prepare('SELECT DISTINCT IP FROM ' . $wpdb->base_prefix . 'wfBlocks
+				WHERE wfsn = 0
+				AND permanent = 0
+				AND blockedTime + %d > UNIX_TIMESTAMP()', $blockedTime));
+				break;
+		}
+		foreach ($IPs as $IP) {
+			self::getLog()->blockIP(wfUtils::inet_ntop($IP), $reason, false, true);
+		}
+
+		return array('ok' => 1);
 	}
 }
 ?>
