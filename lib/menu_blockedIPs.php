@@ -59,6 +59,7 @@
 {{/each}}
 </table>
 </div>
+<!--<p><a class="button" href="#" onclick="WFAD.permanentlyBlockAllIPs('throttled'); return false;">Permanently block all throttled IP addresses</a></p>-->
 </div>
 </script>
 
@@ -87,7 +88,7 @@
 	</div>
 	<div>
 		{{if lastAttemptAgo}}
-			<span class="wfTimeAgo">Last blocked attempt to sign-in or use the forgot password form was ${lastAttemptAgo} ago.</span>
+			<span class="wfTimeAgo">Last blocked attempt to sign-in or use the forgot password form was <span class="wfTimeAgo-timestamp" data-timestamp="${lastAttempt}">${lastAttemptAgo} ago</span>.</span>
 		{{else}}
 			<span class="wfTimeAgo">No attempts have been made to sign-in or use the forgot password form since this IP was locked out.</span>
 		{{/if}}
@@ -102,6 +103,7 @@
 {{/each}}
 </table>
 </div>
+<p><a class="button" href="#" onclick="WFAD.permanentlyBlockAllIPs('lockedOut'); return false;">Permanently block all locked out IP addresses</a></p>
 </div>
 </script>
 
@@ -133,14 +135,14 @@
 	</div>
 	<div>
 		{{if lastAttemptAgo}}
-			<span class="wfTimeAgo">Last blocked attempt to access the site was ${lastAttemptAgo} ago.</span>
+			<span class="wfTimeAgo">Last blocked attempt to access the site was <span class="wfTimeAgo-timestamp" data-timestamp="${lastAttempt}">${lastAttemptAgo} ago</span>.</span>
 		{{else}}
 			<span class="wfTimeAgo">No attempts have been made to access the site since this IP was blocked.</span>
 		{{/if}}
 	</div>
 	<div>
 		{{if lastHitAgo}}
-			<span class="wfTimeAgo">Last site access before this IP was blocked was ${lastHitAgo} ago.</span>
+			<span class="wfTimeAgo">Last site access before this IP was blocked was <span class="wfTimeAgo-timestamp" data-timestamp="${lastHit}">${lastHitAgo} ago</span></span>
 		{{/if}}
 	</div>
 </td>
@@ -157,6 +159,7 @@
 {{/each}}
 </table>
 </div>
+<p><a class="button" href="#" onclick="WFAD.permanentlyBlockAllIPs('blocked'); return false;">Permanently block all temporarily blocked IP addresses</a></p>
 </div>
 </script>
 

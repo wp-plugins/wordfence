@@ -3,7 +3,7 @@ Contributors: mmaunder
 Tags: wordpress, security, performance, speed, caching, cache, caching plugin, wordpress cache, wordpress caching, wordpress security, security plugin, secure, anti-virus, malware, firewall, antivirus, virus, google safe browsing, phishing, scrapers, hacking, wordfence, securty, secrity, secure, two factor, cellphone sign-in, cellphone signin, cellphone, twofactor, security, secure, htaccess, login, log, users, login alerts, lock, chmod, maintenance, plugin, private, privacy, protection, permissions, 503, base64, injection, code, encode, script, attack, hack, hackers, block, blocked, prevent, prevention, RFI, XSS, CRLF, CSRF, SQL Injection, vulnerability, website security, WordPress security, security log, logging, HTTP log, error log, login security, personal security, infrastructure security, firewall security, front-end security, web server security, proxy security, reverse proxy security, secure website, secure login, two factor security, maximum login security, heartbleed, heart bleed, heartbleed vulnerability, openssl vulnerability, nginx, litespeed, php5-fpm, woocommerce support, woocommerce caching, IPv6, IP version 6
 Requires at least: 3.9
 Tested up to: 4.2.2
-Stable tag: 6.0.7
+Stable tag: 6.0.8
 
 Wordfence Security is a free enterprise class security and performance plugin that makes your site up to 50 times faster and more secure. 
 
@@ -172,15 +172,24 @@ fully compatible with both IPv4 and IPv6 whether you run both or only one addres
 
 == Changelog ==
 
+= 6.0.8 =
+* Improvement: Added the local time stamp to 'time since' labels in Live Traffic and Blocked IPs pages.
+* Improvement: Added a check to prompt the admin to download a backup copy of the wp-config.php in the event it's flagged as containing malware.
+* Improvement: Added option in Live Traffic to remove a blocked network range defined in Advanced Blocking in the Live Traffic feed for IPs within that range.
+* Improvement: Added option to permanently block all IPs that are currently temporarily blocked or locked out from the Blocked IPs page.
+* Improvement: Updated local GeoIP database.
+* Fix: Fixed double forward slash in file path in the 'View the File' action of malicious code scan.
+* Fix: Fixed notice in block IP JSON callback.
+
 = 6.0.7 =
-* Fix: Fixed bug with Top Five Logins displaying all failed logins opposed to timeframe set by email frequency. 
-* Fix: Fixed bug with author=N scan protection not working for authors with no published posts.
+* Fix: Fixed bug with Top 5 Logins displaying all failed logins opposed to timeframe set by email frequency.
+* Fix: Fixed bug with /?author=N scan protection not working for authors with no published posts.
 * Improvement: Fixed Wordfence logo width in dashboard widget on smaller screens.
-* Improvement: Added country names to flag icons in widget dashboard. 
-* Improvement: Updated issues email to use WordPress' charset instead of ISO-8859-1. 
-* Improvement: Added check to see if premium API key is set to auto-renew and send email reminder prior to renewal. 
+* Improvement: Added country names to flag icons in widget dashboard.
+* Improvement: Updated issues email to use WordPress' charset instead of ISO-8859-1.
+* Improvement: Added check to see if premium API key is set to auto-renew and send email reminder prior to renewal.
 * Improvement: Updated to API version 2.17.
-* Improvement: Changed auto-renew reminder email to go out 10 days before renewal, 12 days before expiration. 
+* Improvement: Changed auto-renew reminder email to go out 10 days before renewal, 12 days before expiration.
 
 = 6.0.6 =
 * Improvement: Handled uncaught exception when noc1 is not available in 2FA.
