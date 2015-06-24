@@ -459,11 +459,10 @@ class wfLog {
 			wordfence::status(1, 'error', "Invalid type to getLeechers(): $type");
 			return false;
 		}
-		$results = $this->getDB()->querySelect("select IP, sum(hits) as totalHits from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
+		$results = $this->getDB()->querySelect("select IP, sum(hits) as totalHits, eMin * 60 as timestamp, (UNIX_TIMESTAMP() - (eMin * 60)) as timeAgo  from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
-			$elem['timestamp'] = $this->getDB()->querySingle("select unix_timestamp() - (eMin * 60) from $table where IP=%s", $elem['IP']);
-			$elem['timeAgo'] = wfUtils::makeTimeAgo($elem['timestamp']);
+			$elem['timeAgo'] = wfUtils::makeTimeAgo($elem['timeAgo']);
 			$elem['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and ((blockedTime + %s > unix_timestamp()) OR permanent = 1)", $elem['IP'], wfConfig::get('blockedTime'));
 			//take action
 			$elem['IP'] = wfUtils::inet_ntop($elem['IP']);
@@ -578,6 +577,11 @@ class wfLog {
 			list($blocked_range) = explode('|', $advanced_blocking_row['blockString']);
 			$blocked_range = explode('-', $blocked_range);
 			if (count($blocked_range) == 2) {
+				// Still using v5 32 bit int style format.
+				if (!preg_match('/[\.:]/', $blocked_range[0])) {
+					$blocked_range[0] = long2ip($blocked_range[0]);
+					$blocked_range[1] = long2ip($blocked_range[1]);
+				}
 				$advanced_blocking[] = array(wfUtils::inet_pton($blocked_range[0]), wfUtils::inet_pton($blocked_range[1]), $advanced_blocking_row['id']);
 			}
 		}

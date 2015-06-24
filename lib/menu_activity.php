@@ -88,7 +88,7 @@
 		<span class="wfReverseLookup"><span style="display:none;">${elem.IP}</span></span>
 	</div>
 	<div>
-		<span class="wfTimeAgo wfTimeAgo-timestamp">Last hit was ${elem.timeAgo} ago.</span>
+		<span class="wfTimeAgo wfTimeAgo-timestamp" data-timestamp="${elem.timestamp}">Last hit was ${elem.timeAgo} ago.</span>
 	</div>
 </td>
 <td style="font-size: 28px; color: #999;">

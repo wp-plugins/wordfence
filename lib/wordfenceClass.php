@@ -486,7 +486,7 @@ class wordfence {
 		add_action('wordfence_hourly_cron', 'wordfence::hourlyCron');
 		add_action('plugins_loaded', 'wordfence::veryFirstAction');
 		add_action('init', 'wordfence::initAction');
-		add_action('template_redirect', 'wordfence::templateRedir');
+		add_action('template_redirect', 'wordfence::templateRedir', 0);
 		add_action('shutdown', 'wordfence::shutdownAction');
 
 		if(version_compare(PHP_VERSION, '5.4.0') >= 0){
@@ -2615,6 +2615,7 @@ class wordfence {
 		// prevent /?author=N scans from disclosing usernames.
 		if (wfConfig::get('loginSec_disableAuthorScan') && is_author() && !empty($_GET['author']) && is_numeric($_GET['author'])) {
 			wp_redirect(home_url());
+			exit;
 		}
 
 		$wfFunc = get_query_var('_wfsf');
