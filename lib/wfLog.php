@@ -426,7 +426,8 @@ class wfLog {
 			//$lastLeech will be true because we use aggregation functions, so check actual values
 			if($lastLeech['lastHit']){ 
 				$totalHits += $lastLeech['totalHits']; 
-				$lastHitAgo = $serverTime - $lastLeech['lastHit']; 
+				$lastHitAgo = $serverTime - $lastLeech['lastHit'];
+				$elem['lastHit'] = $lastLeech['lastHit'];
 			}
 			$lastScan = $this->getDB()->querySingleRec("select max(eMin) * 60 as lastHit, sum(hits) as totalHits from " . $this->scanTable . " where IP=%s", $elem['IP']);
 			if($lastScan['lastHit']){ //Checking actual value because we will get a row back from aggregation funcs
@@ -434,6 +435,7 @@ class wfLog {
 				$lastScanAgo = $serverTime - $lastScan['lastHit']; 
 				if($lastScanAgo < $lastHitAgo){
 					$lastHitAgo = $lastScanAgo;
+					$elem['lastHit'] = $lastScan['lastHit'];
 				}
 			}
 			$elem['totalHits'] = $totalHits;
@@ -457,10 +459,10 @@ class wfLog {
 			wordfence::status(1, 'error', "Invalid type to getLeechers(): $type");
 			return false;
 		}
-		$results = $this->getDB()->querySelect("select IP, sum(hits) as totalHits from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
+		$results = $this->getDB()->querySelect("select IP, sum(hits) as totalHits, eMin * 60 as timestamp, (UNIX_TIMESTAMP() - (eMin * 60)) as timeAgo  from $table where eMin > ((unix_timestamp() - 86400) / 60) group by IP order by totalHits desc limit 20");
 		$this->resolveIPs($results);
 		foreach($results as &$elem){
-			$elem['timeAgo'] = wfUtils::makeTimeAgo($this->getDB()->querySingle("select unix_timestamp() - (eMin * 60) from $table where IP=%s", $elem['IP']));
+			$elem['timeAgo'] = wfUtils::makeTimeAgo($elem['timeAgo']);
 			$elem['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and ((blockedTime + %s > unix_timestamp()) OR permanent = 1)", $elem['IP'], wfConfig::get('blockedTime'));
 			//take action
 			$elem['IP'] = wfUtils::inet_ntop($elem['IP']);
@@ -568,10 +570,35 @@ class wfLog {
 		$ourHost = strtolower($ourURL['host']);
 		$ourHost = preg_replace('/^www\./i', '', $ourHost);
 		$browscap = new wfBrowscap();
-		foreach($results as &$res){ 
+
+		$advanced_blocking_results = $this->getDB()->querySelect('SELECT * FROM ' . $this->ipRangesTable);
+		$advanced_blocking = array();
+		foreach ($advanced_blocking_results as $advanced_blocking_row) {
+			list($blocked_range) = explode('|', $advanced_blocking_row['blockString']);
+			$blocked_range = explode('-', $blocked_range);
+			if (count($blocked_range) == 2) {
+				// Still using v5 32 bit int style format.
+				if (!preg_match('/[\.:]/', $blocked_range[0])) {
+					$blocked_range[0] = long2ip($blocked_range[0]);
+					$blocked_range[1] = long2ip($blocked_range[1]);
+				}
+				$advanced_blocking[] = array(wfUtils::inet_pton($blocked_range[0]), wfUtils::inet_pton($blocked_range[1]), $advanced_blocking_row['id']);
+			}
+		}
+
+		foreach($results as &$res){
 			$res['type'] = $type;
 			$res['timeAgo'] = wfUtils::makeTimeAgo($serverTime - $res['ctime']);
 			$res['blocked'] = $this->getDB()->querySingle("select blockedTime from " . $this->blocksTable . " where IP=%s and (permanent = 1 OR (blockedTime + %s > unix_timestamp()))", $res['IP'], wfConfig::get('blockedTime'));
+			$res['rangeBlocked'] = false;
+			$res['ipRangeID'] = -1;
+			foreach ($advanced_blocking as $advanced_blocking_row) {
+				if (strcmp($res['IP'], $advanced_blocking_row[0]) >= 0 && strcmp($res['IP'], $advanced_blocking_row[1]) <= 0) {
+					$res['rangeBlocked'] = true;
+					$res['ipRangeID'] = $advanced_blocking_row[2];
+					break;
+				}
+			}
 			$res['IP'] = wfUtils::inet_ntop($res['IP']);
 			$res['extReferer'] = false;
 			if(isset( $res['referer'] ) && $res['referer']){

@@ -88,7 +88,7 @@
 		<span class="wfReverseLookup"><span style="display:none;">${elem.IP}</span></span>
 	</div>
 	<div>
-		<span class="wfTimeAgo">Last hit was ${elem.timeAgo} ago.</span>
+		<span class="wfTimeAgo wfTimeAgo-timestamp" data-timestamp="${elem.timestamp}">Last hit was ${elem.timeAgo} ago.</span>
 	</div>
 </td>
 <td style="font-size: 28px; color: #999;">
@@ -132,7 +132,7 @@
 		<span class="wfReverseLookup"><span style="display:none;">${IP}</span></span>
 	</div>
 	<div>
-		<span class="wfTimeAgo">${timeAgo} ago</span>
+		<span class="wfTimeAgo wfTimeAgo-timestamp">${timeAgo} ago</span>
 	</div>
 </div>
 </div>
@@ -168,9 +168,11 @@
 	{{/if}}
 <a href="${URL}" target="_blank">${URL}</a>
 </td></tr>
-<tr><td><span class="wfTimeAgo">${timeAgo} ago</span>&nbsp;&nbsp; <strong>IP:</strong> <a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a>
+<tr><td><span class="wfTimeAgo wfTimeAgo-timestamp">${timeAgo} ago</span>&nbsp;&nbsp; <strong>IP:</strong> <a href="${WFAD.makeIPTrafLink(IP)}" target="_blank">${IP}</a>
 	{{if blocked}}
 		[<a href="#" onclick="WFAD.unblockIP('${IP}'); return false;">unblock</a>]
+	{{else rangeBlocked}}
+		[<a href="#" onclick="WFAD.unblockNetwork('${ipRangeID}'); return false;">unblock this range</a>]
 	{{else}}
 		[<a href="#" onclick="WFAD.blockIP('${IP}', 'Manual block by administrator'); return false;">block</a>]
 	{{/if}}
@@ -181,6 +183,8 @@
 <tr><td>
 {{if blocked}}
 [<a href="#" onclick="WFAD.unblockIP('${IP}'); return false;">Unblock this IP</a>]
+{{else rangeBlocked}}
+[<a href="#" onclick="WFAD.unblockNetwork('${ipRangeID}'); return false;">Unblock this range</a>]
 {{else}}
 [<a href="#" onclick="WFAD.blockIP('${IP}', 'Manual block by administrator'); return false;">Block this IP</a>]
 {{/if}}
