@@ -201,10 +201,11 @@ ORDER BY blockCount DESC
 LIMIT %d
 SQL
 			, $limit));
-		foreach ($results as &$row) {
-			$row->countryName = $this->getCountryNameByCode($row->countryCode);
+		if ($results) {
+			foreach ($results as &$row) {
+				$row->countryName = $this->getCountryNameByCode($row->countryCode);
+			}
 		}
-
 		return $results;
 	}
 
@@ -227,8 +228,10 @@ ORDER BY totalBlockCount DESC
 LIMIT %d
 SQL
 			, $limit));
-		foreach ($results as &$row) {
-			$row->countryName = $this->getCountryNameByCode($row->countryCode);
+		if ($results) {
+			foreach ($results as &$row) {
+				$row->countryName = $this->getCountryNameByCode($row->countryCode);
+			}
 		}
 		return $results;
 	}

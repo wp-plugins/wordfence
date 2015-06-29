@@ -200,7 +200,7 @@ class wfScanEngine {
 					'siteURL' => site_url()
 					));
 				$haveIssues = false;
-				if($result['haveIssues'] && is_array($result['issues']) ){
+				if(!empty($result['haveIssues']) && is_array($result['issues']) ){
 					foreach($result['issues'] as $issue){
 						$this->addIssue($issue['type'], $issue['level'], $issue['ignoreP'], $issue['ignoreC'], $issue['shortMsg'], $issue['longMsg'], $issue['data']);
 						$haveIssues = true;
