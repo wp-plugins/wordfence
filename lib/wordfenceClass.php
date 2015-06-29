@@ -2350,6 +2350,9 @@ class wordfence {
 		}
 	}
 	public static function ajax_exportSettings_callback(){
+		/** @var wpdb $wpdb */
+		global $wpdb;
+
 		$keys = wfConfig::getExportableOptionsKeys();
 		$export = array();
 		foreach($keys as $key){
@@ -2357,6 +2360,12 @@ class wordfence {
 		}
 		$export['scanScheduleJSON'] = json_encode(wfConfig::get_ser('scanSched', array()));
 		$export['schedMode'] = wfConfig::get('schedMode', '');
+
+		// Any user supplied blocked IPs.
+		$export['_blockedIPs'] = $wpdb->get_results('SELECT *, HEX(IP) as IP FROM ' . $wpdb->base_prefix . 'wfBlocks WHERE wfsn = 0 AND permanent = 1');
+
+		// Any advanced blocking stuff too.
+		$export['_advancedBlocking'] = $wpdb->get_results('SELECT * FROM ' . $wpdb->base_prefix . 'wfBlocksAdv');
 
 		try {
 			$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
@@ -2374,6 +2383,9 @@ class wordfence {
 		}
 	}
 	public static function importSettings($token){
+		/** @var wpdb $wpdb */
+		global $wpdb;
+
 		$api = new wfAPI(wfConfig::get('apiKey'), wfUtils::getWPVersion());
 		$res = $api->call('import_options', array(), array('token' => $token));
 		$totalSet = 0;
@@ -2391,6 +2403,27 @@ class wordfence {
 				wfConfig::set('schedMode', $res['options']['schedMode']);
 				$totalSet += 2;
 			}
+
+			if (!empty($res['options']['_blockedIPs']) && is_array($res['options']['_blockedIPs'])) {
+				foreach ($res['options']['_blockedIPs'] as $row) {
+					if (!empty($row['IP'])) {
+						$row['IP'] = pack('H*', $row['IP']);
+						if (!$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . $wpdb->base_prefix . 'wfBlocks WHERE IP = %s', $row['IP']))) {
+							$wpdb->insert($wpdb->base_prefix . 'wfBlocks', $row);
+						}
+					}
+				}
+			}
+
+			if (!empty($res['options']['_advancedBlocking']) && is_array($res['options']['_advancedBlocking'])) {
+				foreach ($res['options']['_advancedBlocking'] as $row) {
+					if (!empty($row['blockString']) && !$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . $wpdb->base_prefix . 'wfBlocksAdv WHERE blockString = %s', $row['blockString']))) {
+						unset($row['id']);
+						$wpdb->insert($wpdb->base_prefix . 'wfBlocksAdv', $row);
+					}
+				}
+			}
+
 			return $totalSet;
 		} else if($res['err']){
 			throw new Exception($res['err']);
@@ -3428,10 +3461,21 @@ EOL;
 				AND blockedTime + %d > UNIX_TIMESTAMP()', $blockedTime));
 				break;
 		}
-		foreach ($IPs as $IP) {
-			self::getLog()->blockIP(wfUtils::inet_ntop($IP), $reason, false, true);
+		if ($IPs && is_array($IPs)) {
+			foreach ($IPs as $IP) {
+				self::getLog()->blockIP(wfUtils::inet_ntop($IP), $reason, false, true);
+			}
 		}
-
+		switch ($type) {
+			case 'lockedOut':
+				if ($IPs) {
+					foreach ($IPs as &$IP) {
+						$IP = $wpdb->prepare('%s', $IP);
+					}
+					$wpdb->query('DELETE FROM ' . $wpdb->base_prefix . 'wfLockedOut WHERE IP IN ('. join(', ', $IPs).')');
+				}
+				break;
+		}
 		return array('ok' => 1);
 	}
 }
