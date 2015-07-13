@@ -1371,6 +1371,7 @@
 				});
 			},
 			completeWhois: function(res) {
+				var self = this;
 				if (res.ok && res.result && res.result.rawdata && res.result.rawdata.length > 0) {
 					var rawhtml = "";
 					for (var i = 0; i < res.result.rawdata.length; i++) {
@@ -1381,7 +1382,6 @@
 						if (this.getQueryParam('wfnetworkblock')) {
 							redStyle = " style=\"color: #F00;\"";
 						}
-						var self = this;
 
 						function wfm21(str, ipRange, offset, totalStr) {
 							var ips = ipRange.split(/\s*\-\s*/);
@@ -1391,10 +1391,32 @@
 								var ip2num = self.inet_aton(ips[1]);
 								totalIPs = ip2num - ip1num + 1;
 							}
-							return "<a href=\"admin.php?page=WordfenceRangeBlocking&wfBlockRange=" + ipRange + "\"" + redStyle + ">" + ipRange + " [" + (!isNaN(totalIPs) ? "<strong>" + totalIPs + "</strong> addresses in this network." : "") + "Click to block this network]<\/a>";
+							return "<a href=\"admin.php?page=WordfenceRangeBlocking&wfBlockRange=" + ipRange + "\"" + redStyle + ">" + ipRange + " [" + (!isNaN(totalIPs) ? "<strong>" + totalIPs + "</strong> addresses in this network. " : "") + "Click to block this network]<\/a>";
+						}
+
+						function buildRangeLink2(str, octet1, octet2, octet3, octet4, cidrRange) {
+
+							octet3 = octet3.length > 0 ? octet3 : '0';
+							octet4 = octet4.length > 0 ? octet4 : '0';
+
+							var rangeStart = [octet1, octet2, octet3, octet4].join('.');
+							var rangeStartNum = self.inet_aton(rangeStart);
+							cidrRange = parseInt(cidrRange, 10);
+							if (!isNaN(rangeStartNum) && cidrRange > 0 && cidrRange < 32) {
+								var rangeEndNum = rangeStartNum;
+								for (var i = 32, j = 1; i >= cidrRange; i--, j *= 2) {
+									rangeEndNum |= j;
+								}
+								rangeEndNum = rangeEndNum >>> 0;
+								var ipRange = self.inet_ntoa(rangeStartNum) + '-' + self.inet_ntoa(rangeEndNum);
+								var totalIPs = rangeEndNum - rangeStartNum;
+								return "<a href=\"admin.php?page=WordfenceRangeBlocking&wfBlockRange=" + ipRange + "\"" + redStyle + ">" + ipRange + " [" + (!isNaN(totalIPs) ? "<strong>" + totalIPs + "</strong> addresses in this network. " : "") + "Click to block this network]<\/a>";
+							}
+							return str;
 						}
 
 						res.result.rawdata[i] = res.result.rawdata[i].replace(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-f0-9:.]{3,} - [a-f0-9:.]{3,})/i, wfm21);
+						res.result.rawdata[i] = res.result.rawdata[i].replace(/(\d{1,3})\.(\d{1,3})\.?(\d{0,3})\.?(\d{0,3})\/(\d{1,3})/i, buildRangeLink2);
 						rawhtml += res.result.rawdata[i] + "<br />";
 					}
 					jQuery('#wfrawhtml').html(rawhtml);
