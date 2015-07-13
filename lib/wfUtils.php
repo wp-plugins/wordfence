@@ -773,10 +773,10 @@ class wfUtils {
 		wfCache::doNotCache();
 	}
 	public static function isUABlocked($uaPattern){ // takes a pattern using asterisks as wildcards, turns it into regex and checks it against the visitor UA returning true if blocked
-		return fnmatch($uaPattern, $_SERVER['HTTP_USER_AGENT'], FNM_CASEFOLD);
+		return fnmatch($uaPattern, !empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '', FNM_CASEFOLD);
 	}
 	public static function isRefererBlocked($refPattern){
-		return fnmatch($refPattern, $_SERVER['HTTP_REFERER'], FNM_CASEFOLD);
+		return fnmatch($refPattern, !empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '', FNM_CASEFOLD);
 	}
 
 	/**
