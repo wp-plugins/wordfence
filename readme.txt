@@ -17,7 +17,7 @@ You can find our official documentation at [docs.wordfence.com](http://docs.word
 
 This is a brief introductory video for Wordfence:
 
-[vimeo http://vimeo.com/70908504]
+[vimeo http://vimeo.com/134150724]
 
 Wordfence Security is now Multi-Site compatible and includes Cellphone Sign-in which permanently secures your website from brute force hacks. 
 
