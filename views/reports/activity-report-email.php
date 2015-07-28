@@ -295,7 +295,7 @@ $title = 'Wordfence Activity for the week of ' . date_i18n(get_option('date_form
 				<div style="float: right;text-align: right;line-height:1.1;color: #666666;margin:20px 0 0;">
 					Activity for week of<br> <strong><?php echo date_i18n(get_option('date_format')) ?></strong>
 				</div>
-				<a href="http://www.wordfence.com/zz7/"><img src="http://www.wordfence.com/wp-content/themes/parallelus-salutation/wfCustomHome/images/wordfenceLogo.png" alt=""/></a>
+				<a href="http://www.wordfence.com/zz7/"><img src="http://www.wordfence.com/wp-content/themes/wordfence/img/logo.png" alt=""/></a>
 
 				<h2>Top 10 IP's Blocked</h2>
 

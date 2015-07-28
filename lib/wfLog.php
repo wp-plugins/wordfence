@@ -90,6 +90,25 @@ class wfLog {
 				return;
 			}
 
+			if ($type == '404') {
+				$allowed404s = wfConfig::get('allowed404s');
+				if (is_string($allowed404s)) {
+					$allowed404s = array_filter(explode("\n", $allowed404s));
+					$allowed404sPattern = '';
+					foreach ($allowed404s as $allowed404) {
+						$allowed404sPattern .= preg_replace('/\\\\\*/', '.*?', preg_quote($allowed404, '/')) . '|';
+					}
+					$uri = $_SERVER['REQUEST_URI'];
+					if (($index = strpos($uri, '?')) !== false) {
+						$uri = substr($uri, 0, $index);
+					}
+					if ($allowed404sPattern && preg_match('/^' . substr($allowed404sPattern, 0, -1) . '$/i', $uri)) {
+						return;
+					}
+				}
+			}
+
+
 			if($type == '404'){
 				$table = $this->scanTable;
 			} else if($type == 'hit'){
