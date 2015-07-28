@@ -613,6 +613,7 @@ class wordfence {
 			header('Content-type: text/javascript');
 			header("Connection: close");
 			header("Content-Length: 0");
+			header("X-Robots-Tag: noindex");
 		}
 		flush();
 		if(! $isCrawler){
@@ -2651,6 +2652,11 @@ class wordfence {
 			exit;
 		}
 
+		if (!empty($_GET['wordfence_logHuman'])) {
+			self::ajax_logHuman_callback();
+			exit;
+		}
+
 		$wfFunc = get_query_var('_wfsf');
 
 		//Logging
@@ -2779,8 +2785,8 @@ wfscr.src = url;
 EOL;
 	}
 	public static function wfLogHumanHeader(){
-		$URL = admin_url('admin-ajax.php?action=wordfence_logHuman&hid=' . wfUtils::encrypt(self::$hitID));
-		$URL = preg_replace('/^https?:/i', '', $URL);
+		$URL = site_url('/?wordfence_logHuman=1&hid=' . wfUtils::encrypt(self::$hitID));
+		$URL = addslashes(preg_replace('/^https?:/i', '', $URL));
 		#Load as external script async so we don't slow page down.
 		echo <<<EOL
 <script type="text/javascript">
