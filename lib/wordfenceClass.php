@@ -613,6 +613,7 @@ class wordfence {
 			header('Content-type: text/javascript');
 			header("Connection: close");
 			header("Content-Length: 0");
+			header("X-Robots-Tag: noindex");
 		}
 		flush();
 		if(! $isCrawler){
