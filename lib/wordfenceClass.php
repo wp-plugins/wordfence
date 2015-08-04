@@ -603,7 +603,7 @@ class wordfence {
 		$isCrawler = false;
 		if($UA){
 			$b = $browscap->getBrowser($UA);
-			if(!empty($b['Crawler'])){
+			if(!empty($b['Crawler']) || wfCrawl::isGoogleCrawler()){
 				$isCrawler = true;
 			}
 		}
@@ -614,6 +614,9 @@ class wordfence {
 			header("Connection: close");
 			header("Content-Length: 0");
 			header("X-Robots-Tag: noindex");
+			if (!$isCrawler) {
+				setcookie('wordfence_verifiedHuman', wp_create_nonce('wordfence_verifiedHuman' . $UA . wfUtils::getIP()), time() + 86400, '/');
+			}
 		}
 		flush();
 		if(! $isCrawler){
@@ -2788,18 +2791,41 @@ EOL;
 		$URL = site_url('/?wordfence_logHuman=1&hid=' . wfUtils::encrypt(self::$hitID));
 		$URL = addslashes(preg_replace('/^https?:/i', '', $URL));
 		#Load as external script async so we don't slow page down.
-		echo <<<EOL
+		echo <<<HTML
 <script type="text/javascript">
 (function(url){
-if(/(?:Chrome\/26\.0\.1410\.63 Safari\/537\.31|WordfenceTestMonBot)/.test(navigator.userAgent)){ return; }
-var wfscr = document.createElement('script');
-wfscr.type = 'text/javascript';
-wfscr.async = true;
-wfscr.src = url + '&r=' + Math.random();
-(document.getElementsByTagName('head')[0]||document.getElementsByTagName('body')[0]).appendChild(wfscr);
+	if(/(?:Chrome\/26\.0\.1410\.63 Safari\/537\.31|WordfenceTestMonBot)/.test(navigator.userAgent)){ return; }
+	var addEvent = function(evt, handler) {
+		if (window.addEventListener) {
+			document.addEventListener(evt, handler, false);
+		} else if (window.attachEvent) {
+			document.attachEvent('on' + evt, handler);
+		}
+	};
+	var removeEvent = function(evt, handler) {
+		if (window.removeEventListener) {
+			document.removeEventListener(evt, handler, false);
+		} else if (window.detachEvent) {
+			document.detachEvent('on' + evt, handler);
+		}
+	};
+	var evts = 'contextmenu dblclick drag dragend dragenter dragleave dragover dragstart drop keydown keypress keyup mousedown mousemove mouseout mouseover mouseup mousewheel scroll'.split(' ');
+	var logHuman = function() {
+		var wfscr = document.createElement('script');
+		wfscr.type = 'text/javascript';
+		wfscr.async = true;
+		wfscr.src = url + '&r=' + Math.random();
+		(document.getElementsByTagName('head')[0]||document.getElementsByTagName('body')[0]).appendChild(wfscr);
+		for (var i = 0; i < evts.length; i++) {
+			removeEvent(evts[i], logHuman);
+		}
+	};
+	for (var i = 0; i < evts.length; i++) {
+		addEvent(evts[i], logHuman);
+	}
 })('$URL');
 </script>
-EOL;
+HTML;
 	}
 	public static function shutdownAction(){
 	}

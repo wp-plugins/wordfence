@@ -496,7 +496,8 @@ class wfLog {
 				$headers[$matches[1]] = $v;
 			}
 		}
-		$this->getDB()->queryWrite("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s')", 
+		$ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+		$this->getDB()->queryWrite("insert into " . $this->hitsTable . " (ctime, is404, isGoogle, IP, userID, newVisit, URL, referer, UA, jsRun) values (%f, %d, %d, %s, %s, %d, '%s', '%s', '%s', %d)",
 			sprintf('%.6f', microtime(true)),
 			(is_404() ? 1 : 0),
 			(wfCrawl::isGoogleCrawler() ? 1 : 0),
@@ -505,7 +506,8 @@ class wfLog {
 			(wordfence::$newVisit ? 1 : 0),
 			wfUtils::getRequestedURL(),
 			(isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : ''),
-			(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '')
+			$ua,
+			(int) (isset($_COOKIE['wordfence_verifiedHuman']) && wp_verify_nonce($_COOKIE['wordfence_verifiedHuman'], 'wordfence_verifiedHuman' . $ua . wfUtils::getIP()))
 			);
 		return $this->getDB()->querySingle("select last_insert_id()");
 	}
