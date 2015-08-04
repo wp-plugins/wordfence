@@ -838,6 +838,16 @@ $w = new wfConfig();
 				</tr>
 
 				<tr>
+					<th style="vertical-align: top;">Whitelisted 404 URLs (one per line). </th>
+					<td><textarea name="allowed404s" id="" cols="40" rows="4"><?php echo $w->getHTML( 'allowed404s' ); ?></textarea></td>
+				</tr>
+				<tr>
+					<th colspan="2" style="color: #999;">These URL patterns will be excluded from
+						the throttling rules used to limit crawlers.
+						<br/><br/></th>
+				</tr>
+
+				<tr>
 					<th>Hide WordPress version<a
 							href="http://docs.wordfence.com/en/Wordfence_options#Hide_WordPress_version" target="_blank"
 							class="wfhelp"></a></th>

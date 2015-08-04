@@ -96,6 +96,7 @@ class wfConfig {
 				'blockedTime' => "300",
 				'email_summary_interval' => 'biweekly',
 				'email_summary_excluded_directories' => 'wp-content/cache,wp-content/wfcache,wp-content/plugins/wordfence/tmp',
+				'allowed404s' => "/favicon.ico\n/apple-touch-icon*.png\n/*@2x.png",
 			)
 		),
 		array( //level 1
@@ -185,6 +186,7 @@ class wfConfig {
 				'blockedTime' => "300",
 				'email_summary_interval' => 'biweekly',
 				'email_summary_excluded_directories' => 'wp-content/cache,wp-content/wfcache,wp-content/plugins/wordfence/tmp',
+				'allowed404s' => "/favicon.ico\n/apple-touch-icon*.png\n/*@2x.png",
 			)
 		),
 		array( //level 2
@@ -274,6 +276,7 @@ class wfConfig {
 				'blockedTime' => "300",
 				'email_summary_interval' => 'biweekly',
 				'email_summary_excluded_directories' => 'wp-content/cache,wp-content/wfcache,wp-content/plugins/wordfence/tmp',
+				'allowed404s' => "/favicon.ico\n/apple-touch-icon*.png\n/*@2x.png",
 			)
 		),
 		array( //level 3
@@ -363,6 +366,7 @@ class wfConfig {
 				'blockedTime' => "1800",
 				'email_summary_interval' => 'biweekly',
 				'email_summary_excluded_directories' => 'wp-content/cache,wp-content/wfcache,wp-content/plugins/wordfence/tmp',
+				'allowed404s' => "/favicon.ico\n/apple-touch-icon*.png\n/*@2x.png",
 			)
 		),
 		array( //level 4
@@ -452,6 +456,7 @@ class wfConfig {
 				'blockedTime' => "7200",
 				'email_summary_interval' => 'biweekly',
 				'email_summary_excluded_directories' => 'wp-content/cache,wp-content/wfcache,wp-content/plugins/wordfence/tmp',
+				'allowed404s' => "/favicon.ico\n/apple-touch-icon*.png\n/*@2x.png",
 			)
 		)
 	);
